@@ -18,6 +18,8 @@ import {
   emitConfigUpdate,
   emitChangeServe,
   emitUseChallenge,
+  emitToggleSides,
+  emitResetMatch,
 } from '@/lib/socket';
 
 interface UseMatchOptions {
@@ -41,6 +43,8 @@ interface UseMatchReturn {
   updateConfig: (config: Partial<DisplayConfig>) => void;
   changeServe: (team: 'home' | 'away', position?: 'left' | 'right') => void;
   useChallenge: (team: 'home' | 'away') => void;
+  toggleSides: () => void;
+  resetMatch: () => void;
   // Timer computed value
   remainingTime: number;
 }
@@ -206,6 +210,14 @@ export function useMatch({
     emitUseChallenge(team);
   }, []);
 
+  const toggleSides = useCallback(() => {
+    emitToggleSides();
+  }, []);
+
+  const resetMatch = useCallback(() => {
+    emitResetMatch();
+  }, []);
+
   return {
     match,
     isConnected,
@@ -220,6 +232,8 @@ export function useMatch({
     updateConfig,
     changeServe,
     useChallenge,
+    toggleSides,
+    resetMatch,
     remainingTime,
   };
 }

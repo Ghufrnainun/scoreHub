@@ -129,6 +129,23 @@
   }
 }
 
+.font-display {
+  font-family:
+    var(--font-display),
+    var(--font-body),
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+.font-body {
+  font-family:
+    var(--font-body),
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
 /* Badminton Court Visuals */
 .court-grid {
   background-color: #16a34a;

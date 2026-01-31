@@ -181,6 +181,8 @@ io.on('connection', (socket: Socket) => {
         },
         pin: data.pin,
         templateId: data.templateId || 'default',
+        gameMode: data.gameMode,
+        category: data.category,
       });
 
       io.to(matchId).emit('match:state', match);
@@ -223,6 +225,30 @@ io.on('connection', (socket: Socket) => {
     }
 
     const match = matchManager.useChallenge(matchId, data.team);
+    if (match) {
+      io.to(matchId).emit('match:state', match);
+    }
+  });
+
+  socket.on('sides:toggle', () => {
+    if (role !== 'referee' && role !== 'admin') {
+      socket.emit('error:permission', 'Only referee/admin can toggle sides');
+      return;
+    }
+
+    const match = matchManager.toggleSides(matchId);
+    if (match) {
+      io.to(matchId).emit('match:state', match);
+    }
+  });
+
+  socket.on('match:reset', () => {
+    if (role !== 'referee' && role !== 'admin') {
+      socket.emit('error:permission', 'Only referee/admin can reset match');
+      return;
+    }
+
+    const match = matchManager.resetMatch(matchId);
     if (match) {
       io.to(matchId).emit('match:state', match);
     }

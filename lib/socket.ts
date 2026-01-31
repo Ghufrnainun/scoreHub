@@ -18,6 +18,7 @@ export interface TeamState {
   logo?: string;
   challenges: number;
   players: PlayerInfo[];
+  playerPositions: number[]; // Added
 }
 
 export interface TimerState {
@@ -98,7 +99,11 @@ export interface MatchState {
   currentSet: number;
   sets: { home: number; away: number }[]; // History of set scores
   server?: 'home' | 'away'; // TeamSide
+  servingPlayerIndex?: number; // Added
+  receivingPlayerIndex?: number; // Added
   serviceCourt?: 'left' | 'right';
+  isFlipped?: boolean; // Added
+  isFlippedInSet3?: boolean;
   winner?: 'home' | 'away';
   gameMode?: 'single' | 'double';
   category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD'; // Standard BWF categories
@@ -238,4 +243,12 @@ export function emitChangeServe(
 
 export function emitUseChallenge(team: 'home' | 'away'): void {
   socket?.emit('challenge:use', { team });
+}
+
+export function emitToggleSides(): void {
+  socket?.emit('sides:toggle');
+}
+
+export function emitResetMatch(): void {
+  socket?.emit('match:reset');
 }

@@ -111,7 +111,7 @@ export default function AdminLayout({
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
       <aside
-        className={`bg-card border-r transition-all duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
+        className={`bg-card border-r transition-[width] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
           isSidebarOpen ? 'w-64' : 'w-20'
         }`}
       >
@@ -167,7 +167,8 @@ export default function AdminLayout({
         <header className="h-16 border-b bg-card/50 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-10">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 -ml-2 rounded-md hover:bg-muted text-muted-foreground"
+            aria-label="Toggle sidebar"
+            className="p-2 -ml-2 rounded-md hover:bg-muted text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <svg
               className="w-5 h-5"
@@ -191,7 +192,9 @@ export default function AdminLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">{children}</main>
+        <main id="main-content" className="flex-1 p-6 lg:p-8 overflow-y-auto">
+          {children}
+        </main>
       </div>
     </div>
   );

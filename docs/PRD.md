@@ -1,5 +1,7 @@
 # Product Requirements Document (PRD)
 
+**Status:** Implementation-aligned spec (updated **January 30, 2026**)
+
 ## Sistem Scoreboard Real-time Berbasis Web (Badminton First)
 
 ---
@@ -39,26 +41,30 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ---
 
-## 4. Scope Produk
+## 4. Scope Produk (Sesuai Implementasi Saat Ini)
 
-### 4.1 In Scope (V1)
+### 4.1 In Scope (V1 - Implemented)
 
 - Fokus olahraga: **Badminton**
-- Web controller (input skor & konfigurasi)
-- Web display (scoreboard fullscreen)
+- Web controller (input skor)
+- Web display (scoreboard fullscreen) di `/match/[id]/display`
 - Real-time update (tanpa refresh)
 - Single match aktif (single lapangan)
-- Single/double, best of 3 set
-- Serve indicator dan posisi servis (double)
-- Interval timer (11 poin) dan break antar set
+- Single/double via kategori (MS/WS/MD/WD/XD)
+- **Best of 3** (fixed)
+- Serve indicator (berdasarkan skor server; rotasi doubles belum full rule)
+- Undo multi-step (disimpan history hingga 50 state)
 
-### 4.2 Out of Scope (Versi Awal)
+### 4.2 Out of Scope (Belum Diimplementasikan)
 
 - Template olahraga lain (futsal, basket, voli, e-sport)
 - Hardware scoreboard fisik
 - Integrasi broadcast TV / overlay streaming
 - Statistik lanjutan (shot, foul detail)
 - Multi venue dan cloud sync
+- Interval timer 11 poin & break antar set
+- Best of 5
+- Manual end set / manual edit skor via UI
 
 ---
 
@@ -84,39 +90,37 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ### 6.1 Match Setup
 
-- Buat match baru
-- Set kategori: Single / Double
-- Set format: Best of 3 / Best of 5
-- Set nama tim/pemain
-- Set lapangan (A / B / C) (opsional v1)
-- Set posisi awal (coin toss, pilih serve / side)
+- Buat match baru via landing page (auto-generate matchId)
+- Set kategori: MS / WS / MD / WD / XD (menentukan single/double)
+- Format: **Best of 3 only**
+- Set nama tim dan pemain (home/away)
+- PIN admin/referee wajib saat create match
 
 ### 6.2 Score Control (Rally-based)
 
 - Input berbasis rally: **Point Home** / **Point Away**
-- Undo 1 langkah terakhir
-- Reset skor (dengan konfirmasi)
+- Undo **multi-step** (tiap klik undo mundur 1 state)
 - Support dua tim (Home vs Away)
+- `score:update` tersedia (event) untuk koreksi skor, belum ada UI dedicated
 
 ### 6.3 Serve Logic (Badminton)
 
-- Server ditentukan otomatis berdasarkan rules badminton
-- Indicator servis (ikon kok) di display
-- Double: posisi servis (left/right) dan rotasi partner
+- Server ditentukan otomatis: pemenang rally menjadi server
+- Service court ditentukan dari **paritas skor server** (genap=right, ganjil=left)
+- Indicator servis di display
+- **Doubles rotation / receiver logic belum dimodelkan**
 
 ### 6.4 Set & Match Management
 
-- Auto end set ketika skor memenuhi rule (win by 2, cap 30)
-- Konfirmasi manual untuk end set / end match
-- Manual override skor dan set (role Admin)
-- Log aksi terakhir (minimal 20 action) untuk audit/undo
+- Auto end set ketika skor memenuhi rule (21, win by 2, cap 30)
+- Auto end match saat team menang 2 set
+- Tidak ada manual end set / manual override via UI
+- History disimpan di server (maks 50 state) untuk undo
 
 ### 6.5 Timer
 
-- Timer match (opsional) berbasis **server timestamp**
-- Interval timer di 11 poin (default 60s)
-- Break antar set (default 120s)
-- Client hanya menghitung sisa waktu berdasarkan data dari server
+- Event timer tersedia (`timer:start`, `timer:pause`, `timer:reset`)
+- **Timer belum diinisialisasi di match state**, jadi fitur timer belum aktif
 
 ### 6.6 Real-time Sync
 
@@ -127,29 +131,23 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ## 7. Konfigurasi Tampilan (Display Config)
 
-Konfigurasi tampilan dapat diubah real-time dari controller dan langsung diterapkan ke display.
+Konfigurasi tampilan memiliki event realtime, tetapi display saat ini belum menerapkan perubahan selain templateId default.
 
 ### 7.1 Template Scoreboard (V1)
 
-- Badminton (BWF style)
+- Badminton (BWF style) melalui template id `bwf-default`
 
 Template menentukan:
 
 - Struktur layout
-- Posisi skor, timer, dan nama tim
+- Posisi skor dan nama tim
 - Skala default elemen
 
-### 7.2 Customisasi Template
+### 7.2 Customisasi Template (Status Saat Ini)
 
-Setelah template dipilih, operator (admin) dapat menyesuaikan:
-
-- Ukuran skor (S / M / L / XL)
-- Font scale global
-- Warna tema (dark / light / custom)
-- Show / hide elemen (timer, logo, round, set)
-- Orientasi (landscape / portrait)
-
-Perubahan template dan konfigurasi langsung terlihat di display tanpa refresh.
+- `displayConfig` saat ini hanya menyimpan `templateId` (dan opsional `primaryColor`)
+- UI template selector di `/admin/templates` masih **mock** (belum terhubung realtime)
+- Display belum menerapkan variasi tema/template selain layout default
 
 ---
 
@@ -165,8 +163,9 @@ Perubahan template dan konfigurasi langsung terlihat di display tanpa refresh.
 [TV / Videotron]
 ```
 
-- Komunikasi real-time menggunakan WebSocket
+- Komunikasi real-time menggunakan Socket.io (WebSocket + fallback)
 - Semua client terhubung ke satu server
+- REST API untuk create/list/get/delete match
 
 ---
 
@@ -242,47 +241,26 @@ Sistem yang bertanggung jawab:
 
 ### 11.4 Undo / Correction Rule
 
-Karena kesalahan input **pasti terjadi di lapangan**, sistem menyediakan undo terbatas.
+Karena kesalahan input **pasti terjadi di lapangan**, sistem menyediakan undo.
 
 Aturan:
 
-- Undo hanya **1 langkah terakhir**
-- Undo mengembalikan:
-  - Skor
-  - Server
-  - Service court
-  - Court position (double)
-- Undo **disabled** jika:
-  - Set sudah dikunci
-  - Match sudah selesai
+- Undo **multi-step** (tiap klik mundur 1 state, max 50 state tersimpan)
+- Undo mengembalikan skor + server + service court + set state
+- Undo **disabled** saat match selesai (status finished)
 
 Undo hanya tersedia untuk role **Wasit & Admin**.
 
 ### 11.5 Confirmation & Lock Action
 
-Aksi berisiko tinggi wajib konfirmasi:
-
-- Reset match
-- End set manual
-- Ganti template
-- Manual edit skor / set
-
-Metode:
-
-- Modal konfirmasi ATAU
-- Long press (+/- 2 detik)
-
-Tujuan: mencegah salah sentuh.
+Saat ini **belum ada mekanisme konfirmasi** (modal/long-press) di UI.
+Event sensitif yang tersedia di server hanya bisa diakses oleh admin.
 
 ### 11.6 Visual Feedback untuk Wasit
 
-Setiap input rally wajib memberikan feedback instan:
-
-- Animasi skor naik
-- Highlight tim pemenang rally
-- Update ikon servis
-
-Ini penting agar wasit **yakin input berhasil**.
+- Perubahan skor muncul instan di UI
+- Indikator servis ikut berubah sesuai state
+- Animasi khusus (highlight/score tick) belum diimplementasikan
 
 ### 11.7 State Recovery (Lapangan Real Case)
 
@@ -305,12 +283,12 @@ Sistem menggunakan role sederhana untuk mengatur akses:
 | Role    | Hak Akses                                                                        |
 | ------- | -------------------------------------------------------------------------------- |
 | Admin   | Buat match, reset match, pilih template, ubah konfigurasi tampilan, assign wasit |
-| Wasit   | Input skor, kontrol timer                                                        |
+| Wasit   | Input skor, kontrol timer (endpoint tersedia, belum aktif)                         |
 | Display | Read-only, tidak dapat mengirim event                                             |
 
-- Akses controller dilindungi PIN berdasarkan role
-- Validasi role dilakukan di **server**, bukan hanya frontend
-- Display tidak memiliki hak input
+- Akses controller dilindungi **PIN tunggal** (dipakai admin/referee)
+- Validasi role dilakukan di **server**
+- Display read-only (tanpa PIN)
 
 ---
 
@@ -320,7 +298,6 @@ Wajib ada:
 
 - Input skor berbasis rally
 - Serve indicator (single/double)
-- Timer interval & break antar set
 - Display fullscreen
 - Real-time update
 - State match tersimpan di server
@@ -335,11 +312,11 @@ Nice to have:
 
 ---
 
-## 14. Acceptance Criteria (Badminton V1)
+## 14. Acceptance Criteria (Badminton V1 - Implemented)
 
 - Perubahan skor tampil di semua display < 1 detik (dalam LAN)
 - End set otomatis saat skor memenuhi rule (21 poin, win by 2, cap 30)
-- Serve indicator dan posisi servis double selalu konsisten dengan skor
+- Serve indicator konsisten dengan skor server (paritas genap/ganjil)
 - Reconnect client mengembalikan state penuh dalam < 2 detik
 - Undo mengembalikan skor + serve state dengan benar
 
@@ -352,6 +329,82 @@ Nice to have:
 - Statistik pertandingan
 - Cloud hosting multi venue
 - Integrasi overlay live streaming
+
+---
+
+## 15A. Rencana Landing Page (SaaS)
+
+### Tujuan
+
+- Menjelaskan value utama produk secara singkat
+- Mendorong user mencoba (CTA) atau meminta demo
+- Menjadi pintu masuk dokumentasi dan live demo
+
+### Target Audience
+
+- Venue olahraga
+- Perorangan penyelenggara event/latihan
+
+### Brand & Positioning
+
+- **Brand name (pilihan utama):** Scorehub
+- Alternatif nama (opsional): ScoreHub Live, CourtScore, RallyBoard
+- Tone bahasa: santai
+- Warna utama (landing page): **Amber / Black / Off-White**
+  - Primary: `#F59E0B`
+  - Accent: `#111827`
+  - Support: `#F8FAFC`
+
+### Tagline (Pilihan Draft)
+
+- "Scoreboard real-time, tinggal jalan."
+- "Skor jelas, event lancar."
+- "Real-time di lapangan, simpel di tangan."
+- "Buka. Input. Tampil. Selesai."
+
+### Value Proposition
+
+- Real-time scoreboard tanpa refresh
+- Bisa jalan **tanpa internet** (LAN/WiFi lokal)
+- Setup cepat, UI operator sederhana
+- Display profesional untuk TV/Videotron
+
+### Struktur Halaman (Draft Sections)
+
+1) Hero (headline + subheadline + CTA utama)
+2) Problem → Solution (before/after)
+3) Fitur utama (rally input, serve indicator, set management, realtime display)
+4) Alur penggunaan (Create → Control → Display)
+5) Showcase / screenshot (control & display)
+6) Use cases (kampus, klub, venue)
+7) CTA penutup + link demo
+8) Footer (kontak, docs, status)
+
+### CTA (Final)
+
+- Primary: **Start Match**
+- Secondary: **Upgrade to Pro**
+
+### Monetization (Draft)
+
+- Free tier: **1 match aktif** (tanpa history, 1 template default)
+- Pro tier: multi-match, template tambahan, branding removal, sponsor/ads, cloud sync (planned)
+
+### Asset yang Dibutuhkan
+
+- Screenshot halaman control
+- Screenshot display fullscreen
+- Logo / brand wordmark (jika ada)
+- (Opsional) video demo 20–40 detik
+
+### Tracking (Opsional)
+
+- Klik CTA utama
+- Scroll depth (50% / 90%)
+
+### Status
+
+- **Planned** (belum diimplementasikan)
 
 ---
 
@@ -371,7 +424,7 @@ Nice to have:
 
 ---
 
-## 18. Badminton Rules & Match Flow
+## 18. Badminton Rules & Match Flow (Implemented)
 
 ### 18.1 Scoring Rules
 
@@ -382,78 +435,47 @@ Nice to have:
 
 ### 18.2 Match Format
 
-- Default: Best of 3
-- Opsional: Best of 5
+- Best of 3 (fixed)
 
 ### 18.3 Interval & Break
 
-- Interval 60 detik saat salah satu tim mencapai 11 poin
-- Break antar set 120 detik
-- Configurable oleh admin
+- Belum diimplementasikan
 
 ### 18.4 Change Ends
 
-- Ganti sisi setelah setiap set
-- Pada set penentuan (set 3/5): ganti sisi saat salah satu tim mencapai 11 poin
+- Belum diimplementasikan
 
-### 18.5 Serve Rules (Accurate)
+### 18.5 Serve Rules (Implemented)
 
-- Serve selalu **diagonal** ke service court lawan.
-- Singles: server di kanan jika skor server **genap**, kiri jika **ganjil**.
-- Doubles:
-  - Service court ditentukan oleh skor **tim yang serve** (genap=kanan, ganjil=kiri).
-  - Jika tim yang serve menang rally, **pemain yang sama** tetap serve dan pindah sisi (kanan <-> kiri) sesuai skor baru.
-  - Jika tim yang receive menang rally, **pemain yang menerima** menjadi server berikutnya (partner tidak serve).
-  - Receiver berada di service court diagonal terhadap server; partner receiver bebas posisi (asal tidak menghalangi).
+- Server = pemenang rally
+- Service court berdasarkan skor **server** (genap=right, ganjil=left)
+- Rotasi doubles (server/receiver/partner) belum dimodelkan
 
 ---
 
 ## 19. Match State Definition (Core Data Model)
 
-Match State adalah single source of truth yang disimpan di server (memory/redis). Semua client (wasit, admin, display) akan sync ke object ini.
+Match State adalah single source of truth yang disimpan di server (in-memory). Semua client (wasit, admin, display) akan sync ke object ini.
 
 ### Contoh Match State (JSON)
 
 ```json
 {
+  "id": "MATCH-001",
   "matchId": "MATCH-001",
   "sport": "badminton",
-  "templateId": "bwf-default",
-  "status": "running",
-  "format": "bo3",
-  "mode": "double",
+  "status": "active",
+  "gameMode": "double",
+  "category": "MD",
   "teams": {
-    "home": { "name": "Team A", "score": 12, "players": ["A1", "A2"] },
-    "away": { "name": "Team B", "score": 10, "players": ["B1", "B2"] }
+    "home": { "name": "Team A", "score": 12, "players": [{ "name": "A1" }, { "name": "A2" }], "setsWon": 0 },
+    "away": { "name": "Team B", "score": 10, "players": [{ "name": "B1" }, { "name": "B2" }], "setsWon": 0 }
   },
-  "sets": {
-    "current": 1,
-    "home": 0,
-    "away": 0,
-    "history": [
-      { "set": 1, "home": 21, "away": 18 }
-    ]
-  },
-  "serve": {
-    "team": "home",
-    "position": "right",
-    "side": "left-court"
-  },
-  "timer": {
-    "mode": "interval",
-    "intervalSeconds": 60,
-    "breakSeconds": 120,
-    "startedAt": 1730000000000,
-    "pausedAt": null
-  },
-  "config": {
-    "fontScale": 1,
-    "showTimer": true,
-    "theme": "dark"
-  },
-  "eventLog": [
-    { "type": "rally", "team": "home", "at": 1730000000000 }
-  ]
+  "currentSet": 1,
+  "sets": [{ "home": 21, "away": 18 }],
+  "server": "home",
+  "serviceCourt": "right",
+  "displayConfig": { "templateId": "bwf-default" }
 }
 ```
 
@@ -463,49 +485,52 @@ Match State adalah single source of truth yang disimpan di server (memory/redis)
 
 Menggunakan Socket.io (WebSocket fallback polling).
 
-### Client -> Server
+### Client -> Server (Implemented)
 
-- `match:join` -> join room matchId
-- `rally:point` -> home/away menang rally
-- `match:undo`
-- `match:end-set`
-- `timer:start`
-- `timer:pause`
-- `timer:reset`
-- `config:update`
-- `template:change`
+- `match:create` (admin)
+- `score:update` (admin/referee) -> manual delta
+- `point` (admin/referee) -> rally winner
+- `undo` (admin/referee)
+- `challenge:use` (admin/referee)
+- `timer:start` / `timer:pause` / `timer:reset` (admin/referee)
+- `config:update` (admin)
+- `template:change` (admin)
+- `serve:change` (admin/referee)
 
-### Server -> Client
+### Server -> Client (Implemented)
 
-- `match:state` -> full state (on join / reconnect)
-- `match:update` -> partial update
-- `timer:tick` -> optional (display bisa hitung sendiri)
+- `match:state` -> full state (on connect + most actions)
+- `match:update` -> partial update (timer/config/template/serve)
+- `match:ended`
 - `error:permission`
+- `error:undo`
 
 ---
 
-## 21. Permission Matrix (MVP)
+## 21. Permission Matrix (Implemented)
 
 | Event            | Admin | Wasit | Display |
 | ---------------- | ----- | ----- | ------- |
-| rally:point      | NO    | YES   | NO      |
-| match:undo       | YES   | YES   | NO      |
-| match:end-set    | YES   | YES   | NO      |
-| timer:start      | NO    | YES   | NO      |
-| timer:pause      | NO    | YES   | NO      |
+| match:create     | YES   | NO    | NO      |
+| score:update     | YES   | YES   | NO      |
+| point            | YES   | YES   | NO      |
+| undo             | YES   | YES   | NO      |
+| challenge:use    | YES   | YES   | NO      |
+| timer:start      | YES   | YES   | NO      |
+| timer:pause      | YES   | YES   | NO      |
+| timer:reset      | YES   | YES   | NO      |
 | config:update    | YES   | NO    | NO      |
 | template:change  | YES   | NO    | NO      |
+| serve:change     | YES   | YES   | NO      |
 | match:state      | YES   | YES   | YES     |
 
 ---
 
 ## 22. Template System
 
-Template adalah blueprint UI + rules yang menentukan **struktur scoreboard**, **aturan olahraga**, dan **komponen visual**.
+Template saat ini hanya berupa **id** yang disimpan di `displayConfig`. Belum ada rule engine/template renderer.
 
-Template **tidak hardcode UI**, tapi bersifat configurable dan scalable.
-
-### 22.1 Template Structure (Extended)
+### 22.1 Template Structure (Planned)
 
 ```json
 {

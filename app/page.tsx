@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -29,6 +30,62 @@ const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
         d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
       />
     )}
+  </svg>
+);
+
+const BadmintonIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M5 5l7 7m0 0l4 4m-4-4l6-6M8 8l-3 3"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M15.5 15.5l3 3m-1.5-4.5a2.12 2.12 0 013 3"
+    />
+  </svg>
+);
+
+const TennisIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+  >
+    <circle cx="12" cy="12" r="6" strokeWidth={2} />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M8 9c2 2 6 2 8 0m-8 6c2-2 6-2 8 0"
+    />
+  </svg>
+);
+
+const VolleyballIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+  >
+    <circle cx="12" cy="12" r="9" strokeWidth={2} />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 12a9 9 0 009 9m0-18a9 9 0 019 9M4.5 7.5c4 1.5 6.5 5.5 7.5 12"
+    />
   </svg>
 );
 
@@ -71,9 +128,24 @@ function generateMatchId(): string {
 type SportType = 'badminton' | 'tennis' | 'volleyball';
 
 const SPORTS = [
-  { id: 'badminton', name: 'Badminton', icon: '🏸', available: true },
-  { id: 'tennis', name: 'Tennis', icon: '🎾', available: false }, // Future
-  { id: 'volleyball', name: 'Volleyball', icon: '🏐', available: false }, // Future
+  {
+    id: 'badminton',
+    name: 'Badminton',
+    icon: BadmintonIcon,
+    available: true,
+  },
+  {
+    id: 'tennis',
+    name: 'Tennis',
+    icon: TennisIcon,
+    available: false,
+  }, // Future
+  {
+    id: 'volleyball',
+    name: 'Volleyball',
+    icon: VolleyballIcon,
+    available: false,
+  }, // Future
 ];
 
 export default function ScoreboardLanding() {
@@ -103,6 +175,9 @@ export default function ScoreboardLanding() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const canJoinDisplay = matchIdInput.trim().length > 0;
+  const canJoinReferee =
+    matchIdInput.trim().length > 0 && pinInput.trim().length >= 4;
 
   // Theme Logic
   useEffect(() => {
@@ -234,50 +309,83 @@ export default function ScoreboardLanding() {
     }
   };
 
+  const handleJoinLinkClick = (
+    role: 'referee' | 'display',
+    event: MouseEvent<HTMLAnchorElement>,
+  ) => {
+    if (role === 'referee') {
+      if (!canJoinReferee) {
+        event.preventDefault();
+        handleJoinMatch('referee');
+      }
+    } else if (!canJoinDisplay) {
+      event.preventDefault();
+      handleJoinMatch('display');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300 relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[900px] -translate-x-1/2 opacity-40 blur-3xl"
+        aria-hidden="true"
+      >
+        <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,rgba(37,99,235,0.28),rgba(59,130,246,0.12),transparent_70%)]" />
+      </div>
       {/* Top Bar */}
-      <header className="h-16 border-b bg-card px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      <header className="h-16 border-b bg-card/80 backdrop-blur px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center font-black text-lg">
-            M
+          <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black text-sm tracking-wide">
+            MP
           </div>
           <div>
-            <h1 className="font-bold text-sm leading-none uppercase tracking-wide">
+            <h1 className="font-display text-sm leading-none uppercase tracking-[0.2em]">
               MatchPoint
             </h1>
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-              Universal Scoreboard SaaS
+            <span className="text-[10px] font-body text-muted-foreground uppercase tracking-widest">
+              Control Suite
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <a
-            href="#"
-            className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
+            Workspace
+            <span className="h-1 w-1 rounded-full bg-muted-foreground/60" />
+            Arena Ops
+          </div>
+          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground/80">
+            Plan: Studio
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="text-xs font-bold uppercase tracking-widest hidden sm:flex"
           >
-            PRICING
-          </a>
-          <a
-            href="#"
-            className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            DOCS
-          </a>
-          <div className="h-4 w-px bg-border hidden sm:block" />
+            <Link href="/docs">Guide</Link>
+          </Button>
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+            aria-label="Toggle theme"
+            className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            type="button"
           >
             <ThemeToggleIcon mode={theme} />
           </button>
         </div>
       </header>
 
-      <main className="container mx-auto max-w-6xl p-4 lg:p-8">
+      <main
+        id="main-content"
+        className="container mx-auto max-w-6xl p-4 lg:p-8"
+      >
         {/* Error Banner */}
         {error && (
-          <div className="mb-6 p-3 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 text-sm font-bold rounded-lg flex items-center gap-2">
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-6 p-3 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 text-sm font-bold rounded-lg flex items-center gap-2"
+          >
             <svg
               className="w-4 h-4"
               fill="none"
@@ -295,12 +403,66 @@ export default function ScoreboardLanding() {
           </div>
         )}
 
+        <section className="mb-8">
+          <div className="relative overflow-hidden rounded-2xl border bg-card/80 p-6 lg:p-8">
+            <div
+              className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.15),transparent_65%)]"
+              aria-hidden="true"
+            />
+            <div className="relative">
+              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+                Your Arena Workspace
+              </div>
+              <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="font-display text-3xl lg:text-4xl font-black tracking-tight text-foreground">
+                    Match Control Hub
+                  </h2>
+                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                    Launch new matches fast, keep officials synced, and run
+                    broadcast-ready displays from one console.
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl border bg-background/80 px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Active
+                    </div>
+                    <div className="mt-1 text-2xl font-black text-foreground">
+                      1
+                    </div>
+                  </div>
+                  <div className="rounded-xl border bg-background/80 px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Displays
+                    </div>
+                    <div className="mt-1 text-2xl font-black text-foreground">
+                      2
+                    </div>
+                  </div>
+                  <div className="rounded-xl border bg-background/80 px-4 py-3">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Templates
+                    </div>
+                    <div className="mt-1 text-2xl font-black text-foreground">
+                      4
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
           {/* Primary Column: Create Match (Embedded) */}
           <section>
             <div className="mb-6">
-              <h2 className="text-3xl font-black text-foreground tracking-tight mb-2">
-                Create Event
+              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+                Match Builder
+              </div>
+              <h2 className="mt-2 text-3xl font-black text-foreground tracking-tight">
+                Create Match
               </h2>
               <p className="text-sm text-muted-foreground">
                 Select your sport and configure the match details.
@@ -321,8 +483,11 @@ export default function ScoreboardLanding() {
                         s.available && setSelectedSport(s.id as SportType)
                       }
                       disabled={!s.available}
+                      aria-pressed={selectedSport === s.id}
+                      aria-disabled={!s.available}
+                      type="button"
                       className={`
-                        relative group flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all
+                        relative group flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors transition-shadow
                         ${
                           selectedSport === s.id
                             ? 'border-primary bg-primary/5 shadow-md'
@@ -331,7 +496,9 @@ export default function ScoreboardLanding() {
                         ${!s.available ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:border-primary/50 cursor-pointer'}
                       `}
                     >
-                      <span className="text-3xl mb-2">{s.icon}</span>
+                      <span className="text-3xl mb-2">
+                        <s.icon className="w-7 h-7" />
+                      </span>
                       <span className="text-xs font-bold uppercase tracking-wider">
                         {s.name}
                       </span>
@@ -356,7 +523,7 @@ export default function ScoreboardLanding() {
                           <button
                             key={cat}
                             onClick={() => setCategory(cat)}
-                            className={`flex-1 py-3 px-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all min-w-[50px] whitespace-nowrap ${
+                            className={`flex-1 py-3 px-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors transition-shadow min-w-[50px] whitespace-nowrap ${
                               category === cat
                                 ? 'bg-background shadow-sm text-foreground ring-1 ring-border'
                                 : 'text-muted-foreground hover:text-foreground'
@@ -383,12 +550,18 @@ export default function ScoreboardLanding() {
 
                       <div className="space-y-3">
                         <div className="relative">
+                          <label htmlFor="home-player-1" className="sr-only">
+                            Home player 1
+                          </label>
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             <UserIcon className="w-4 h-4" />
                           </div>
                           <Input
-                            placeholder="Player 1"
-                            className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-all"
+                            id="home-player-1"
+                            name="homePlayer1"
+                            autoComplete="off"
+                            placeholder="Player 1 (e.g. Andi)…"
+                            className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                             value={homePlayers[0]}
                             onChange={(e) =>
                               handlePlayerChange('home', 0, e.target.value)
@@ -397,12 +570,18 @@ export default function ScoreboardLanding() {
                         </div>
                         {gameMode === 'double' && (
                           <div className="relative">
+                            <label htmlFor="home-player-2" className="sr-only">
+                              Home player 2
+                            </label>
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                               <UserIcon className="w-4 h-4" />
                             </div>
                             <Input
-                              placeholder="Player 2"
-                              className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-all"
+                              id="home-player-2"
+                              name="homePlayer2"
+                              autoComplete="off"
+                              placeholder="Player 2 (e.g. Budi)…"
+                              className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                               value={homePlayers[1]}
                               onChange={(e) =>
                                 handlePlayerChange('home', 1, e.target.value)
@@ -425,12 +604,18 @@ export default function ScoreboardLanding() {
 
                       <div className="space-y-3">
                         <div className="relative">
+                          <label htmlFor="away-player-1" className="sr-only">
+                            Away player 1
+                          </label>
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             <UserIcon className="w-4 h-4" />
                           </div>
                           <Input
-                            placeholder="Player 1"
-                            className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-all"
+                            id="away-player-1"
+                            name="awayPlayer1"
+                            autoComplete="off"
+                            placeholder="Player 1 (e.g. Sari)…"
+                            className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                             value={awayPlayers[0]}
                             onChange={(e) =>
                               handlePlayerChange('away', 0, e.target.value)
@@ -439,12 +624,18 @@ export default function ScoreboardLanding() {
                         </div>
                         {gameMode === 'double' && (
                           <div className="relative">
+                            <label htmlFor="away-player-2" className="sr-only">
+                              Away player 2
+                            </label>
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                               <UserIcon className="w-4 h-4" />
                             </div>
                             <Input
-                              placeholder="Player 2"
-                              className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-all"
+                              id="away-player-2"
+                              name="awayPlayer2"
+                              autoComplete="off"
+                              placeholder="Player 2 (e.g. Rina)…"
+                              className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                               value={awayPlayers[1]}
                               onChange={(e) =>
                                 handlePlayerChange('away', 1, e.target.value)
@@ -470,14 +661,26 @@ export default function ScoreboardLanding() {
 
                     {showAdvanced && (
                       <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                        <label htmlFor="home-team" className="sr-only">
+                          Home team or club name
+                        </label>
                         <Input
-                          placeholder="Home Team/Club Name"
+                          id="home-team"
+                          name="homeTeam"
+                          autoComplete="organization"
+                          placeholder="Home Team/Club Name (e.g. PB Jaya)…"
                           value={homeTeam}
                           onChange={(e) => setHomeTeam(e.target.value)}
                           className="h-9 text-xs"
                         />
+                        <label htmlFor="away-team" className="sr-only">
+                          Away team or club name
+                        </label>
                         <Input
-                          placeholder="Away Team/Club Name"
+                          id="away-team"
+                          name="awayTeam"
+                          autoComplete="organization"
+                          placeholder="Away Team/Club Name (e.g. PB Maju)…"
                           value={awayTeam}
                           onChange={(e) => setAwayTeam(e.target.value)}
                           className="h-9 text-xs"
@@ -489,11 +692,17 @@ export default function ScoreboardLanding() {
                   {/* PIN & Submit */}
                   <div className="mt-8 pt-8 border-t grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-end">
                     <div>
-                      <label className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest">
+                      <label
+                        htmlFor="create-pin"
+                        className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
+                      >
                         Set Referee PIN
                       </label>
                       <Input
-                        placeholder="e.g. 1234"
+                        id="create-pin"
+                        name="createPin"
+                        autoComplete="new-password"
+                        placeholder="PIN (e.g. 1234)…"
                         type="number"
                         pattern="[0-9]*"
                         inputMode="numeric"
@@ -510,12 +719,12 @@ export default function ScoreboardLanding() {
                     <Button
                       onClick={handleCreateMatch}
                       disabled={isLoading}
-                      className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-[box-shadow,background-color,color]"
                     >
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating Match...
+                          Creating Match…
                         </span>
                       ) : (
                         'Start Match'
@@ -556,27 +765,53 @@ export default function ScoreboardLanding() {
                 </div>
               </div>
               <div className="space-y-3">
+                <label htmlFor="match-id-referee" className="sr-only">
+                  Match ID
+                </label>
                 <Input
-                  placeholder="Match ID"
+                  id="match-id-referee"
+                  name="matchId"
+                  autoComplete="off"
+                  placeholder="Match ID (e.g. MATCH-1A2B)…"
                   className="h-9 font-mono text-xs uppercase"
                   value={matchIdInput}
                   onChange={(e) =>
                     setMatchIdInput(e.target.value.toUpperCase())
                   }
                 />
+                <label htmlFor="pin-referee" className="sr-only">
+                  Referee PIN
+                </label>
                 <Input
-                  placeholder="PIN"
+                  id="pin-referee"
+                  name="pin"
+                  autoComplete="current-password"
+                  placeholder="PIN (e.g. 1234)…"
                   type="password"
                   className="h-9 font-mono text-xs"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
                 />
                 <Button
-                  onClick={() => handleJoinMatch('referee')}
+                  asChild
                   variant="secondary"
-                  className="w-full h-9 text-xs font-bold uppercase tracking-wider"
+                  className={`w-full h-9 text-xs font-bold uppercase tracking-wider ${
+                    canJoinReferee ? '' : 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
-                  Enter Console
+                  <Link
+                    href={
+                      canJoinReferee
+                        ? `/match/${matchIdInput}/control?role=referee&pin=${encodeURIComponent(
+                            pinInput,
+                          )}`
+                        : '#'
+                    }
+                    aria-disabled={!canJoinReferee}
+                    onClick={(event) => handleJoinLinkClick('referee', event)}
+                  >
+                    Enter Console
+                  </Link>
                 </Button>
               </div>
             </Card>
@@ -602,8 +837,14 @@ export default function ScoreboardLanding() {
                 </div>
               </div>
               <div className="space-y-3">
+                <label htmlFor="match-id-display" className="sr-only">
+                  Match ID
+                </label>
                 <Input
-                  placeholder="Match ID"
+                  id="match-id-display"
+                  name="matchIdDisplay"
+                  autoComplete="off"
+                  placeholder="Match ID (e.g. MATCH-1A2B)…"
                   className="h-9 font-mono text-xs uppercase"
                   value={matchIdInput}
                   onChange={(e) =>
@@ -611,11 +852,21 @@ export default function ScoreboardLanding() {
                   }
                 />
                 <Button
-                  onClick={() => handleJoinMatch('display')}
+                  asChild
                   variant="secondary"
-                  className="w-full h-9 text-xs font-bold uppercase tracking-wider"
+                  className={`w-full h-9 text-xs font-bold uppercase tracking-wider ${
+                    canJoinDisplay ? '' : 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
-                  Launch Display
+                  <Link
+                    href={
+                      canJoinDisplay ? `/match/${matchIdInput}/display` : '#'
+                    }
+                    aria-disabled={!canJoinDisplay}
+                    onClick={(event) => handleJoinLinkClick('display', event)}
+                  >
+                    Launch Display
+                  </Link>
                 </Button>
               </div>
             </Card>
@@ -637,6 +888,36 @@ export default function ScoreboardLanding() {
           </aside>
         </div>
       </main>
+
+      <footer className="mt-auto py-8 border-t bg-card/30">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-primary text-white flex items-center justify-center font-black text-[10px]">
+              MP
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              MatchPoint Control Suite
+            </span>
+          </div>
+          <div className="flex gap-6">
+            <Link
+              href="/docs"
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            >
+              Documentation
+            </Link>
+            <Link
+              href="/docs#badminton-rules"
+              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            >
+              BWF Rules
+            </Link>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              Status: Stable
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

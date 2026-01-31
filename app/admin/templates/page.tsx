@@ -58,9 +58,18 @@ export default function TemplateSelector() {
           <Card
             key={t.id}
             onClick={() => setSelectedId(t.id)}
-            className={`cursor-pointer transition-all duration-300 relative overflow-hidden group ${
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setSelectedId(t.id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-pressed={selectedId === t.id}
+            className={`cursor-pointer transition-colors transition-shadow duration-300 relative overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
               selectedId === t.id
-                ? 'ring-2 ring-primary border-primary shadow-lg scale-[1.02]'
+                ? 'ring-2 ring-primary border-primary shadow-lg'
                 : 'hover:border-primary/50 hover:shadow-md'
             }`}
           >

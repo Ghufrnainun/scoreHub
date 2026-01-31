@@ -65,30 +65,47 @@ export default function MediaManager() {
         <h3 className="font-bold mb-4">Add New Asset</h3>
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px_auto] gap-4 items-end">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase">
+            <label
+              htmlFor="asset-name"
+              className="text-xs font-bold text-muted-foreground uppercase"
+            >
               Asset Name
             </label>
             <Input
-              placeholder="e.g. Nike Commercial"
+              id="asset-name"
+              name="assetName"
+              autoComplete="off"
+              placeholder="Asset name (e.g. Nike Commercial)…"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase">
+            <label
+              htmlFor="asset-url"
+              className="text-xs font-bold text-muted-foreground uppercase"
+            >
               URL
             </label>
             <Input
-              placeholder="https://..."
+              id="asset-url"
+              name="assetUrl"
+              autoComplete="url"
+              placeholder="https://example.com/asset…"
               value={newItemUrl}
               onChange={(e) => setNewItemUrl(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase">
+            <label
+              htmlFor="asset-type"
+              className="text-xs font-bold text-muted-foreground uppercase"
+            >
               Type
             </label>
             <select
+              id="asset-type"
+              name="assetType"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={newItemType}
               onChange={(e) =>
@@ -114,15 +131,20 @@ export default function MediaManager() {
                   <img
                     src={asset.url}
                     alt={asset.name}
+                    width={1920}
+                    height={1080}
+                    loading="lazy"
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <video
                     src={asset.url}
                     className="w-full h-full object-cover"
+                    controls
+                    preload="metadata"
                   />
                 )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <div className="absolute inset-0 bg-black/50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <Button
                     variant="destructive"
                     size="sm"

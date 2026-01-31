@@ -11,6 +11,9 @@ export interface TeamState {
   score: number;
   setsWon: number;
   challenges: number;
+  // playerPositions[0] is in Even (Right) court, playerPositions[1] is in Odd (Left) court
+  // Stores the index of the player in team.players array
+  playerPositions: number[];
 }
 
 export interface TimerState {
@@ -34,9 +37,13 @@ export interface MatchState {
   };
   currentSet: number;
   sets: { home: number; away: number }[]; // History of set scores
-  server?: TeamSide; // Who is serving
+  server?: TeamSide; // Who is serving (home/away)
+  servingPlayerIndex?: number; // Index in team.players (0 or 1)
   receiver?: TeamSide; // Who is receiving
+  receivingPlayerIndex?: number; // Index in team.players (0 or 1)
   serviceCourt?: 'left' | 'right'; // For badminton/tennis
+  isFlipped?: boolean; // If true, home is right and away is left
+  isFlippedInSet3?: boolean;
   winner?: TeamSide;
 
   // Undo History

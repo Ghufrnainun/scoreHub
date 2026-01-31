@@ -73,7 +73,7 @@ export default function AdminDashboard() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-40 bg-secondary/50 animate-pulse rounded-xl"
+              className="h-40 bg-secondary/50 animate-pulse motion-reduce:animate-none rounded-xl"
             />
           ))}
         </div>
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none" />
                   <span className="text-xs font-mono font-bold text-muted-foreground">
                     {match.matchId}
                   </span>

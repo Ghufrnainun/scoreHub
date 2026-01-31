@@ -44,12 +44,16 @@ export class MatchManager {
           players: config.teams.home.players,
           score: 0,
           setsWon: 0,
+          challenges: 2,
+          playerPositions: [0, 1],
         },
         away: {
           name: config.teams.away.name,
           players: config.teams.away.players,
           score: 0,
           setsWon: 0,
+          challenges: 2,
+          playerPositions: [0, 1],
         },
       },
       currentSet: 1,
@@ -234,6 +238,55 @@ export class MatchManager {
       active,
       currentAssetId: assetId,
     };
+    return match;
+  }
+
+  resetMatch(matchId: string): MatchState | undefined {
+    const match = this.matches.get(matchId);
+    if (!match) return undefined;
+
+    const rules =
+      this.ruleEngines.get(match.sport) || this.ruleEngines.get('badminton')!;
+    const initialState = rules.initMatch({
+      matchId: match.id,
+      sport: match.sport,
+      gameMode: match.gameMode,
+      category: match.category,
+      teams: {
+        home: {
+          name: match.teams.home.name,
+          players: match.teams.home.players,
+        },
+        away: {
+          name: match.teams.away.name,
+          players: match.teams.away.players,
+        },
+      },
+      pin: match.adminPin,
+    });
+
+    const resetState: MatchState = {
+      ...match,
+      ...initialState,
+      status: 'active',
+      currentSet: 1,
+      sets: [],
+      history: [],
+      teams: {
+        home: { ...match.teams.home, score: 0, setsWon: 0, challenges: 2 },
+        away: { ...match.teams.away, score: 0, setsWon: 0, challenges: 2 },
+      },
+    };
+
+    this.matches.set(matchId, resetState);
+    return resetState;
+  }
+
+  toggleSides(matchId: string): MatchState | undefined {
+    const match = this.matches.get(matchId);
+    if (!match) return undefined;
+
+    match.isFlipped = !match.isFlipped;
     return match;
   }
 }
