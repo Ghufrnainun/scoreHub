@@ -1,0 +1,10 @@
+{
+  "sports": [
+    { "id": "badminton", "name": "Badminton", "enabled": true },
+    { "id": "basketball", "name": "Basketball", "enabled": false },
+    { "id": "volleyball", "name": "Volleyball", "enabled": false },
+    { "id": "tennis", "name": "Tennis", "enabled": false },
+    { "id": "futsal", "name": "Futsal", "enabled": false },
+    { "id": "soccer", "name": "Soccer", "enabled": false }
+  ]
+}

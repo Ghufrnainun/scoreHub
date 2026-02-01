@@ -6,6 +6,8 @@ import { MatchManager, MatchState, MatchRole } from './match-manager';
 
 const PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const ADMIN_PIN = process.env.ADMIN_PIN || '';
+const GLOBAL_ADMIN_PIN = process.env.ADMIN_PIN;
 
 const app = express();
 app.use(cors({ origin: CORS_ORIGIN }));
@@ -21,9 +23,37 @@ const io = new Server(httpServer, {
 
 const matchManager = new MatchManager();
 
+const getSafeMatch = (match: MatchState, role?: MatchRole) => {
+  const { adminPin, refereeToken, ...safeMatch } = match;
+  return safeMatch;
+};
+
 // REST API Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+app.use('/api/admin', (req, res, next) => {
+  if (!ADMIN_PIN) {
+    return next();
+  }
+  const provided = req.header('x-admin-pin');
+  if (!provided || provided !== ADMIN_PIN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+});
+
+app.get('/api/admin/matches', (req, res) => {
+  const matches = matchManager.listMatches().map((m) => ({
+    matchId: m.matchId,
+    sport: m.sport,
+    status: m.status,
+    teams: { home: m.teams.home.name, away: m.teams.away.name },
+    scores: { home: m.teams.home.score, away: m.teams.away.score },
+    updatedAt: Date.now(),
+  }));
+  res.json(matches);
 });
 
 app.get('/api/matches', (req, res) => {
@@ -77,7 +107,7 @@ app.post('/api/matches', (req, res) => {
     sport,
     teams: { home: homeTeam, away: awayTeam },
     pin,
-    templateId: templateId || 'bwf-default',
+    templateId: templateId || 'modern',
     gameMode: gameMode || 'single',
     category,
   });
@@ -86,6 +116,7 @@ app.post('/api/matches', (req, res) => {
     matchId: match.matchId,
     status: match.status,
     message: 'Match created',
+    refereeToken: match.refereeToken,
   });
 });
 
@@ -118,7 +149,7 @@ app.delete('/api/matches/:id', (req, res) => {
 
 // Socket authentication middleware
 io.use((socket, next) => {
-  const { matchId, role, pin } = socket.handshake.auth;
+  const { matchId, role, pin, token } = socket.handshake.auth;
 
   if (!matchId) {
     return next(new Error('Match ID required'));
@@ -129,11 +160,20 @@ io.use((socket, next) => {
     return next(new Error('Invalid role'));
   }
 
-  // For admin/referee, validate PIN
-  if (role !== 'display') {
-    const match = matchManager.getMatch(matchId);
-    if (match && match.adminPin !== pin) {
+  const match = matchManager.getMatch(matchId);
+
+  if (role === 'admin') {
+    const expectedPin = GLOBAL_ADMIN_PIN || match?.adminPin;
+    if (expectedPin && expectedPin !== pin) {
       return next(new Error('Invalid PIN'));
+    }
+  }
+
+  if (role === 'referee') {
+    const tokenOk = token && match?.refereeToken === token;
+    const pinOk = match?.adminPin && match.adminPin === pin;
+    if (!tokenOk && !pinOk) {
+      return next(new Error('Invalid referee token'));
     }
   }
 
@@ -153,7 +193,7 @@ io.on('connection', (socket: Socket) => {
   // Send current state on connect
   const match = matchManager.getMatch(matchId);
   if (match) {
-    socket.emit('match:state', match);
+    socket.emit('match:state', getSafeMatch(match, role));
   }
 
   // Handle match creation (admin only)
@@ -180,12 +220,12 @@ io.on('connection', (socket: Socket) => {
           away: data.teams.away,
         },
         pin: data.pin,
-        templateId: data.templateId || 'default',
+        templateId: data.templateId || 'modern',
         gameMode: data.gameMode,
         category: data.category,
       });
 
-      io.to(matchId).emit('match:state', match);
+      io.to(matchId).emit('match:state', getSafeMatch(match, role));
     },
   );
 
@@ -200,21 +240,25 @@ io.on('connection', (socket: Socket) => {
 
       const match = matchManager.updateScore(matchId, data.team, data.delta);
       if (match) {
-        io.to(matchId).emit('match:state', match);
+        io.to(matchId).emit('match:state', getSafeMatch(match, role));
+      } else {
+        socket.emit('error:action_failed', 'Match not found or finished');
       }
     },
   );
 
   // Handle point (rally winner - referee preferred input)
-  socket.on('point', (data: { winner: 'home' | 'away' }) => {
+  socket.on('point', (data: { winner: 'home' | 'away'; value?: number }) => {
     if (role !== 'referee' && role !== 'admin') {
       socket.emit('error:permission', 'Only referee can award points');
       return;
     }
 
-    const match = matchManager.awardPoint(matchId, data.winner);
+    const match = matchManager.awardPoint(matchId, data.winner, data.value);
     if (match) {
-      io.to(matchId).emit('match:state', match);
+      io.to(matchId).emit('match:state', getSafeMatch(match, role));
+    } else {
+      socket.emit('error:action_failed', 'Match not found or finished');
     }
   });
 
@@ -226,7 +270,7 @@ io.on('connection', (socket: Socket) => {
 
     const match = matchManager.useChallenge(matchId, data.team);
     if (match) {
-      io.to(matchId).emit('match:state', match);
+      io.to(matchId).emit('match:state', getSafeMatch(match, role));
     }
   });
 
@@ -238,7 +282,7 @@ io.on('connection', (socket: Socket) => {
 
     const match = matchManager.toggleSides(matchId);
     if (match) {
-      io.to(matchId).emit('match:state', match);
+      io.to(matchId).emit('match:state', getSafeMatch(match, role));
     }
   });
 
@@ -250,7 +294,7 @@ io.on('connection', (socket: Socket) => {
 
     const match = matchManager.resetMatch(matchId);
     if (match) {
-      io.to(matchId).emit('match:state', match);
+      io.to(matchId).emit('match:state', getSafeMatch(match, role));
     }
   });
 
@@ -263,7 +307,7 @@ io.on('connection', (socket: Socket) => {
 
     const match = matchManager.undo(matchId);
     if (match) {
-      io.to(matchId).emit('match:state', match);
+      io.to(matchId).emit('match:state', getSafeMatch(match, role));
     } else {
       socket.emit('error:undo', 'Nothing to undo');
     }

@@ -1,6 +1,11 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { Barlow, Barlow_Condensed } from 'next/font/google';
+import {
+  Barlow,
+  Barlow_Condensed,
+  Bebas_Neue,
+  Literata,
+} from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
@@ -14,12 +19,23 @@ const barlowCondensed = Barlow_Condensed({
   weight: ['600', '700'],
   variable: '--font-display',
 });
+const bebas = Bebas_Neue({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-bebas',
+});
+const literata = Literata({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-literata',
+});
 
 export const metadata: Metadata = {
   title: 'Sports Scoreboard System',
   description: 'Real-time scoreboard system for live sports events',
   generator: 'v0.app',
   icons: {
+    icon: '/scorehub-logo.svg',
     icon: [
       {
         url: '/icon-light-32x32.png',
@@ -36,7 +52,7 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
-}
+};
 
 export default function RootLayout({
   children,
@@ -46,7 +62,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${barlow.className} ${barlowCondensed.variable} antialiased`}
+        className={`${barlow.className} ${barlowCondensed.variable} ${bebas.variable} ${literata.variable} antialiased`}
       >
         <a
           href="#main-content"

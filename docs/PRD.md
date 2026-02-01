@@ -1,6 +1,6 @@
-# Product Requirements Document (PRD)
+﻿# Product Requirements Document (PRD)
 
-**Status:** Implementation-aligned spec (updated **January 30, 2026**)
+**Status:** Implementation-aligned spec (updated **February 1, 2026**)
 
 ## Sistem Scoreboard Real-time Berbasis Web (Badminton First)
 
@@ -41,23 +41,23 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ---
 
-## 4. Scope Produk (Sesuai Implementasi Saat Ini)
+## 4. Scope Produk (Target Sistem)
 
-### 4.1 In Scope (V1 - Implemented)
+### 4.1 In Scope (V1 - Target)
 
-- Fokus olahraga: **Badminton**
-- Web controller (input skor)
+- Multi-sport: **Badminton, Basket, Voli, Tenis, Futsal, Sepakbola**
+- Web controller (input skor) untuk tiap sport
 - Web display (scoreboard fullscreen) di `/match/[id]/display`
 - Real-time update (tanpa refresh)
-- Single match aktif (single lapangan)
-- Single/double via kategori (MS/WS/MD/WD/XD)
-- **Best of 3** (fixed)
-- Serve indicator (berdasarkan skor server; rotasi doubles belum full rule)
+- **Multi-match / multi-court** (lebih dari 1 match aktif)
+- Template per olahraga (2-3 template default / sport)
 - Undo multi-step (disimpan history hingga 50 state)
+- Referee link per match (token) tanpa login untuk wasit
+- Audit log level poin (tiap aksi tercatat)
 
 ### 4.2 Out of Scope (Belum Diimplementasikan)
 
-- Template olahraga lain (futsal, basket, voli, e-sport)
+- Template lintas-olahraga (global template library)
 - Hardware scoreboard fisik
 - Integrasi broadcast TV / overlay streaming
 - Statistik lanjutan (shot, foul detail)
@@ -65,6 +65,7 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 - Interval timer 11 poin & break antar set
 - Best of 5
 - Manual end set / manual edit skor via UI
+- Realtime moderation dashboard (review audit log langsung)
 
 ---
 
@@ -86,15 +87,17 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ---
 
-## 6. Fitur Utama (Core Features - Badminton)
+## 6. Fitur Utama (Core Features - Multi Sport)
 
 ### 6.1 Match Setup
 
 - Buat match baru via landing page (auto-generate matchId)
-- Set kategori: MS / WS / MD / WD / XD (menentukan single/double)
-- Format: **Best of 3 only**
+- Pilih sport (badminton/basket/voli/tenis/futsal/sepakbola)
+- Pilih template **per olahraga**
+- Kategori sesuai sport (contoh: badminton MS/WS/MD/WD/XD)
 - Set nama tim dan pemain (home/away)
-- PIN admin/referee wajib saat create match
+- Admin akses via **PIN global**
+- Generate **referee link** per match (token unik)
 
 ### 6.2 Score Control (Rally-based)
 
@@ -135,7 +138,7 @@ Konfigurasi tampilan memiliki event realtime, tetapi display saat ini belum mene
 
 ### 7.1 Template Scoreboard (V1)
 
-- Badminton (BWF style) melalui template id `bwf-default`
+- Badminton (BWF style) melalui template id `modern`
 
 Template menentukan:
 
@@ -154,18 +157,18 @@ Template menentukan:
 ## 8. Arsitektur Sistem (High Level)
 
 ```
-[Controller Web]
-       ->
-[Realtime Server]
-       ->
-[Display Web]
-       -> HDMI
-[TV / Videotron]
+[Controller Web]     [Admin Console]
+         \                /
+          -> [Convex: DB + Realtime]
+                    |
+              [Display Web]
+                    -> HDMI
+              [TV / Videotron]
 ```
 
-- Komunikasi real-time menggunakan Socket.io (WebSocket + fallback)
-- Semua client terhubung ke satu server
-- REST API untuk create/list/get/delete match
+- Realtime dan state authoritative disimpan di Convex
+- Client subscribe ke query (live updates), perubahan via mutation
+- Socket.io server tetap tersedia selama transisi
 
 ---
 
@@ -208,6 +211,7 @@ Bagian ini mendefinisikan **cara wasit berinteraksi dengan sistem** saat pertand
 - Wasit **tidak input angka**, hanya memilih **pemenang rally**
 - Semua logic (serve, set, rotasi) diproses server
 - UI tahan salah pencet (undo & confirm)
+- Akses via **referee link** (token) tanpa login
 
 ### 11.2 Model Input Wasit (Core Concept)
 
@@ -283,12 +287,32 @@ Sistem menggunakan role sederhana untuk mengatur akses:
 | Role    | Hak Akses                                                                        |
 | ------- | -------------------------------------------------------------------------------- |
 | Admin   | Buat match, reset match, pilih template, ubah konfigurasi tampilan, assign wasit |
-| Wasit   | Input skor, kontrol timer (endpoint tersedia, belum aktif)                         |
-| Display | Read-only, tidak dapat mengirim event                                             |
+| Wasit   | Input skor, kontrol timer (endpoint tersedia, belum aktif)                       |
+| Display | Read-only, tidak dapat mengirim event                                            |
 
-- Akses controller dilindungi **PIN tunggal** (dipakai admin/referee)
-- Validasi role dilakukan di **server**
+- Admin akses via **PIN global**
+- Wasit akses via **referee link** per match (token)
+- Validasi role dilakukan di **server/Convex functions**
 - Display read-only (tanpa PIN)
+
+### 12.2 Referee Link (Token) - Per Match
+
+- Token unik dibuat oleh admin untuk tiap match
+- Token memiliki masa berlaku (default: sampai match selesai; opsional 24 jam)
+- Token bisa dicabut/di-rotate jika bocor
+- Token hanya valid untuk 1 match
+
+### 12.3 Audit Log (Level Poin)
+
+- Semua aksi wasit tercatat (point, undo, timer)
+- Log menyimpan **before/after score**, timestamp, dan `actorTokenId`
+- Admin dapat melihat riwayat log setelah pertandingan (post-match review)
+
+### 12.4 Onboarding Per Role
+
+- Setelah masuk, user pilih role (Admin/Wasit)
+- Onboarding ringan 1 layar untuk tiap role
+- Preferensi role disimpan untuk device yang sama
 
 ---
 
@@ -371,14 +395,14 @@ Nice to have:
 
 ### Struktur Halaman (Draft Sections)
 
-1) Hero (headline + subheadline + CTA utama)
-2) Problem → Solution (before/after)
-3) Fitur utama (rally input, serve indicator, set management, realtime display)
-4) Alur penggunaan (Create → Control → Display)
-5) Showcase / screenshot (control & display)
-6) Use cases (kampus, klub, venue)
-7) CTA penutup + link demo
-8) Footer (kontak, docs, status)
+1. Hero (headline + subheadline + CTA utama)
+2. Problem → Solution (before/after)
+3. Fitur utama (rally input, serve indicator, set management, realtime display)
+4. Alur penggunaan (Create → Control → Display)
+5. Showcase / screenshot (control & display)
+6. Use cases (kampus, klub, venue)
+7. CTA penutup + link demo
+8. Footer (kontak, docs, status)
 
 ### CTA (Final)
 
@@ -419,8 +443,34 @@ Nice to have:
 ## 17. Catatan
 
 - Browser digunakan sebagai media render display, bukan sebagai keterbatasan sistem, demi fleksibilitas dan reliability di lapangan.
-- Sistem **tidak mewajibkan database** pada versi awal; state match dapat disimpan di memory server selama event berlangsung.
-- Database atau persistent storage hanya diperlukan untuk kebutuhan lanjutan seperti history match atau multi venue.
+- Sistem **menggunakan Convex** untuk state match dan audit log agar konsisten lintas device.
+- Penyimpanan persistent diperlukan untuk history match dan akses multi-device selama event.
+
+---
+
+## 23. Multi-Sport Framework (Planned)
+
+### 23.1 Sport Registry
+
+- Setiap sport punya definisi rule, format, dan template default
+- Contoh:
+  - Badminton: best of 3, 21 poin, win by 2, cap 30
+  - Basket: quarter, game clock, team foul, 2/3 points
+  - Voli: best of 3/5, rally point 25, win by 2
+  - Tenis: set, game, point (15/30/40/ad)
+  - Futsal/Sepakbola: half, game clock, goal
+
+### 23.2 Template per Sport
+
+- Tiap sport punya 2-3 template default
+- Template hanya muncul untuk sport yang sesuai
+- Template mengatur layout, posisi skor, timer, dan indikator spesifik sport
+
+### 23.3 Multi-Match Dashboard
+
+- Admin bisa melihat semua match aktif
+- Filter per sport / court
+- Aksi cepat: buka control, copy referee link, open display
 
 ---
 
@@ -468,14 +518,24 @@ Match State adalah single source of truth yang disimpan di server (in-memory). S
   "gameMode": "double",
   "category": "MD",
   "teams": {
-    "home": { "name": "Team A", "score": 12, "players": [{ "name": "A1" }, { "name": "A2" }], "setsWon": 0 },
-    "away": { "name": "Team B", "score": 10, "players": [{ "name": "B1" }, { "name": "B2" }], "setsWon": 0 }
+    "home": {
+      "name": "Team A",
+      "score": 12,
+      "players": [{ "name": "A1" }, { "name": "A2" }],
+      "setsWon": 0
+    },
+    "away": {
+      "name": "Team B",
+      "score": 10,
+      "players": [{ "name": "B1" }, { "name": "B2" }],
+      "setsWon": 0
+    }
   },
   "currentSet": 1,
   "sets": [{ "home": 21, "away": 18 }],
   "server": "home",
   "serviceCourt": "right",
-  "displayConfig": { "templateId": "bwf-default" }
+  "displayConfig": { "templateId": "modern" }
 }
 ```
 
@@ -483,7 +543,7 @@ Match State adalah single source of truth yang disimpan di server (in-memory). S
 
 ## 20. Realtime Communication (Socket Events)
 
-Menggunakan Socket.io (WebSocket fallback polling).
+Migrasi ke Convex (query/mutation realtime). Socket.io tetap tersedia selama transisi.
 
 ### Client -> Server (Implemented)
 
@@ -509,20 +569,20 @@ Menggunakan Socket.io (WebSocket fallback polling).
 
 ## 21. Permission Matrix (Implemented)
 
-| Event            | Admin | Wasit | Display |
-| ---------------- | ----- | ----- | ------- |
-| match:create     | YES   | NO    | NO      |
-| score:update     | YES   | YES   | NO      |
-| point            | YES   | YES   | NO      |
-| undo             | YES   | YES   | NO      |
-| challenge:use    | YES   | YES   | NO      |
-| timer:start      | YES   | YES   | NO      |
-| timer:pause      | YES   | YES   | NO      |
-| timer:reset      | YES   | YES   | NO      |
-| config:update    | YES   | NO    | NO      |
-| template:change  | YES   | NO    | NO      |
-| serve:change     | YES   | YES   | NO      |
-| match:state      | YES   | YES   | YES     |
+| Event           | Admin | Wasit | Display |
+| --------------- | ----- | ----- | ------- |
+| match:create    | YES   | NO    | NO      |
+| score:update    | YES   | YES   | NO      |
+| point           | YES   | YES   | NO      |
+| undo            | YES   | YES   | NO      |
+| challenge:use   | YES   | YES   | NO      |
+| timer:start     | YES   | YES   | NO      |
+| timer:pause     | YES   | YES   | NO      |
+| timer:reset     | YES   | YES   | NO      |
+| config:update   | YES   | NO    | NO      |
+| template:change | YES   | NO    | NO      |
+| serve:change    | YES   | YES   | NO      |
+| match:state     | YES   | YES   | YES     |
 
 ---
 
@@ -534,7 +594,7 @@ Template saat ini hanya berupa **id** yang disimpan di `displayConfig`. Belum ad
 
 ```json
 {
-  "id": "bwf-default",
+  "id": "modern",
   "sport": "badminton",
   "layout": "single-screen-bwf",
   "mode": "single | double",
@@ -629,3 +689,34 @@ Semua template mendukung konfigurasi visual **real-time**:
   }
 }
 ```
+
+---
+
+## 24. Future Roadmap: Phase 2 (Backend Modernization)
+
+Target: Migrasi penuh dari custom Socket.io server ke **Convex**.
+
+### 24.1 Motivation
+
+- **Serverless**: Tidak perlu manage VPS/EC2.
+- **Auto-scale**: Handle ribuan user concurrent tanpa setup load balancer.
+- **Consistency**: Database & Realtime sync jadi satu engine (ACID compliant).
+
+### 24.2 Migration Steps
+
+1.  **Data Modeling (Schema)**
+    - Port `MatchState` (in-memory Map) ke Database Schema (`matches` table).
+    - Port `SportRules` logic menjadi Convex Mutations.
+
+2.  **Core Logic Rewrite**
+    - Rewrite `server/match-manager.ts` -> `convex/matches.ts`.
+    - Rewrite `socket.on` events -> `convex/actions.ts`.
+
+3.  **Client Integration**
+    - Ganti `socket.emit('score:update')` -> `useMutation(api.matches.updateScore)`.
+    - Ganti `socket.on('match:state')` -> `useQuery(api.matches.get)`.
+
+4.  **Deployment**
+    - Frontend: Vercel / Cloudflare Pages.
+    - Backend: Convex Cloud (Fully Managed).
+

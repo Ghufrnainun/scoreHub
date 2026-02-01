@@ -1,5 +1,12 @@
 export type MatchRole = 'admin' | 'referee' | 'display';
 export type TeamSide = 'home' | 'away';
+export type SportId =
+  | 'badminton'
+  | 'basketball'
+  | 'volleyball'
+  | 'tennis'
+  | 'futsal'
+  | 'soccer';
 
 export interface Player {
   name: string;
@@ -11,6 +18,8 @@ export interface TeamState {
   score: number;
   setsWon: number;
   challenges: number;
+  country?: string;
+  logo?: string;
   // playerPositions[0] is in Even (Right) court, playerPositions[1] is in Odd (Left) court
   // Stores the index of the player in team.players array
   playerPositions: number[];
@@ -53,6 +62,7 @@ export interface MatchState {
 
   // SaaS Features
   adminPin?: string;
+  refereeToken?: string;
   ads?: {
     active: boolean;
     currentAssetId?: string;
@@ -61,13 +71,23 @@ export interface MatchState {
     templateId: string;
     primaryColor?: string;
   };
+
+  // Sport-specific extended state
+  sportState?: Record<string, any>;
 }
 
 export interface SportRules {
   initMatch(config: any): Partial<MatchState>;
-  awardPoint(state: MatchState, winner: TeamSide): MatchState;
+  awardPoint(state: MatchState, winner: TeamSide, value?: number): MatchState;
   getServeState(state: MatchState): {
     server: TeamSide;
     court: 'left' | 'right';
   };
+}
+
+export interface SportDefinition {
+  id: SportId;
+  name: string;
+  enabled: boolean;
+  templates: string[];
 }

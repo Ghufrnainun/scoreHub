@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,7 +15,7 @@ const SectionHeader = ({
 }) => (
   <h2
     id={id}
-    className="text-2xl font-black uppercase tracking-tight text-foreground mt-12 mb-6 border-b pb-2 border-primary/20"
+    className="text-2xl font-black uppercase tracking-tight text-foreground mt-12 mb-6 border-b pb-2 border-primary/20 scroll-mt-24"
   >
     {children}
   </h2>
@@ -38,8 +39,14 @@ export default function DocsPage() {
           href="/"
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
-          <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black text-xs uppercase">
-            MP
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Image
+              src="/scorehub-logo.svg"
+              alt="Scorehub logo"
+              width={20}
+              height={20}
+              className="h-4 w-4"
+            />
           </div>
           <span className="font-display text-sm uppercase tracking-widest font-black">
             ScoreHub
@@ -47,12 +54,15 @@ export default function DocsPage() {
         </Link>
         <nav className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/">Back to Lobby</Link>
+            <Link href="/create">Back to Lobby</Link>
           </Button>
         </nav>
       </header>
 
-      <main className="container mx-auto max-w-4xl p-6 lg:p-12">
+      <main
+        id="main-content"
+        className="container mx-auto max-w-4xl p-6 lg:p-12"
+      >
         <div className="mb-12">
           <h1 className="text-4xl lg:text-6xl font-black tracking-tighter uppercase mb-4">
             System Documentation
@@ -239,8 +249,8 @@ export default function DocsPage() {
             <SubHeader>Singles (MS/WS)</SubHeader>
             <p className="text-muted-foreground mb-4">
               The server serves from the **Right service court** when their
-              score is **Even** (0, 2, 4...) and from the **Left service court**
-              when their score is **Odd** (1, 3, 5...).
+              score is **Even** (0, 2, 4…) and from the **Left service court**
+              when their score is **Odd** (1, 3, 5…).
             </p>
 
             <SubHeader>Doubles (MD/WD/XD)</SubHeader>
@@ -287,8 +297,14 @@ export default function DocsPage() {
         )}
 
         <footer className="mt-24 pt-8 border-t border-border flex flex-col items-center gap-4 text-center">
-          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-black text-xs">
-            MP
+          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+            <Image
+              src="/scorehub-logo.svg"
+              alt="Scorehub logo"
+              width={22}
+              height={22}
+              className="h-5 w-5"
+            />
           </div>
           <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">
             Version 2.4.0 &bull; Tournament System Control

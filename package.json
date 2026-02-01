@@ -9,7 +9,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "lint": "eslint .",
     "start": "next start",
-    "start:server": "tsx server/index.ts"
+    "start:server": "tsx server/index.ts",
+    "start:all": "concurrently \"npm run start\" \"npm run start:server\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

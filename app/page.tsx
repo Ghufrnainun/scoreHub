@@ -1,923 +1,838 @@
 'use client';
 
-import { useState, useEffect, type MouseEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import Image from 'next/image';
+import { Bebas_Neue, Literata } from 'next/font/google';
 
-// --- ICONS ---
-const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    {mode === 'dark' ? (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-      />
-    ) : (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-      />
-    )}
-  </svg>
-);
+const displayFont = Bebas_Neue({
+  subsets: ['latin'],
+  weight: ['400'],
+});
 
-const BadmintonIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M5 5l7 7m0 0l4 4m-4-4l6-6M8 8l-3 3"
-    />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M15.5 15.5l3 3m-1.5-4.5a2.12 2.12 0 013 3"
-    />
-  </svg>
-);
+const bodyFont = Literata({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
 
-const TennisIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="6" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 9c2 2 6 2 8 0m-8 6c2-2 6-2 8 0"
-    />
-  </svg>
-);
-
-const VolleyballIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="9" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M3 12a9 9 0 009 9m0-18a9 9 0 019 9M4.5 7.5c4 1.5 6.5 5.5 7.5 12"
-    />
-  </svg>
-);
-
-const UserIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-    />
-  </svg>
-);
-
-const ChevronDownIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 9l-7 7-7-7"
-    />
-  </svg>
-);
-
-function generateMatchId(): string {
-  return `MATCH-${Date.now().toString(36).toUpperCase()}`;
-}
-
-type SportType = 'badminton' | 'tennis' | 'volleyball';
-
-const SPORTS = [
-  {
-    id: 'badminton',
-    name: 'Badminton',
-    icon: BadmintonIcon,
-    available: true,
-  },
-  {
-    id: 'tennis',
-    name: 'Tennis',
-    icon: TennisIcon,
-    available: false,
-  }, // Future
-  {
-    id: 'volleyball',
-    name: 'Volleyball',
-    icon: VolleyballIcon,
-    available: false,
-  }, // Future
+const highlights = [
+  { label: 'Latency', value: '< 1s' },
+  { label: 'Mode', value: 'LAN Ready' },
+  { label: 'Undo', value: '50 states' },
 ];
 
-export default function ScoreboardLanding() {
-  const router = useRouter();
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+const signatureFeatures = [
+  {
+    title: 'Rally-first input',
+    description:
+      'Wasit cukup pilih pemenang rally. Sistem otomatis atur skor, server, dan set.',
+  },
+  {
+    title: 'Display fullscreen',
+    description:
+      'Tampilan LED-style untuk TV/videotron, realtime tanpa refresh.',
+  },
+  {
+    title: 'Aturan BWF',
+    description:
+      'Best of 3, 21 poin, win by 2, cap 30. End set & match otomatis.',
+  },
+  {
+    title: 'Offline-ready',
+    description: 'Jalan di LAN/WiFi lokal. Tidak wajib internet saat event.',
+  },
+];
 
-  // Form State
-  const [matchIdInput, setMatchIdInput] = useState('');
-  const [pinInput, setPinInput] = useState('');
+const flowSteps = [
+  {
+    id: 'create',
+    label: 'Create',
+    title: 'Start Match',
+    description: 'Buat match baru, pilih kategori (MS/WS/MD/WD/XD), set PIN.',
+  },
+  {
+    id: 'control',
+    label: 'Control',
+    title: 'Input Rally',
+    description: 'Wasit input via web controller. Undo aman sampai 50 state.',
+  },
+  {
+    id: 'display',
+    label: 'Display',
+    title: 'Show on Screen',
+    description:
+      'Scoreboard fullscreen untuk TV/videotron dengan serve indicator.',
+  },
+];
 
-  // Create Match State
-  const [selectedSport, setSelectedSport] = useState<SportType>('badminton');
-  const [createPin, setCreatePin] = useState('');
+const useCases = [
+  {
+    title: 'Venue',
+    description: 'Skor rapi untuk sewa lapangan, liga lokal, sparring rutin.',
+  },
+  {
+    title: 'Perorangan',
+    description: 'Pelatih/komunitas kecil yang butuh tampilan profesional.',
+  },
+  {
+    title: 'Event',
+    description: 'Turnamen skala kecil-menengah dengan setup cepat.',
+  },
+];
 
-  // Category logic replaces simple gameMode toggle
-  type MatchCategory = 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
-  const [category, setCategory] = useState<MatchCategory>('MS');
+const faqs = [
+  {
+    q: 'Apakah butuh akun untuk mulai?',
+    a: 'Belum. Kamu bisa langsung Start Match tanpa login.',
+  },
+  {
+    q: 'Bisa dipakai tanpa internet?',
+    a: 'Ya. Scorehub dirancang untuk LAN/WiFi lokal.',
+  },
+  {
+    q: 'Berapa match gratis yang bisa aktif?',
+    a: 'Free tier: 1 match aktif. Pro tier (planned) untuk multi-match.',
+  },
+  {
+    q: 'Apakah ada history match?',
+    a: 'Belum. State disimpan in-memory untuk match aktif.',
+  },
+];
 
-  // Computed gameMode based on category
-  const gameMode = ['MD', 'WD', 'XD'].includes(category) ? 'double' : 'single';
+function StatPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-black/70 shadow-sm">
+      {label}
+      <span className="ml-2 text-black tabular-nums">{value}</span>
+    </div>
+  );
+}
 
-  const [homePlayers, setHomePlayers] = useState(['', '']);
-  const [awayPlayers, setAwayPlayers] = useState(['', '']);
-  const [homeTeam, setHomeTeam] = useState(''); // Club name
-  const [awayTeam, setAwayTeam] = useState(''); // Club name
-  const [showAdvanced, setShowAdvanced] = useState(false);
+function SectionHeading({
+  kicker,
+  title,
+  description,
+}: {
+  kicker: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="text-center">
+      <p className="text-[11px] font-bold uppercase tracking-[0.5em] text-black/50">
+        {kicker}
+      </p>
+      <h2
+        className={`${displayFont.className} mt-4 text-4xl uppercase tracking-[0.08em] text-black text-balance sm:text-5xl`}
+      >
+        {title}
+      </h2>
+      <p className="mx-auto mt-3 max-w-2xl text-sm text-black/70 text-pretty">
+        {description}
+      </p>
+    </div>
+  );
+}
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const canJoinDisplay = matchIdInput.trim().length > 0;
-  const canJoinReferee =
-    matchIdInput.trim().length > 0 && pinInput.trim().length >= 4;
+function FeatureCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+      <h3
+        className={`${displayFont.className} text-2xl uppercase tracking-[0.06em]`}
+      >
+        {title}
+      </h3>
+      <p className="mt-3 text-sm text-black/70 text-pretty">{description}</p>
+    </div>
+  );
+}
 
-  // Theme Logic
-  useEffect(() => {
-    const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (saved) setTheme(saved);
-  }, []);
+export default function LandingPage() {
+  const [activeStep, setActiveStep] = useState(flowSteps[0]);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
-
-  // Input Handlers
-  const handlePlayerChange = (
-    team: 'home' | 'away',
-    index: number,
-    value: string,
-  ) => {
-    if (team === 'home') {
-      const newPlayers = [...homePlayers];
-      newPlayers[index] = value;
-      setHomePlayers(newPlayers);
-    } else {
-      const newPlayers = [...awayPlayers];
-      newPlayers[index] = value;
-      setAwayPlayers(newPlayers);
-    }
-  };
-
-  const handleCreateMatch = async () => {
-    if (selectedSport !== 'badminton') {
-      setError('Only Badminton is supported in this beta version.');
-      return;
-    }
-
-    if (!createPin || createPin.length < 4) {
-      setError('PIN must be at least 4 digits');
-      return;
-    }
-
-    // Validation
-    const p1Home = homePlayers[0].trim();
-    const p1Away = awayPlayers[0].trim();
-
-    if (!p1Home || !p1Away) {
-      setError('Player 1 name is required for both sides');
-      return;
-    }
-
-    if (gameMode === 'double') {
-      if (!homePlayers[1].trim() || !awayPlayers[1].trim()) {
-        setError('Player 2 name is required for doubles');
-        return;
-      }
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    const newMatchId = generateMatchId();
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'}/api/matches`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            matchId: newMatchId,
-            sport: selectedSport,
-            gameMode,
-            category, // Pass category to backend
-            teams: {
-              home: {
-                name: homeTeam || homePlayers[0],
-                players:
-                  gameMode === 'single'
-                    ? [{ name: homePlayers[0] }]
-                    : [{ name: homePlayers[0] }, { name: homePlayers[1] }],
-              },
-              away: {
-                name: awayTeam || awayPlayers[0],
-                players:
-                  gameMode === 'single'
-                    ? [{ name: awayPlayers[0] }]
-                    : [{ name: awayPlayers[0] }, { name: awayPlayers[1] }],
-              },
-            },
-            pin: createPin,
-            templateId: 'bwf-default',
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create match');
-      }
-
-      router.push(
-        `/match/${newMatchId}/control?role=admin&pin=${encodeURIComponent(createPin)}`,
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create match');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleJoinMatch = (role: 'referee' | 'display') => {
-    if (!matchIdInput) {
-      setError('Please enter Match ID');
-      return;
-    }
-
-    if (role === 'referee') {
-      if (!pinInput || pinInput.length < 4) {
-        setError('PIN required for referee access');
-        return;
-      }
-      router.push(
-        `/match/${matchIdInput}/control?role=referee&pin=${encodeURIComponent(pinInput)}`,
-      );
-    } else {
-      router.push(`/match/${matchIdInput}/display`);
-    }
-  };
-
-  const handleJoinLinkClick = (
-    role: 'referee' | 'display',
-    event: MouseEvent<HTMLAnchorElement>,
-  ) => {
-    if (role === 'referee') {
-      if (!canJoinReferee) {
-        event.preventDefault();
-        handleJoinMatch('referee');
-      }
-    } else if (!canJoinDisplay) {
-      event.preventDefault();
-      handleJoinMatch('display');
-    }
-  };
+  const flowIndex = useMemo(() => {
+    return flowSteps.findIndex((step) => step.id === activeStep.id);
+  }, [activeStep.id]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300 relative overflow-hidden">
-      <div
-        className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[900px] -translate-x-1/2 opacity-40 blur-3xl"
-        aria-hidden="true"
+    <div
+      className={`${bodyFont.className} min-h-screen bg-[#F8FAFC] text-black`}
+      style={
+        {
+          '--amber': '#F59E0B',
+          '--ink': '#111827',
+          '--paper': '#F8FAFC',
+        } as React.CSSProperties
+      }
+    >
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-black focus:px-4 focus:py-2 focus:text-xs focus:font-bold focus:text-white"
       >
-        <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,rgba(37,99,235,0.28),rgba(59,130,246,0.12),transparent_70%)]" />
-      </div>
-      {/* Top Bar */}
-      <header className="h-16 border-b bg-card/80 backdrop-blur px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black text-sm tracking-wide">
-            MP
-          </div>
-          <div>
-            <h1 className="font-display text-sm leading-none uppercase tracking-[0.2em]">
-              MatchPoint
-            </h1>
-            <span className="text-[10px] font-body text-muted-foreground uppercase tracking-widest">
-              Control Suite
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
-            Workspace
-            <span className="h-1 w-1 rounded-full bg-muted-foreground/60" />
-            Arena Ops
-          </div>
-          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground/80">
-            Plan: Studio
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="text-xs font-bold uppercase tracking-widest hidden sm:flex"
-          >
-            <Link href="/docs">Guide</Link>
-          </Button>
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            type="button"
-          >
-            <ThemeToggleIcon mode={theme} />
-          </button>
-        </div>
-      </header>
+        Skip to content
+      </a>
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.35),transparent_70%)] blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-120px] left-[-10%] h-[360px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.18),transparent_70%)] blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-24 h-[380px] w-[900px] -translate-x-1/2 border border-black/10 bg-[linear-gradient(120deg,rgba(0,0,0,0.04),transparent)] opacity-70" />
 
-      <main
-        id="main-content"
-        className="container mx-auto max-w-6xl p-4 lg:p-8"
-      >
-        {/* Error Banner */}
-        {error && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mb-6 p-3 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 text-sm font-bold rounded-lg flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            {error}
-          </div>
-        )}
-
-        <section className="mb-8">
-          <div className="relative overflow-hidden rounded-2xl border bg-card/80 p-6 lg:p-8">
-            <div
-              className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.15),transparent_65%)]"
-              aria-hidden="true"
-            />
-            <div className="relative">
-              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
-                Your Arena Workspace
+        <header className="sticky top-0 z-20 border-b border-black/10 bg-white/80 backdrop-blur">
+          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 lg:px-8">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--ink)] text-[var(--amber)]">
+                <Image
+                  src="/scorehub-logo.svg"
+                  alt="Scorehub logo"
+                  width={20}
+                  height={20}
+                  className="h-5 w-5"
+                />
               </div>
-              <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="font-display text-3xl lg:text-4xl font-black tracking-tight text-foreground">
-                    Match Control Hub
-                  </h2>
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Launch new matches fast, keep officials synced, and run
-                    broadcast-ready displays from one console.
-                  </p>
+              <div>
+                <p
+                  className={`${displayFont.className} text-sm uppercase tracking-[0.35em]`}
+                >
+                  Scorehub
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-black/50">
+                  Badminton Realtime
+                </p>
+              </div>
+            </div>
+
+            <nav className="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-[0.35em] text-black/60">
+              {[
+                { label: 'Fitur', href: '#features' },
+                { label: 'Alur', href: '#flow' },
+                { label: 'Pro', href: '#pricing' },
+                { label: 'FAQ', href: '#faq' },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-full px-2 py-1 transition-colors hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/create"
+                className="hidden rounded-full border border-black/20 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-black/70 transition-colors hover:border-black/50 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)] md:inline-flex"
+              >
+                Open Console
+              </Link>
+              <Link
+                href="/create"
+                className="rounded-full bg-[var(--amber)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-black shadow-lg shadow-amber-500/30 transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              >
+                Start Match
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <main id="main-content" className="mx-auto max-w-6xl px-4 lg:px-8">
+          <section className="relative pt-24 pb-20 lg:pt-32 lg:pb-32">
+            <div className="grid gap-16 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+              <div className="flex flex-col items-start pt-8">
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse motion-reduce:animate-none" />
+                  Live Beta
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Active
-                    </div>
-                    <div className="mt-1 text-2xl font-black text-foreground">
-                      1
+
+                <h1
+                  className={`${displayFont.className} mt-8 text-6xl uppercase leading-[0.85] tracking-[0.05em] text-black text-balance sm:text-7xl lg:text-8xl`}
+                >
+                  The Stadium <br />
+                  <span className="text-black/20">Experience,</span> <br />
+                  <span className="text-[var(--amber)]">Anywhere.</span>
+                </h1>
+
+                <p className="mt-8 max-w-lg text-lg leading-relaxed text-black/60 font-medium text-pretty">
+                  Professional badminton scoreboard system.{' '}
+                  <br className="hidden sm:block" />
+                  Realtime via LAN. Controls from your phone.
+                </p>
+
+                <div className="mt-10 flex flex-wrap gap-4">
+                  <Link
+                    href="/create"
+                    className="inline-flex h-14 items-center justify-center rounded-full bg-black px-8 text-[11px] font-bold uppercase tracking-[0.3em] text-white shadow-xl shadow-black/20 transition-[transform,box-shadow,background-color] hover:-translate-y-1 hover:shadow-2xl hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
+                  >
+                    Start Match
+                  </Link>
+                  <a
+                    href="#flow"
+                    className="inline-flex h-14 items-center justify-center rounded-full border border-black/10 px-8 text-[11px] font-bold uppercase tracking-[0.3em] text-black/60 transition-colors hover:border-black/30 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
+                  >
+                    How it works
+                  </a>
+                </div>
+              </div>
+
+              <div className="relative">
+                {/* Abstract Background Elements */}
+                <div className="absolute -right-12 -top-12 h-64 w-64 rounded-full bg-[var(--amber)] opacity-20 blur-[100px]" />
+                <div className="absolute -bottom-12 -left-12 h-64 w-64 rounded-full bg-blue-500 opacity-10 blur-[100px]" />
+
+                {/* Main Visual Anchor - Tilted Display */}
+                <div className="relative z-10 transform transition-transform duration-700 hover:rotate-0 lg:rotate-[-2deg] hover:scale-[1.02]">
+                  <div className="overflow-hidden rounded-3xl border border-black/10 bg-black shadow-2xl shadow-black/20">
+                    <div className="relative aspect-video w-full bg-neutral-900 p-1">
+                      {/* Screen Bezel */}
+                      <div className="h-full w-full rounded-2xl bg-[#000000] overflow-hidden relative flex flex-col font-sans">
+                        {/* Header */}
+                        <div className="h-12 bg-[#111] border-b border-white/10 flex items-center justify-between px-6 shrink-0">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-[#fbbf24] text-black px-1.5 py-0.5 text-[8px] font-bold uppercase rounded-sm tracking-wider">
+                              MS
+                            </div>
+                            <div className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">
+                              Men's Singles
+                            </div>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
+                          </div>
+                        </div>
+
+                        {/* Score Rows */}
+                        <div className="flex-1 flex flex-col">
+                          {/* Home Row */}
+                          <div className="flex-1 border-b border-white/10 flex">
+                            {/* Name Side */}
+                            <div className="flex-1 bg-[#111] flex items-center px-6 relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 animate-pulse motion-reduce:animate-none"></div>
+                              <div className="flex items-center gap-4">
+                                <div className="h-8 w-12 bg-blue-600 rounded-sm relative overflow-hidden border border-white/10 shadow-sm">
+                                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/20"></div>
+                                </div>
+                                <span className="text-white font-bold text-xl uppercase tracking-wider truncate">
+                                  Ginting
+                                </span>
+                                <div className="h-4 w-4 text-[#fbbf24]">
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                  >
+                                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                            {/* Sets & Points */}
+                            <div className="w-16 bg-[#0a0a0a] flex items-center justify-center border-l border-white/5">
+                              <span className="text-2xl font-mono font-bold text-[#fbbf24]/80">
+                                21
+                              </span>
+                            </div>
+                            <div className="w-24 bg-black flex items-center justify-center border-l-2 border-white/10 relative overflow-hidden">
+                              <span className="text-5xl font-mono font-black text-[#4ade80] tracking-tighter tabular-nums relative z-10">
+                                21
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Away Row */}
+                          <div className="flex-1 flex">
+                            {/* Name Side */}
+                            <div className="flex-1 bg-[#111] flex items-center px-6">
+                              <div className="flex items-center gap-4">
+                                <div className="h-8 w-12 bg-red-600 rounded-sm relative overflow-hidden border border-white/10 shadow-sm">
+                                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/20"></div>
+                                </div>
+                                <span className="text-white/40 font-bold text-xl uppercase tracking-wider truncate">
+                                  Axelsen
+                                </span>
+                              </div>
+                            </div>
+                            {/* Sets & Points */}
+                            <div className="w-16 bg-[#0a0a0a] flex items-center justify-center border-l border-white/5">
+                              <span className="text-2xl font-mono font-bold text-[#fbbf24]/80">
+                                15
+                              </span>
+                            </div>
+                            <div className="w-24 bg-black flex items-center justify-center border-l-2 border-white/10">
+                              <span className="text-5xl font-mono font-black text-[#4ade80] tracking-tighter tabular-nums opacity-60">
+                                12
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer Info */}
+                        <div className="h-8 bg-[#0a0a0a] border-t border-white/10 flex items-center justify-center gap-6">
+                          <div className="text-[9px] font-bold text-[#fbbf24] uppercase tracking-[0.2em]">
+                            Set 2
+                          </div>
+                          <div className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">
+                            Court 1
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Displays
+
+                  {/* Floating Element: Controller */}
+                  <div className="absolute -bottom-12 -left-8 w-48 rounded-[24px] border border-black/10 bg-white p-4 shadow-xl lg:-left-12">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="h-1.5 w-8 rounded-full bg-black/10"></div>
+                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none"></div>
                     </div>
-                    <div className="mt-1 text-2xl font-black text-foreground">
-                      2
-                    </div>
-                  </div>
-                  <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Templates
-                    </div>
-                    <div className="mt-1 text-2xl font-black text-foreground">
-                      4
+                    <div className="space-y-2">
+                      <div className="h-12 w-full rounded-xl bg-[var(--amber)] flex items-center justify-center text-[10px] font-bold uppercase tracking-widest shadow-md">
+                        Point INA
+                      </div>
+                      <div className="h-12 w-full rounded-xl bg-black/5 flex items-center justify-center text-[10px] font-bold uppercase tracking-widest text-black/40">
+                        Point JPN
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
-          {/* Primary Column: Create Match (Embedded) */}
-          <section>
-            <div className="mb-6">
-              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
-                Match Builder
-              </div>
-              <h2 className="mt-2 text-3xl font-black text-foreground tracking-tight">
-                Create Match
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Select your sport and configure the match details.
-              </p>
-            </div>
-
-            <Card className="p-6 lg:p-8 border shadow-sm bg-card">
-              {/* Sport Selector (SaaS Style) */}
-              <div className="mb-8">
-                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-3 block tracking-widest">
-                  Select Sport
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {SPORTS.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() =>
-                        s.available && setSelectedSport(s.id as SportType)
-                      }
-                      disabled={!s.available}
-                      aria-pressed={selectedSport === s.id}
-                      aria-disabled={!s.available}
-                      type="button"
-                      className={`
-                        relative group flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-colors transition-shadow
-                        ${
-                          selectedSport === s.id
-                            ? 'border-primary bg-primary/5 shadow-md'
-                            : 'border-transparent bg-secondary'
-                        }
-                        ${!s.available ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:border-primary/50 cursor-pointer'}
-                      `}
-                    >
-                      <span className="text-3xl mb-2">
-                        <s.icon className="w-7 h-7" />
-                      </span>
-                      <span className="text-xs font-bold uppercase tracking-wider">
-                        {s.name}
-                      </span>
-                      {!s.available && (
-                        <span className="absolute top-2 right-2 text-[8px] font-bold bg-muted-foreground/20 text-muted-foreground px-1.5 py-0.5 rounded">
-                          SOON
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Only show config if sport is valid (Badminton for now) */}
-              {selectedSport === 'badminton' && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  {/* Category Toggle */}
-                  <div className="flex justify-center mb-8">
-                    <div className="bg-secondary p-1 rounded-xl flex gap-1 w-full max-w-lg overflow-x-auto">
-                      {(['MS', 'WS', 'MD', 'WD', 'XD'] as MatchCategory[]).map(
-                        (cat) => (
-                          <button
-                            key={cat}
-                            onClick={() => setCategory(cat)}
-                            className={`flex-1 py-3 px-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors transition-shadow min-w-[50px] whitespace-nowrap ${
-                              category === cat
-                                ? 'bg-background shadow-sm text-foreground ring-1 ring-border'
-                                : 'text-muted-foreground hover:text-foreground'
-                            }`}
-                          >
-                            {cat}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Player Inputs - Tournament Style */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                    {/* Home Side */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 pb-2 border-b">
-                        <div className="w-2 h-2 rounded-full bg-[var(--accent-b)]" />{' '}
-                        {/* Red marker */}
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Home Side
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <label htmlFor="home-player-1" className="sr-only">
-                            Home player 1
-                          </label>
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            <UserIcon className="w-4 h-4" />
-                          </div>
-                          <Input
-                            id="home-player-1"
-                            name="homePlayer1"
-                            autoComplete="off"
-                            placeholder="Player 1 (e.g. Andi)…"
-                            className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
-                            value={homePlayers[0]}
-                            onChange={(e) =>
-                              handlePlayerChange('home', 0, e.target.value)
-                            }
-                          />
-                        </div>
-                        {gameMode === 'double' && (
-                          <div className="relative">
-                            <label htmlFor="home-player-2" className="sr-only">
-                              Home player 2
-                            </label>
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              <UserIcon className="w-4 h-4" />
-                            </div>
-                            <Input
-                              id="home-player-2"
-                              name="homePlayer2"
-                              autoComplete="off"
-                              placeholder="Player 2 (e.g. Budi)…"
-                              className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
-                              value={homePlayers[1]}
-                              onChange={(e) =>
-                                handlePlayerChange('home', 1, e.target.value)
-                              }
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Away Side */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 pb-2 border-b">
-                        <div className="w-2 h-2 rounded-full bg-[var(--accent-a)]" />{' '}
-                        {/* Blue marker */}
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Away Side
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <label htmlFor="away-player-1" className="sr-only">
-                            Away player 1
-                          </label>
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            <UserIcon className="w-4 h-4" />
-                          </div>
-                          <Input
-                            id="away-player-1"
-                            name="awayPlayer1"
-                            autoComplete="off"
-                            placeholder="Player 1 (e.g. Sari)…"
-                            className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
-                            value={awayPlayers[0]}
-                            onChange={(e) =>
-                              handlePlayerChange('away', 0, e.target.value)
-                            }
-                          />
-                        </div>
-                        {gameMode === 'double' && (
-                          <div className="relative">
-                            <label htmlFor="away-player-2" className="sr-only">
-                              Away player 2
-                            </label>
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              <UserIcon className="w-4 h-4" />
-                            </div>
-                            <Input
-                              id="away-player-2"
-                              name="awayPlayer2"
-                              autoComplete="off"
-                              placeholder="Player 2 (e.g. Rina)…"
-                              className="pl-9 h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
-                              value={awayPlayers[1]}
-                              onChange={(e) =>
-                                handlePlayerChange('away', 1, e.target.value)
-                              }
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Advanced Options Toggle */}
-                  <div className="mt-8">
-                    <button
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest"
-                    >
-                      Advanced Options{' '}
-                      <ChevronDownIcon
-                        className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-
-                    {showAdvanced && (
-                      <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                        <label htmlFor="home-team" className="sr-only">
-                          Home team or club name
-                        </label>
-                        <Input
-                          id="home-team"
-                          name="homeTeam"
-                          autoComplete="organization"
-                          placeholder="Home Team/Club Name (e.g. PB Jaya)…"
-                          value={homeTeam}
-                          onChange={(e) => setHomeTeam(e.target.value)}
-                          className="h-9 text-xs"
-                        />
-                        <label htmlFor="away-team" className="sr-only">
-                          Away team or club name
-                        </label>
-                        <Input
-                          id="away-team"
-                          name="awayTeam"
-                          autoComplete="organization"
-                          placeholder="Away Team/Club Name (e.g. PB Maju)…"
-                          value={awayTeam}
-                          onChange={(e) => setAwayTeam(e.target.value)}
-                          className="h-9 text-xs"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* PIN & Submit */}
-                  <div className="mt-8 pt-8 border-t grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-end">
-                    <div>
-                      <label
-                        htmlFor="create-pin"
-                        className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
-                      >
-                        Set Referee PIN
-                      </label>
-                      <Input
-                        id="create-pin"
-                        name="createPin"
-                        autoComplete="new-password"
-                        placeholder="PIN (e.g. 1234)…"
-                        type="number"
-                        pattern="[0-9]*"
-                        inputMode="numeric"
-                        maxLength={6}
-                        className="text-center font-mono tracking-[0.5em] h-12 text-lg bg-secondary/30 focus:bg-background transition-colors"
-                        value={createPin}
-                        onChange={(e) =>
-                          setCreatePin(
-                            e.target.value.replace(/\D/g, '').slice(0, 6),
-                          )
-                        }
-                      />
-                    </div>
-                    <Button
-                      onClick={handleCreateMatch}
-                      disabled={isLoading}
-                      className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-[box-shadow,background-color,color]"
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating Match…
-                        </span>
-                      ) : (
-                        'Start Match'
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
           </section>
 
-          {/* Secondary Column: Join & Shortcuts */}
-          <aside className="flex flex-col gap-6">
-            <div className="mb-2">
-              <h2 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">
-                Join Existing
+          {/* COMPARISON SECTION - High Contrast Rhythm Breaker */}
+          <section id="replace" className="py-24 lg:py-32 scroll-mt-24">
+            <div className="rounded-[40px] bg-neutral-900 p-8 lg:p-20 text-white shadow-2xl overflow-hidden relative">
+              {/* Background Texture */}
+              <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
+
+              <div className="relative z-10 grid gap-16 lg:grid-cols-2 lg:items-center">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">
+                    The Upgrade
+                  </div>
+                  <h2
+                    className={`${displayFont.className} mt-6 text-5xl uppercase tracking-wider leading-[0.9]`}
+                  >
+                    Leave the <br />
+                    <span className="text-white/40 line-through decoration-amber-500 decoration-4">
+                      Whiteboard
+                    </span>
+                    <br /> Behind.
+                  </h2>
+                  <p className="mt-6 text-lg text-white/60 text-pretty max-w-md">
+                    Manual scoring is prone to error and invisible to the
+                    audience. Scorehub centralizes control and broadcasts it
+                    instantly.
+                  </p>
+                </div>
+
+                <div className="grid gap-6">
+                  <div className="p-6 rounded-3xl bg-white/5 border border-white/5 flex items-start gap-4">
+                    <div className="shrink-0 h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 text-lg">
+                      ✕
+                    </div>
+                    <div>
+                      <p className="font-bold text-white/90">The Old Way</p>
+                      <p className="text-white/50 text-sm mt-1">
+                        Shouting scores, forgetting whose serve it is, manual
+                        flipboards that break.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-6 rounded-3xl bg-[var(--amber)] text-black flex items-start gap-4 shadow-[0_0_40px_-10px_rgba(245,158,11,0.3)]">
+                    <div className="shrink-0 h-10 w-10 rounded-full bg-black/10 flex items-center justify-center text-black text-lg">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="font-bold text-black">The Scorehub Way</p>
+                      <p className="text-black/70 text-sm mt-1">
+                        One tap to add a point. Serve indicator moves
+                        automatically. TV updates instantly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* FEATURES SECTION - Visual Moments */}
+          <section id="features" className="py-24 space-y-32 scroll-mt-24">
+            {/* Feature 1: Controller */}
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <div className="order-2 lg:order-1 relative">
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-purple-500/5 rounded-full blur-3xl" />
+                <div className="relative rounded-[32px] border border-black/10 bg-white shadow-xl overflow-hidden aspect-[4/3] flex items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+                  {/* Abstract Phone UI */}
+                  <div className="w-[45%] h-[85%] bg-black rounded-[2rem] border-4 border-black shadow-2xl flex flex-col overflow-hidden relative">
+                    <div className="h-6 w-32 bg-black absolute top-0 left-1/2 -translate-x-1/2 rounded-b-xl z-20"></div>
+                    <div className="flex-1 bg-neutral-900 p-4 flex flex-col gap-2">
+                      <div className="h-14 bg-neutral-800 rounded-xl w-full opacity-50 shrink-0"></div>
+                      <div className="flex-1 rounded-xl border border-white/10 bg-white/5 p-2 grid grid-rows-2 gap-2">
+                        <div className="bg-[var(--amber)] rounded-lg flex items-center justify-center text-black font-bold uppercase tracking-widest text-[10px] shadow-lg">
+                          Point Left
+                        </div>
+                        <div className="bg-neutral-800 rounded-lg flex items-center justify-center text-white/20 font-bold uppercase tracking-widest text-[10px]">
+                          Point Right
+                        </div>
+                      </div>
+                      <div className="h-12 bg-neutral-800 rounded-xl shrink-0 flex items-center justify-center gap-4 px-4">
+                        <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                        <div className="h-1 w-full bg-white/10 rounded-full"></div>
+                        <div className="text-[8px] text-white/50 uppercase tracking-widest">
+                          Undo
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Floating Badge */}
+                  <div className="absolute bottom-8 right-8 bg-white px-4 py-2 rounded-full shadow-lg border border-black/5 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none" />
+                    Latency &lt; 50ms
+                  </div>
+                </div>
+              </div>
+              <div className="order-1 lg:order-2 px-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--amber)] mb-4">
+                  Core Workflow
+                </div>
+                <h3
+                  className={`${displayFont.className} text-5xl uppercase tracking-wide leading-[0.9] text-balance`}
+                >
+                  Point input, <br /> Not Math class.
+                </h3>
+                <p className="mt-6 text-lg text-black/60 text-pretty">
+                  Referees shouldn't be calculating scores. They should be
+                  watching the lines. Just tap who won the rally. We handle the
+                  serving order, court sides, and set intervals.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 2: Display */}
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <div className="px-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-600 mb-4">
+                  Visuals
+                </div>
+                <h3
+                  className={`${displayFont.className} text-5xl uppercase tracking-wide leading-[0.9] text-balance`}
+                >
+                  Broadcast <br /> Quality.
+                </h3>
+                <p className="mt-6 text-lg text-black/60 text-pretty">
+                  Your cheap TV monitor just became a pro scoreboard. Designed
+                  for high visibility, reading comfortably from the back of the
+                  hall.
+                </p>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-tr from-[var(--amber)]/10 to-transparent rounded-full blur-3xl" />
+                <div className="relative rounded-[32px] border border-black/10 bg-black shadow-2xl overflow-hidden aspect-video flex items-center justify-center group">
+                  {/* Screen Content */}
+                  <div className="absolute inset-0 flex flex-col p-8 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-between items-end border-b border-white/20 pb-4">
+                      <span className="text-4xl font-black text-white">21</span>
+                      <span className="text-xl font-medium text-white/50 tracking-widest">
+                        SET 1
+                      </span>
+                      <span className="text-4xl font-black text-[var(--amber)]">
+                        19
+                      </span>
+                    </div>
+                    <div className="mt-8 flex justify-between">
+                      <div className="text-6xl font-black text-white/20">
+                        INA
+                      </div>
+                      <div className="text-6xl font-black text-white/20">
+                        MAS
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-[10px] font-bold text-white/70 uppercase tracking-widest">
+                    <span className="w-2 h-2 rounded-sm bg-white" /> Fullscreen
+                    Mode
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature 3: Offline */}
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <div className="order-2 lg:order-1 relative">
+                <div className="relative rounded-[32px] bg-neutral-100 border border-black/5 overflow-hidden aspect-[4/3] flex items-center justify-center">
+                  {/* Network Visualization */}
+                  <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,black_1px,transparent_1px)] [background-size:24px_24px]"></div>
+
+                  <div className="relative z-10 grid grid-cols-2 gap-4">
+                    <div className="h-24 w-24 bg-white rounded-2xl shadow-sm border border-black/5 flex flex-col items-center justify-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                        PC
+                      </div>
+                      <div className="h-1 w-8 bg-black/10 rounded-full"></div>
+                    </div>
+                    <div className="h-24 w-24 bg-white rounded-2xl shadow-sm border border-black/5 flex flex-col items-center justify-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-[var(--amber)]/20 text-amber-700 flex items-center justify-center">
+                        TV
+                      </div>
+                      <div className="h-1 w-8 bg-black/10 rounded-full"></div>
+                    </div>
+                    <div className="col-span-2 h-24 w-full bg-neutral-900 rounded-2xl shadow-xl flex items-center justify-center gap-3 text-white">
+                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none"></div>
+                      <span className="text-xs font-bold uppercase tracking-widest ml-2">
+                        Local Server
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] border border-black/5 rounded-full animate-[spin_10s_linear_infinite] motion-reduce:animate-none pointer-events-none border-dashed opacity-20"></div>
+                </div>
+              </div>
+              <div className="order-1 lg:order-2 px-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-600 mb-4">
+                  Reliability
+                </div>
+                <h3
+                  className={`${displayFont.className} text-5xl uppercase tracking-wide leading-[0.9]`}
+                >
+                  No Internet? <br /> No Problem.
+                </h3>
+                <p className="mt-6 text-lg text-black/60 text-pretty">
+                  Gyms often have terrible WiFi. We built Scorehub to work over
+                  a local LAN. Deploy the server on one laptop, and everyone
+                  connects locally.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* FLOW SECTION - Interactive Timeline */}
+          <section
+            id="flow"
+            className="py-24 lg:py-32 scroll-mt-24 border-t border-black/5"
+          >
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">
+                How it works
+              </div>
+              <h2
+                className={`${displayFont.className} mt-6 text-5xl uppercase tracking-wide`}
+              >
+                One System. <br /> Three Roles.
               </h2>
             </div>
 
-            {/* Join as Referee */}
-            <Card className="p-5 border shadow-sm bg-card hover:border-[var(--accent-b)] transition-colors group">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Join as Referee</h3>
-                <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-[var(--accent-b)] transition-colors">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            <div className="grid gap-12 lg:grid-cols-[1fr_1.5fr] items-center">
+              <div className="space-y-4">
+                {flowSteps.map((step) => (
+                  <button
+                    key={step.id}
+                    onClick={() => setActiveStep(step)}
+                    className={`group w-full rounded-[32px] border px-8 py-6 text-left transition-[transform,box-shadow,background-color,color,border-color] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)] ${
+                      activeStep.id === step.id
+                        ? 'border-black bg-black text-white shadow-xl scale-105'
+                        : 'border-transparent hover:bg-black/5 hover:scale-105'
+                    }`}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    />
-                  </svg>
-                </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-[0.2em] ${activeStep.id === step.id ? 'text-[var(--amber)]' : 'text-black/40'}`}
+                      >
+                        Step {step.step}
+                      </span>
+                    </div>
+                    <h3
+                      className={`${displayFont.className} text-3xl uppercase tracking-wide ${activeStep.id === step.id ? 'text-white' : 'text-black/40 group-hover:text-black'}`}
+                    >
+                      {step.title}
+                    </h3>
+                    <p
+                      className={`mt-2 text-sm max-w-xs ${activeStep.id === step.id ? 'text-white/60' : 'text-black/40'}`}
+                    >
+                      {step.description}
+                    </p>
+                  </button>
+                ))}
               </div>
-              <div className="space-y-3">
-                <label htmlFor="match-id-referee" className="sr-only">
-                  Match ID
-                </label>
-                <Input
-                  id="match-id-referee"
-                  name="matchId"
-                  autoComplete="off"
-                  placeholder="Match ID (e.g. MATCH-1A2B)…"
-                  className="h-9 font-mono text-xs uppercase"
-                  value={matchIdInput}
-                  onChange={(e) =>
-                    setMatchIdInput(e.target.value.toUpperCase())
-                  }
-                />
-                <label htmlFor="pin-referee" className="sr-only">
-                  Referee PIN
-                </label>
-                <Input
-                  id="pin-referee"
-                  name="pin"
-                  autoComplete="current-password"
-                  placeholder="PIN (e.g. 1234)…"
-                  type="password"
-                  className="h-9 font-mono text-xs"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                />
-                <Button
-                  asChild
-                  variant="secondary"
-                  className={`w-full h-9 text-xs font-bold uppercase tracking-wider ${
-                    canJoinReferee ? '' : 'opacity-50 cursor-not-allowed'
-                  }`}
-                >
-                  <Link
-                    href={
-                      canJoinReferee
-                        ? `/match/${matchIdInput}/control?role=referee&pin=${encodeURIComponent(
-                            pinInput,
-                          )}`
-                        : '#'
-                    }
-                    aria-disabled={!canJoinReferee}
-                    onClick={(event) => handleJoinLinkClick('referee', event)}
-                  >
-                    Enter Console
-                  </Link>
-                </Button>
-              </div>
-            </Card>
 
-            {/* Display Screen Shortcut */}
-            <Card className="p-5 border shadow-sm bg-card hover:border-[var(--accent-a)] transition-colors group">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Display Screen</h3>
-                <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-[var(--accent-a)] transition-colors">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label htmlFor="match-id-display" className="sr-only">
-                  Match ID
-                </label>
-                <Input
-                  id="match-id-display"
-                  name="matchIdDisplay"
-                  autoComplete="off"
-                  placeholder="Match ID (e.g. MATCH-1A2B)…"
-                  className="h-9 font-mono text-xs uppercase"
-                  value={matchIdInput}
-                  onChange={(e) =>
-                    setMatchIdInput(e.target.value.toUpperCase())
-                  }
-                />
-                <Button
-                  asChild
-                  variant="secondary"
-                  className={`w-full h-9 text-xs font-bold uppercase tracking-wider ${
-                    canJoinDisplay ? '' : 'opacity-50 cursor-not-allowed'
-                  }`}
+              <div className="relative aspect-[16/10] rounded-[40px] bg-neutral-100 border border-black/5 p-8 lg:p-12 shadow-inner overflow-hidden flex items-center justify-center">
+                {/* Dynamic Content Display based on active step */}
+                <div
+                  key={activeStep.id}
+                  className="animate-in fade-in zoom-in duration-500"
                 >
-                  <Link
-                    href={
-                      canJoinDisplay ? `/match/${matchIdInput}/display` : '#'
-                    }
-                    aria-disabled={!canJoinDisplay}
-                    onClick={(event) => handleJoinLinkClick('display', event)}
-                  >
-                    Launch Display
-                  </Link>
-                </Button>
-              </div>
-            </Card>
+                  <div className="text-center">
+                    <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-[var(--amber)] text-black text-3xl font-bold shadow-lg shadow-amber-500/30 mb-6">
+                      {activeStep.id === 'create'
+                        ? '1'
+                        : activeStep.id === 'control'
+                          ? '2'
+                          : '3'}
+                    </div>
+                    <h3
+                      className={`${displayFont.className} text-5xl uppercase tracking-wide text-black mb-4`}
+                    >
+                      {activeStep.title}
+                    </h3>
+                    <p className="text-lg text-black/60 max-w-md mx-auto text-pretty">
+                      {activeStep.description}
+                    </p>
+                  </div>
+                </div>
 
-            {/* Recent Matches Placeholder */}
-            <div className="mt-4">
-              <h3 className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-3">
-                Recent Matches
-              </h3>
-              <div className="space-y-2">
-                <div className="p-3 bg-muted/20 border rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed">
-                  <span className="text-xs font-bold">MATCH-SAMPLE</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    Example
+                {/* Decorative background grid */}
+                <div className="absolute inset-0 z-[-1] opacity-5 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+              </div>
+            </div>
+          </section>
+
+          {/* PRICING SECTION */}
+          <section id="pricing" className="py-24 lg:py-32 scroll-mt-24">
+            <div className="grid gap-8 lg:grid-cols-2">
+              {/* Free Tier */}
+              <div className="rounded-[40px] border border-black/10 bg-white p-10 shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col">
+                <div className="mb-8">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-black/40">
+                    Starter
                   </span>
+                  <h3
+                    className={`${displayFont.className} mt-4 text-6xl uppercase tracking-tight`}
+                  >
+                    Free
+                  </h3>
+                  <p className="mt-4 text-black/60 font-medium">
+                    Perfect for sparring and local practice.
+                  </p>
                 </div>
+                <ul className="space-y-4 mb-10 flex-1">
+                  {[
+                    '1 Active Match',
+                    'Basic Scoreboard',
+                    'Local Network Support',
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-3 text-sm font-semibold text-black/70"
+                    >
+                      <div className="h-1.5 w-1.5 rounded-full bg-black/20"></div>{' '}
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/create"
+                  className="w-full py-4 rounded-full border-2 border-black text-[11px] font-bold uppercase tracking-[0.25em] text-center hover:bg-black hover:text-white transition-colors"
+                >
+                  Start Now
+                </Link>
+              </div>
+
+              {/* Pro Tier (Planned) */}
+              <div className="relative rounded-[40px] border border-black/10 bg-neutral-900 p-10 text-white shadow-2xl flex flex-col overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-20 transform rotate-12">
+                  <div className="text-[10rem] leading-none font-black tracking-tighter text-white">
+                    PRO
+                  </div>
+                </div>
+
+                <div className="relative z-10 mb-8">
+                  <div className="inline-block px-3 py-1 rounded-full bg-[var(--amber)] text-black text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
+                    Coming Soon
+                  </div>
+                  <h3
+                    className={`${displayFont.className} mt-2 text-6xl uppercase tracking-tight`}
+                  >
+                    Unlimited
+                  </h3>
+                  <p className="mt-4 text-white/60 font-medium text-pretty">
+                    For tournaments, leagues, and venues requiring multiple
+                    courts.
+                  </p>
+                </div>
+                <ul className="relative z-10 space-y-4 mb-10 flex-1">
+                  {[
+                    'Result History',
+                    'Custom Branding',
+                    'Cloud Sync',
+                    'Tournament Mode',
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-3 text-sm font-semibold text-white/80"
+                    >
+                      <div className="h-1.5 w-1.5 rounded-full bg-[var(--amber)]"></div>{' '}
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  disabled
+                  className="relative z-10 w-full py-4 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-[0.25em] text-center text-white/40 cursor-not-allowed"
+                >
+                  Join Waitlist
+                </button>
               </div>
             </div>
-          </aside>
-        </div>
-      </main>
+          </section>
 
-      <footer className="mt-auto py-8 border-t bg-card/30">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary text-white flex items-center justify-center font-black text-[10px]">
-              MP
+          {/* CASES SECTION - Minimal Grid */}
+          <section
+            id="cases"
+            className="py-24 scroll-mt-24 border-t border-black/5"
+          >
+            <div className="mb-16">
+              <h2
+                className={`${displayFont.className} text-4xl uppercase tracking-wide text-black/30`}
+              >
+                Built For
+              </h2>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              MatchPoint Control Suite
-            </span>
-          </div>
-          <div className="flex gap-6">
-            <Link
-              href="/docs"
-              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-            >
-              Documentation
-            </Link>
-            <Link
-              href="/docs#badminton-rules"
-              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
-            >
-              BWF Rules
-            </Link>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
-              Status: Stable
-            </span>
-          </div>
-        </div>
-      </footer>
+            <div className="grid gap-8 md:grid-cols-3">
+              {useCases.map((item, i) => (
+                <div key={item.title} className="group cursor-default">
+                  <div className="h-1 w-12 bg-black/10 mb-6 group-hover:w-full group-hover:bg-[var(--amber)] transition-[width,background-color] duration-500"></div>
+                  <h3 className="text-lg font-bold uppercase tracking-widest mb-3">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-black/60 leading-relaxed text-pretty pr-4">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* FAQ SECTION - Clean List */}
+          <section
+            id="faq"
+            className="py-24 scroll-mt-24 border-t border-black/5"
+          >
+            <div className="mb-16">
+              <h2
+                className={`${displayFont.className} text-4xl uppercase tracking-wide text-black/30`}
+              >
+                FAQ
+              </h2>
+            </div>
+            <div className="grid gap-8 md:grid-cols-2">
+              {faqs.map((faq, i) => (
+                <div
+                  key={i}
+                  className="rounded-3xl border border-black/5 bg-white p-8"
+                >
+                  <h3 className="text-lg font-bold text-black mb-2">{faq.q}</h3>
+                  <p className="text-black/60">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }

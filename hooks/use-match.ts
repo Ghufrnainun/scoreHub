@@ -26,6 +26,7 @@ interface UseMatchOptions {
   matchId: string;
   role: MatchRole;
   pin?: string;
+  token?: string;
 }
 
 interface UseMatchReturn {
@@ -34,7 +35,7 @@ interface UseMatchReturn {
   isLoading: boolean;
   error: string | null;
   // Actions
-  awardPoint: (winner: 'home' | 'away') => void;
+  awardPoint: (winner: 'home' | 'away', value?: number) => void;
   updateScore: (team: 'home' | 'away', delta: number) => void;
   undo: () => void;
   startTimer: () => void;
@@ -53,6 +54,7 @@ export function useMatch({
   matchId,
   role,
   pin,
+  token,
 }: UseMatchOptions): UseMatchReturn {
   const [match, setMatch] = useState<MatchState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -61,7 +63,7 @@ export function useMatch({
   const [remainingTime, setRemainingTime] = useState(0);
 
   useEffect(() => {
-    const socket = connectToMatch(matchId, role, pin);
+    const socket = connectToMatch(matchId, role, pin, token);
 
     socket.on('connect', () => {
       setIsConnected(true);
@@ -129,10 +131,15 @@ export function useMatch({
       setTimeout(() => setError(null), 3000);
     });
 
+    socket.on('error:action_failed', (message: string) => {
+      setError(message);
+      setTimeout(() => setError(null), 5000);
+    });
+
     return () => {
       disconnectSocket();
     };
-  }, [matchId, role, pin]);
+  }, [matchId, role, pin, token]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -171,8 +178,8 @@ export function useMatch({
   }, [match?.timer]);
 
   // Action callbacks
-  const awardPoint = useCallback((winner: 'home' | 'away') => {
-    emitPoint(winner);
+  const awardPoint = useCallback((winner: 'home' | 'away', value?: number) => {
+    emitPoint(winner, value);
   }, []);
 
   const updateScore = useCallback((team: 'home' | 'away', delta: number) => {

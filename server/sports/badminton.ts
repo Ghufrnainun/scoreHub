@@ -107,7 +107,7 @@ export class BadmintonRules implements SportRules {
       // Side flip at end of set
       newState.isFlipped = !newState.isFlipped;
 
-      if (newState.teams[setWinner].setsWon >= 2) {
+      if (newState.teams[setWinner].setsWon >= 2 || newState.currentSet >= 4) {
         newState.status = 'finished';
         newState.winner = setWinner;
       } else {

@@ -1,5 +1,12 @@
 import { MatchState, SportRules, TeamSide, MatchRole } from './sports/types';
+import { randomBytes } from 'crypto';
 import { BadmintonRules } from './sports/badminton';
+import { BasketballRules } from './sports/basketball';
+import { VolleyballRules } from './sports/volleyball';
+import { TennisRules } from './sports/tennis';
+import { FutsalRules } from './sports/futsal';
+import { SoccerRules } from './sports/soccer';
+import { resolveSportId } from './sports/registry';
 
 // Re-export types for compatibility
 export type { MatchState, TeamSide, MatchRole };
@@ -11,7 +18,11 @@ export class MatchManager {
   constructor() {
     // Initialize supported sports
     this.ruleEngines.set('badminton', new BadmintonRules());
-    // Future: this.ruleEngines.set('tennis', new TennisRules());
+    this.ruleEngines.set('basketball', new BasketballRules());
+    this.ruleEngines.set('volleyball', new VolleyballRules());
+    this.ruleEngines.set('tennis', new TennisRules());
+    this.ruleEngines.set('futsal', new FutsalRules());
+    this.ruleEngines.set('soccer', new SoccerRules());
   }
 
   createMatch(config: {
@@ -20,21 +31,32 @@ export class MatchManager {
     gameMode?: 'single' | 'double';
     category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
     teams: {
-      home: { name: string; players: { name: string }[] };
-      away: { name: string; players: { name: string }[] };
+      home: {
+        name: string;
+        players: { name: string }[];
+        country?: string;
+        logo?: string;
+      };
+      away: {
+        name: string;
+        players: { name: string }[];
+        country?: string;
+        logo?: string;
+      };
     };
     pin?: string;
     templateId?: string;
   }): MatchState {
+    const resolvedSport = resolveSportId(config.sport);
     const rules =
-      this.ruleEngines.get(config.sport) || this.ruleEngines.get('badminton')!;
+      this.ruleEngines.get(resolvedSport) || this.ruleEngines.get('badminton')!;
 
     const initialState = rules.initMatch(config);
 
     const match: MatchState = {
       id: config.matchId,
       matchId: config.matchId,
-      sport: config.sport || 'badminton',
+      sport: resolvedSport,
       category: config.category,
       gameMode: config.gameMode,
       status: 'active',
@@ -45,6 +67,8 @@ export class MatchManager {
           score: 0,
           setsWon: 0,
           challenges: 2,
+          country: config.teams.home.country,
+          logo: config.teams.home.logo,
           playerPositions: [0, 1],
         },
         away: {
@@ -53,6 +77,8 @@ export class MatchManager {
           score: 0,
           setsWon: 0,
           challenges: 2,
+          country: config.teams.away.country,
+          logo: config.teams.away.logo,
           playerPositions: [0, 1],
         },
       },
@@ -60,8 +86,16 @@ export class MatchManager {
       sets: [],
       history: [],
       adminPin: config.pin,
+      refereeToken: randomBytes(4).toString('hex').toUpperCase(),
+      timer: {
+        mode: 'stopped',
+        duration: 0,
+        startedAt: null,
+        pausedAt: null,
+        elapsed: 0,
+      },
       displayConfig: {
-        templateId: config.templateId || 'bwf-default',
+        templateId: config.templateId || 'modern',
       },
       ...initialState,
     } as MatchState;
@@ -82,7 +116,11 @@ export class MatchManager {
     return this.matches.delete(matchId);
   }
 
-  awardPoint(matchId: string, winner: TeamSide): MatchState | undefined {
+  awardPoint(
+    matchId: string,
+    winner: TeamSide,
+    value?: number,
+  ): MatchState | undefined {
     const match = this.matches.get(matchId);
     if (!match || match.status === 'finished') return undefined;
 
@@ -104,7 +142,7 @@ export class MatchManager {
       this.ruleEngines.get(match.sport) || this.ruleEngines.get('badminton')!;
 
     // Delegate to sport rules
-    const newState = rules.awardPoint(match, winner);
+    const newState = rules.awardPoint(match, winner, value);
 
     // Preserve runtime fields that SportRules might not return
     newState.history = match.history;
@@ -221,7 +259,7 @@ export class MatchManager {
     const match = this.matches.get(matchId);
     if (!match) return undefined;
 
-    const current = match.displayConfig || { templateId: 'bwf-default' };
+    const current = match.displayConfig || { templateId: 'modern' };
     match.displayConfig = { ...current, ...config };
     return match;
   }
@@ -272,6 +310,13 @@ export class MatchManager {
       currentSet: 1,
       sets: [],
       history: [],
+      timer: {
+        mode: 'stopped',
+        duration: 0,
+        startedAt: null,
+        pausedAt: null,
+        elapsed: 0,
+      },
       teams: {
         home: { ...match.teams.home, score: 0, setsWon: 0, challenges: 2 },
         away: { ...match.teams.away, score: 0, setsWon: 0, challenges: 2 },

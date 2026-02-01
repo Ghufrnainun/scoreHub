@@ -91,6 +91,7 @@ export default function MediaManager() {
               id="asset-url"
               name="assetUrl"
               autoComplete="url"
+              type="url"
               placeholder="https://example.com/asset…"
               value={newItemUrl}
               onChange={(e) => setNewItemUrl(e.target.value)}

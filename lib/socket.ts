@@ -113,6 +113,7 @@ export interface MatchState {
 
   // SaaS Features
   adminPin?: string;
+  refereeToken?: string;
   ads?: {
     active: boolean;
     currentAssetId?: string;
@@ -124,6 +125,9 @@ export interface MatchState {
 
   // Legacy/Computed or Additional fields that might be sent
   timer?: TimerState; // If we add timer back to generic
+
+  // Sport-specific extended state
+  sportState?: Record<string, any>;
 }
 
 // Update TeamState to generic
@@ -176,10 +180,11 @@ export function connectToMatch(
   matchId: string,
   role: MatchRole,
   pin?: string,
+  token?: string,
 ): Socket {
   const s = getSocket();
 
-  s.auth = { matchId, role, pin };
+  s.auth = { matchId, role, pin, token };
   s.connect();
 
   return s;
@@ -202,8 +207,8 @@ export function emitCreateMatch(data: {
   socket?.emit('match:create', data);
 }
 
-export function emitPoint(winner: 'home' | 'away'): void {
-  socket?.emit('point', { winner });
+export function emitPoint(winner: 'home' | 'away', value?: number): void {
+  socket?.emit('point', { winner, value });
 }
 
 export function emitScoreUpdate(team: 'home' | 'away', delta: number): void {

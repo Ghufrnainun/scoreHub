@@ -31,6 +31,7 @@ next-env.d.ts
 .agents
 .claude
 .codex
+.codex*
 .gemini
 .openai
 .cursor

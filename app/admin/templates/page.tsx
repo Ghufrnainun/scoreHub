@@ -14,35 +14,33 @@ interface Template {
 
 const TEMPLATES: Template[] = [
   {
-    id: 'bwf-default',
-    name: 'BWF Standard',
-    description: 'Official BWF style scoreboard. Clean and readable.',
-    previewColor: 'bg-blue-600',
+    id: 'modern',
+    name: 'Modern',
+    description: 'Broadcast grid with set columns.',
+    previewColor: 'bg-amber-500',
   },
   {
-    id: 'broadcast-modern',
-    name: 'Broadcast Modern',
-    description: 'TV-ready overlay style with gradients and animations.',
-    previewColor: 'bg-purple-600',
-    isPro: true,
+    id: 'classic',
+    name: 'Classic',
+    description: 'Straight scoreboard with set rows.',
+    previewColor: 'bg-emerald-500',
   },
   {
-    id: 'minimal-dark',
-    name: 'Minimal Dark',
-    description: 'High contrast dark mode for LED screens.',
-    previewColor: 'bg-zinc-900',
+    id: 'minimal',
+    name: 'Minimal',
+    description: 'Big score focus, clean typography.',
+    previewColor: 'bg-slate-800',
   },
   {
-    id: 'neon-cyber',
-    name: 'Neon Cyber',
-    description: 'Futuristic style for esports or fun events.',
-    previewColor: 'bg-pink-500',
-    isPro: true,
+    id: 'neon',
+    name: 'Neon',
+    description: 'High contrast, esports glow.',
+    previewColor: 'bg-fuchsia-500',
   },
 ];
 
 export default function TemplateSelector() {
-  const [selectedId, setSelectedId] = useState('bwf-default');
+  const [selectedId, setSelectedId] = useState('modern');
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -55,19 +53,12 @@ export default function TemplateSelector() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {TEMPLATES.map((t) => (
-          <Card
+          <button
             key={t.id}
             onClick={() => setSelectedId(t.id)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                setSelectedId(t.id);
-              }
-            }}
-            role="button"
-            tabIndex={0}
+            type="button"
             aria-pressed={selectedId === t.id}
-            className={`cursor-pointer transition-colors transition-shadow duration-300 relative overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+            className={`w-full text-left cursor-pointer transition-colors transition-shadow duration-300 relative overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg border bg-card text-card-foreground shadow-sm ${
               selectedId === t.id
                 ? 'ring-2 ring-primary border-primary shadow-lg'
                 : 'hover:border-primary/50 hover:shadow-md'
@@ -119,16 +110,19 @@ export default function TemplateSelector() {
               </p>
 
               <div className="mt-4 pt-4 border-t flex justify-end">
-                <Button
-                  size="sm"
-                  variant={selectedId === t.id ? 'default' : 'secondary'}
-                  className="w-full"
+                <span
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors h-9 w-full ${
+                    selectedId === t.id
+                      ? 'bg-primary text-primary-foreground shadow'
+                      : 'bg-secondary text-secondary-foreground'
+                  }`}
+                  aria-hidden="true"
                 >
                   {selectedId === t.id ? 'Active Template' : 'Select Theme'}
-                </Button>
+                </span>
               </div>
             </div>
-          </Card>
+          </button>
         ))}
       </div>
     </div>

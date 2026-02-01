@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 // Icons
 const DashboardIcon = ({ className }: { className?: string }) => (
-  <svg
+  <svg aria-hidden="true"
     className={className}
     fill="none"
     stroke="currentColor"
@@ -23,7 +25,7 @@ const DashboardIcon = ({ className }: { className?: string }) => (
 );
 
 const MediaIcon = ({ className }: { className?: string }) => (
-  <svg
+  <svg aria-hidden="true"
     className={className}
     fill="none"
     stroke="currentColor"
@@ -39,7 +41,7 @@ const MediaIcon = ({ className }: { className?: string }) => (
 );
 
 const TemplateIcon = ({ className }: { className?: string }) => (
-  <svg
+  <svg aria-hidden="true"
     className={className}
     fill="none"
     stroke="currentColor"
@@ -55,7 +57,7 @@ const TemplateIcon = ({ className }: { className?: string }) => (
 );
 
 const SettingsIcon = ({ className }: { className?: string }) => (
-  <svg
+  <svg aria-hidden="true"
     className={className}
     fill="none"
     stroke="currentColor"
@@ -77,7 +79,7 @@ const SettingsIcon = ({ className }: { className?: string }) => (
 );
 
 const LogoutIcon = ({ className }: { className?: string }) => (
-  <svg
+  <svg aria-hidden="true"
     className={className}
     fill="none"
     stroke="currentColor"
@@ -99,6 +101,9 @@ const MENU_ITEMS = [
   { name: 'Settings', path: '/admin/settings', icon: SettingsIcon },
 ];
 
+const AUTH_STORAGE_KEY = 'scorehub:admin:auth';
+const AUTH_TTL_MS = 1000 * 60 * 60 * 8;
+
 export default function AdminLayout({
   children,
 }: {
@@ -106,21 +111,165 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isReady, setIsReady] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [error, setError] = useState('');
+
+  const adminPin = useMemo(() => {
+    return process.env.NEXT_PUBLIC_ADMIN_PIN || '';
+  }, []);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!adminPin) {
+      setIsAuthed(true);
+      setIsReady(true);
+      return;
+    }
+
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as {
+          pin?: string;
+          ts?: number;
+        };
+        const isValid =
+          parsed?.pin === adminPin &&
+          typeof parsed.ts === 'number' &&
+          Date.now() - parsed.ts < AUTH_TTL_MS;
+        if (isValid) {
+          setIsAuthed(true);
+        }
+      } catch {
+        // Ignore invalid storage
+      }
+    }
+    setIsReady(true);
+  }, [adminPin]);
+
+  const handlePinSubmit = () => {
+    if (!adminPin) {
+      setIsAuthed(true);
+      setError('');
+      return;
+    }
+
+    if (pinInput.trim() !== adminPin) {
+      setError('PIN salah. Coba lagi.');
+      return;
+    }
+
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ pin: adminPin, ts: Date.now() }),
+    );
+    setIsAuthed(true);
+    setError('');
+  };
+
+  if (!isReady) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex items-center justify-center">
+        <div className="text-sm text-muted-foreground font-mono">
+          Loading admin accessâ€¦
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthed) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex items-center justify-center px-6">
+        <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Image
+                src="/scorehub-logo.svg"
+                alt="Scorehub logo"
+                width={20}
+                height={20}
+                className="h-4 w-4"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-pretty">Admin Access</p>
+              <p className="text-xs text-muted-foreground text-pretty">
+                Masukkan PIN global untuk masuk.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <label htmlFor="admin-pin" className="text-xs font-semibold">
+              PIN
+            </label>
+            <Input
+              id="admin-pin"
+              name="adminPin"
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              type="password"
+              spellCheck={false}
+              value={pinInput}
+              onChange={(event) => {
+                setPinInput(event.target.value.replace(/\D/g, '').slice(0, 6));
+                setError('');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handlePinSubmit();
+                }
+              }}
+              className="h-11 text-center font-mono text-lg tracking-widest"
+            />
+            {error ? (
+              <p className="text-xs text-destructive text-pretty" role="status" aria-live="polite">
+                {error}
+              </p>
+            ) : null}
+            <Button className="w-full" onClick={handlePinSubmit}>
+              Unlock Admin
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-pretty">
+              PIN disimpan lokal selama 8 jam.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] flex transition-colors duration-300">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-[#111827] focus:px-4 focus:py-2 focus:text-xs focus:font-bold focus:text-white"
+      >
+        Skip to content
+      </a>
       {/* Sidebar */}
       <aside
-        className={`bg-card border-r transition-[width] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
+        className={`bg-white border-r border-black/10 transition-[width] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
           isSidebarOpen ? 'w-64' : 'w-20'
         }`}
       >
         <div className="h-16 flex items-center justify-center border-b px-4">
           <div className="flex items-center gap-2 font-black text-xl tracking-tight">
-            <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center text-lg">
-              M
+            <div className="w-8 h-8 rounded-lg bg-[#111827] text-[#F59E0B] flex items-center justify-center">
+              <Image
+                src="/scorehub-logo.svg"
+                alt="Scorehub logo"
+                width={20}
+                height={20}
+                className="h-4 w-4"
+              />
             </div>
-            {isSidebarOpen && <span>Admin</span>}
+            {isSidebarOpen && (
+              <span className="font-[family-name:var(--font-bebas)] tracking-wider">
+                Admin
+              </span>
+            )}
           </div>
         </div>
 
@@ -130,16 +279,20 @@ export default function AdminLayout({
             const Icon = item.icon;
 
             return (
-              <Link key={item.path} href={item.path}>
+              <Link
+                key={item.path}
+                href={item.path}
+                className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC]"
+              >
                 <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group cursor-pointer ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC] ${
                     isActive
-                      ? 'bg-primary/10 text-primary font-bold'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'bg-[#111827] text-white font-bold'
+                      : 'text-black/60 hover:bg-black/5 hover:text-black'
                   }`}
                 >
                   <Icon
-                    className={`w-5 h-5 ${isActive ? 'text-primary' : 'group-hover:text-foreground'}`}
+                    className={`w-5 h-5 ${isActive ? 'text-[#F59E0B]' : 'group-hover:text-black'}`}
                   />
                   {isSidebarOpen && (
                     <span className="text-sm">{item.name}</span>
@@ -152,7 +305,7 @@ export default function AdminLayout({
 
         <div className="p-4 border-t">
           <Link href="/">
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer group">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-black/60 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer group">
               <LogoutIcon className="w-5 h-5" />
               {isSidebarOpen && (
                 <span className="text-sm font-bold">Exit Admin</span>
@@ -164,13 +317,13 @@ export default function AdminLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b bg-card/50 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-10">
+        <header className="h-16 border-b border-black/10 bg-white/80 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-10">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             aria-label="Toggle sidebar"
             className="p-2 -ml-2 rounded-md hover:bg-muted text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <svg
+            <svg aria-hidden="true"
               className="w-5 h-5"
               fill="none"
               stroke="currentColor"
@@ -186,7 +339,7 @@ export default function AdminLayout({
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-1 rounded">
+            <div className="text-xs font-mono text-black/60 bg-black/5 px-2 py-1 rounded">
               v1.0-beta
             </div>
           </div>
