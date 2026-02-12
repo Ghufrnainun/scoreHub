@@ -4,7 +4,7 @@
 
 - `app/`: Next.js App Router pages, including display routes (e.g., `/display`).
 - `components/`: Reusable UI components.
-- `server/`: Realtime server (Socket.io + Express).
+- `convex/`: Convex schema, queries, and mutations.
 - `public/`: Static assets (logos, images).
 - `styles/`: Global styles and Tailwind config helpers.
 - `docs/`: Product and design docs (see `docs/PRD.md`).
@@ -13,11 +13,9 @@
 ## Build, Test, and Development Commands
 
 - `npm run dev`: Run the Next.js app for local development.
-- `npm run dev:server`: Run the realtime server in watch mode.
-- `npm run dev:all`: Run app + server together.
+- `npx convex dev`: Run Convex dev (local backend + codegen).
 - `npm run build`: Build the Next.js app for production.
 - `npm run start`: Start the Next.js production server.
-- `npm run start:server`: Start the realtime server (prod).
 - `npm run lint`: Run ESLint across the repo.
 
 ## Coding Style & Naming Conventions
@@ -25,7 +23,7 @@
 - Indentation: 2 spaces in JSON, 2 spaces in CSS, 2 spaces in TS/TSX.
 - Filenames: `kebab-case` for folders, `PascalCase` for React components.
 - Tailwind is used for styling; prefer class-based styling over inline styles.
-- Keep server event names `namespace:action` (e.g., `match:state`).
+- Prefer Convex mutations/queries for realtime updates.
 
 ## Testing Guidelines
 

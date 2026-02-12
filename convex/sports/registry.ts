@@ -1,5 +1,11 @@
-import { SportDefinition, SportId } from './types';
 import sportConfig from '../../config/sports.json';
+import { SportDefinition, SportId, SportRules } from './types';
+import { BadmintonRules } from './badminton';
+import { BasketballRules } from './basketball';
+import { VolleyballRules } from './volleyball';
+import { TennisRules } from './tennis';
+import { FutsalRules } from './futsal';
+import { SoccerRules } from './soccer';
 
 const SPORT_TOGGLES = new Map(
   (sportConfig.sports || []).map((sport) => [sport.id, sport.enabled]),
@@ -44,6 +50,15 @@ export const SPORT_REGISTRY: Record<SportId, SportDefinition> = {
   },
 };
 
+const RULE_ENGINES: Record<SportId, SportRules> = {
+  badminton: new BadmintonRules(),
+  basketball: new BasketballRules(),
+  volleyball: new VolleyballRules(),
+  tennis: new TennisRules(),
+  futsal: new FutsalRules(),
+  soccer: new SoccerRules(),
+};
+
 export function isSportEnabled(
   sportId: string | undefined,
 ): sportId is SportId {
@@ -54,4 +69,9 @@ export function isSportEnabled(
 
 export function resolveSportId(sportId: string | undefined): SportId {
   return isSportEnabled(sportId) ? (sportId as SportId) : 'badminton';
+}
+
+export function getRulesForSport(sportId: string): SportRules {
+  const resolved = resolveSportId(sportId);
+  return RULE_ENGINES[resolved] || RULE_ENGINES.badminton;
 }

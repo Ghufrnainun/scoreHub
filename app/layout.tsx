@@ -8,6 +8,7 @@ import {
 } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
+import ConvexClientProvider from '@/components/convex-client-provider';
 
 const barlow = Barlow({
   subsets: ['latin'],
@@ -70,7 +71,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        {children}
+        <ConvexClientProvider>{children}</ConvexClientProvider>
         <Analytics />
       </body>
     </html>

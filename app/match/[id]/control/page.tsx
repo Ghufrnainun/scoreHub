@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useMatch } from '@/hooks/use-match';
 import { useState, useEffect } from 'react';
-import type { MatchRole } from '@/lib/socket';
+import type { MatchRole } from '@/lib/match-types';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -98,30 +98,11 @@ export default function ControlPage() {
   const [displaySettings, setDisplaySettings] =
     useState<DisplaySettings>(defaultSettings);
 
-  // Timer State
-  const [matchTime, setMatchTime] = useState(0); // in seconds
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setMatchTime((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
-
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const safeSeconds = Math.max(0, Math.floor(seconds));
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
-  const resetTimer = () => {
-    setIsTimerRunning(false);
-    setMatchTime(0);
   };
 
   const matchId = params.id as string;
@@ -135,15 +116,29 @@ export default function ControlPage() {
     error,
     awardPoint,
     undo,
+    startTimer,
+    pauseTimer,
+    resetTimer,
     useChallenge,
     toggleSides,
     resetMatch,
+    remainingTime,
   } = useMatch({
     matchId,
     role,
     pin,
     token,
   });
+
+  const isTimerRunning = Boolean(match?.timer?.startedAt && !match?.timer?.pausedAt);
+
+  const toggleTimer = () => {
+    if (isTimerRunning) {
+      pauseTimer();
+      return;
+    }
+    startTimer();
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('displaySettings');
@@ -561,7 +556,7 @@ export default function ControlPage() {
               e.preventDefault();
               resetTimer();
             }}
-            aria-label={`Match timer. Currently ${formatTime(matchTime)}. ${isTimerRunning ? 'Click to pause' : 'Click to start'}. Right click to reset.`}
+            aria-label={`Match timer. Currently ${formatTime(remainingTime)}. ${isTimerRunning ? 'Click to pause' : 'Click to start'}. Right click to reset.`}
           >
             <span
               className={cn(
@@ -571,7 +566,7 @@ export default function ControlPage() {
                   : 'text-slate-400',
               )}
             >
-              {formatTime(matchTime)}
+              {formatTime(remainingTime)}
             </span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-blue-500 transition-colors">
               {isTimerRunning ? 'PAUSE' : 'START'}

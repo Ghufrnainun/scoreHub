@@ -1,6 +1,6 @@
 ﻿# Product Requirements Document (PRD)
 
-**Status:** Implementation-aligned spec (updated **February 1, 2026**)
+**Status:** Implementation-aligned spec (updated **February 12, 2026**)
 
 ## Sistem Scoreboard Real-time Berbasis Web (Badminton First)
 
@@ -104,7 +104,7 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 - Input berbasis rally: **Point Home** / **Point Away**
 - Undo **multi-step** (tiap klik undo mundur 1 state)
 - Support dua tim (Home vs Away)
-- `score:update` tersedia (event) untuk koreksi skor, belum ada UI dedicated
+- `score:update` tersedia via mutation `matches.updateScore` untuk koreksi skor, belum ada UI dedicated
 
 ### 6.3 Serve Logic (Badminton)
 
@@ -118,12 +118,12 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 - Auto end set ketika skor memenuhi rule (21, win by 2, cap 30)
 - Auto end match saat team menang 2 set
 - Tidak ada manual end set / manual override via UI
-- History disimpan di server (maks 50 state) untuk undo
+- History disimpan persistent di Convex (maks 50 state) untuk undo
 
 ### 6.5 Timer
 
-- Event timer tersedia (`timer:start`, `timer:pause`, `timer:reset`)
-- **Timer belum diinisialisasi di match state**, jadi fitur timer belum aktif
+- Timer mutation tersedia (`matches.timerStart`, `matches.timerPause`, `matches.timerReset`)
+- UI kontrol timer di control page sudah memakai state timer Convex (sinkron lintas device)
 
 ### 6.6 Real-time Sync
 
@@ -134,7 +134,7 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ## 7. Konfigurasi Tampilan (Display Config)
 
-Konfigurasi tampilan memiliki event realtime, tetapi display saat ini belum menerapkan perubahan selain templateId default.
+Konfigurasi tampilan disimpan di `displayConfig`; parameter yang paling aktif dipakai saat ini adalah `templateId` untuk pemilihan layout display.
 
 ### 7.1 Template Scoreboard (V1)
 
@@ -148,9 +148,10 @@ Template menentukan:
 
 ### 7.2 Customisasi Template (Status Saat Ini)
 
-- `displayConfig` saat ini hanya menyimpan `templateId` (dan opsional `primaryColor`)
-- UI template selector di `/admin/templates` masih **mock** (belum terhubung realtime)
-- Display belum menerapkan variasi tema/template selain layout default
+- `displayConfig` saat ini menyimpan `templateId` (dan opsional `primaryColor`)
+- Pemilihan template pada pembuatan match (`/create`) sudah terhubung ke mutation `matches.createMatch`
+- UI template selector di `/admin/templates` sudah terhubung ke mutation `matches.changeTemplate` (by `matchId`)
+- Display sudah merender beberapa template (badminton: modern/classic/minimal/neon; sport lain: template khusus per sport)
 
 ---
 
@@ -168,7 +169,7 @@ Template menentukan:
 
 - Realtime dan state authoritative disimpan di Convex
 - Client subscribe ke query (live updates), perubahan via mutation
-- Socket.io server tetap tersedia selama transisi
+- Tidak ada dependency ke server Socket.io terpisah
 
 ---
 
@@ -191,8 +192,8 @@ Template menentukan:
 ### 10.2 Reliability
 
 - Auto reconnect jika koneksi terputus
-- State match tersimpan di server
-- Client yang baru terhubung atau reconnect **wajib menerima full state match** dari server
+- State match tersimpan persistent di Convex
+- Client yang baru terhubung atau reconnect **wajib menerima full state match** dari query Convex
 
 ### 10.3 Usability
 
@@ -209,7 +210,7 @@ Bagian ini mendefinisikan **cara wasit berinteraksi dengan sistem** saat pertand
 
 - Tombol **besar & jelas** (thumb-friendly)
 - Wasit **tidak input angka**, hanya memilih **pemenang rally**
-- Semua logic (serve, set, rotasi) diproses server
+- Semua logic (serve, set, rotasi) diproses di Convex functions
 - UI tahan salah pencet (undo & confirm)
 - Akses via **referee link** (token) tanpa login
 
@@ -258,7 +259,7 @@ Undo hanya tersedia untuk role **Wasit & Admin**.
 ### 11.5 Confirmation & Lock Action
 
 Saat ini **belum ada mekanisme konfirmasi** (modal/long-press) di UI.
-Event sensitif yang tersedia di server hanya bisa diakses oleh admin.
+Mutation sensitif hanya bisa diakses oleh admin.
 
 ### 11.6 Visual Feedback untuk Wasit
 
@@ -274,7 +275,7 @@ Skenario yang harus aman:
 - Browser reload -> auto sync
 - Koneksi drop beberapa detik -> lanjut tanpa reset
 
-Semua state diambil ulang dari server sebagai **single source of truth**.
+Semua state diambil ulang dari Convex sebagai **single source of truth**.
 
 ---
 
@@ -287,12 +288,12 @@ Sistem menggunakan role sederhana untuk mengatur akses:
 | Role    | Hak Akses                                                                        |
 | ------- | -------------------------------------------------------------------------------- |
 | Admin   | Buat match, reset match, pilih template, ubah konfigurasi tampilan, assign wasit |
-| Wasit   | Input skor, kontrol timer (endpoint tersedia, belum aktif)                       |
+| Wasit   | Input skor, kontrol timer                                                         |
 | Display | Read-only, tidak dapat mengirim event                                            |
 
 - Admin akses via **PIN global**
 - Wasit akses via **referee link** per match (token)
-- Validasi role dilakukan di **server/Convex functions**
+- Validasi role dilakukan di **Convex functions**
 - Display read-only (tanpa PIN)
 
 ### 12.2 Referee Link (Token) - Per Match
@@ -324,7 +325,7 @@ Wajib ada:
 - Serve indicator (single/double)
 - Display fullscreen
 - Real-time update
-- State match tersimpan di server
+- State match tersimpan di Convex
 - Reconnect & state recovery otomatis
 - Satu match aktif
 
@@ -505,7 +506,7 @@ Nice to have:
 
 ## 19. Match State Definition (Core Data Model)
 
-Match State adalah single source of truth yang disimpan di server (in-memory). Semua client (wasit, admin, display) akan sync ke object ini.
+Match State adalah single source of truth yang disimpan persistent di Convex (table `matches`). Semua client (wasit, admin, display) sync ke data ini via query realtime.
 
 ### Contoh Match State (JSON)
 
@@ -541,54 +542,63 @@ Match State adalah single source of truth yang disimpan di server (in-memory). S
 
 ---
 
-## 20. Realtime Communication (Socket Events)
+## 20. Realtime Communication (Convex Query/Mutation)
 
-Migrasi ke Convex (query/mutation realtime). Socket.io tetap tersedia selama transisi.
+Realtime menggunakan subscription query Convex, bukan event socket manual.
 
-### Client -> Server (Implemented)
+### Client -> Convex (Implemented)
 
-- `match:create` (admin)
-- `score:update` (admin/referee) -> manual delta
-- `point` (admin/referee) -> rally winner
-- `undo` (admin/referee)
-- `challenge:use` (admin/referee)
-- `timer:start` / `timer:pause` / `timer:reset` (admin/referee)
-- `config:update` (admin)
-- `template:change` (admin)
-- `serve:change` (admin/referee)
+- Query:
+  - `matches.get` (state full match per `matchId`)
+  - `matches.listAdmin` (list match untuk dashboard admin)
+- Mutation:
+  - `matches.createMatch` (admin)
+  - `matches.updateScore` (admin/referee) -> manual delta
+  - `matches.awardPoint` (admin/referee) -> rally winner
+  - `matches.undo` (admin/referee)
+  - `matches.useChallenge` (admin/referee)
+  - `matches.timerStart` / `matches.timerPause` / `matches.timerReset` (admin/referee)
+  - `matches.updateDisplayConfig` (admin)
+  - `matches.changeTemplate` (admin)
+  - `matches.changeServe` (admin/referee)
+  - `matches.toggleSides` (admin/referee)
+  - `matches.resetMatch` (admin/referee)
+  - `matches.deleteMatch` (admin)
 
-### Server -> Client (Implemented)
+### Convex -> Client (Implemented)
 
-- `match:state` -> full state (on connect + most actions)
-- `match:update` -> partial update (timer/config/template/serve)
-- `match:ended`
-- `error:permission`
-- `error:undo`
+- Subscription `useQuery(api.matches.get)` mengirim update state otomatis ke semua client terkait match
+- Tidak ada channel `socket.emit/socket.on` di frontend
+- Error permission/validasi dikirim sebagai `ConvexError` dari query/mutation
 
 ---
 
 ## 21. Permission Matrix (Implemented)
 
-| Event           | Admin | Wasit | Display |
-| --------------- | ----- | ----- | ------- |
-| match:create    | YES   | NO    | NO      |
-| score:update    | YES   | YES   | NO      |
-| point           | YES   | YES   | NO      |
-| undo            | YES   | YES   | NO      |
-| challenge:use   | YES   | YES   | NO      |
-| timer:start     | YES   | YES   | NO      |
-| timer:pause     | YES   | YES   | NO      |
-| timer:reset     | YES   | YES   | NO      |
-| config:update   | YES   | NO    | NO      |
-| template:change | YES   | NO    | NO      |
-| serve:change    | YES   | YES   | NO      |
-| match:state     | YES   | YES   | YES     |
+| Operation                    | Admin | Wasit | Display |
+| --------------------------- | ----- | ----- | ------- |
+| `matches.createMatch`       | YES   | NO    | NO      |
+| `matches.updateScore`       | YES   | YES   | NO      |
+| `matches.awardPoint`        | YES   | YES   | NO      |
+| `matches.undo`              | YES   | YES   | NO      |
+| `matches.useChallenge`      | YES   | YES   | NO      |
+| `matches.timerStart`        | YES   | YES   | NO      |
+| `matches.timerPause`        | YES   | YES   | NO      |
+| `matches.timerReset`        | YES   | YES   | NO      |
+| `matches.updateDisplayConfig` | YES | NO    | NO      |
+| `matches.changeTemplate`    | YES   | NO    | NO      |
+| `matches.changeServe`       | YES   | YES   | NO      |
+| `matches.toggleSides`       | YES   | YES   | NO      |
+| `matches.resetMatch`        | YES   | YES   | NO      |
+| `matches.deleteMatch`       | YES   | NO    | NO      |
+| `matches.get`               | YES   | YES   | YES     |
+| `matches.listAdmin`         | YES   | NO    | NO      |
 
 ---
 
 ## 22. Template System
 
-Template saat ini hanya berupa **id** yang disimpan di `displayConfig`. Belum ada rule engine/template renderer.
+Template saat ini disimpan sebagai **id** di `displayConfig` dan dirender oleh display page sesuai sport/template. Rule engine generik lintas sport masih planned.
 
 ### 22.1 Template Structure (Planned)
 
@@ -692,31 +702,27 @@ Semua template mendukung konfigurasi visual **real-time**:
 
 ---
 
-## 24. Future Roadmap: Phase 2 (Backend Modernization)
+## 24. Future Roadmap: Phase 2 (Post-Convex Hardening)
 
-Target: Migrasi penuh dari custom Socket.io server ke **Convex**.
+Backend modernization ke Convex sudah selesai untuk alur utama create/control/display.
 
-### 24.1 Motivation
+### 24.1 Current Baseline
 
-- **Serverless**: Tidak perlu manage VPS/EC2.
-- **Auto-scale**: Handle ribuan user concurrent tanpa setup load balancer.
-- **Consistency**: Database & Realtime sync jadi satu engine (ACID compliant).
+- State match, rules sport, audit log, dan realtime update sudah berjalan di Convex
+- `server/` Socket.io lama sudah tidak digunakan
+- Frontend sudah consume query/mutation Convex via `useQuery` dan `useMutation`
 
-### 24.2 Migration Steps
+### 24.2 Next Priorities
 
-1.  **Data Modeling (Schema)**
-    - Port `MatchState` (in-memory Map) ke Database Schema (`matches` table).
-    - Port `SportRules` logic menjadi Convex Mutations.
+1. **Timer unification**
+   - Hubungkan UI timer di control page ke state timer Convex (hapus timer lokal agar sinkron lintas device).
 
-2.  **Core Logic Rewrite**
-    - Rewrite `server/match-manager.ts` -> `convex/matches.ts`.
-    - Rewrite `socket.on` events -> `convex/actions.ts`.
+2. **Template admin integration**
+   - Hubungkan `/admin/templates` ke `matches.changeTemplate` / `matches.updateDisplayConfig`.
 
-3.  **Client Integration**
-    - Ganti `socket.emit('score:update')` -> `useMutation(api.matches.updateScore)`.
-    - Ganti `socket.on('match:state')` -> `useQuery(api.matches.get)`.
+3. **Audit log visibility**
+   - Tambah halaman viewer untuk `match_events` (filter by matchId, actor, timestamp).
 
-4.  **Deployment**
-    - Frontend: Vercel / Cloudflare Pages.
-    - Backend: Convex Cloud (Fully Managed).
+4. **Production deployment hardening**
+   - Standarkan deployment Convex + frontend (environment variables, deploy key, branch preview).
 

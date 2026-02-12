@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect, type MouseEvent } from 'react';
+import { useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import sportConfig from '@/config/sports.json';
 import { cn } from '@/lib/utils';
+import { api } from '@/convex/_generated/api';
 
 // --- ICONS ---
 const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
@@ -353,6 +355,7 @@ const DEFAULT_SPORT =
 
 export default function CreateMatchPage() {
   const router = useRouter();
+  const createMatchMutation = useMutation(api.matches.createMatch);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // Form State
@@ -467,55 +470,42 @@ export default function CreateMatchPage() {
     const newMatchId = generateMatchId();
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'}/api/matches`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            matchId: newMatchId,
-            sport: selectedSport,
-            gameMode: isBadminton ? gameMode : undefined,
-            category: isBadminton ? category : undefined,
-            teams: {
-              home: {
-                name:
-                  homeTeam ||
-                  homePlayers[0] ||
-                  (isBadminton ? 'Home Player' : 'Home Team'),
-                country: homeCountry.trim() || undefined,
-                logo: homeLogo.trim() || undefined,
-                players: isBadminton
-                  ? gameMode === 'single'
-                    ? [{ name: homePlayers[0] }]
-                    : [{ name: homePlayers[0] }, { name: homePlayers[1] }]
-                  : [{ name: homeTeam || 'Home Team' }],
-              },
-              away: {
-                name:
-                  awayTeam ||
-                  awayPlayers[0] ||
-                  (isBadminton ? 'Away Player' : 'Away Team'),
-                country: awayCountry.trim() || undefined,
-                logo: awayLogo.trim() || undefined,
-                players: isBadminton
-                  ? gameMode === 'single'
-                    ? [{ name: awayPlayers[0] }]
-                    : [{ name: awayPlayers[0] }, { name: awayPlayers[1] }]
-                  : [{ name: awayTeam || 'Away Team' }],
-              },
-            },
-            pin: createPin,
-            templateId: selectedTemplate || TEMPLATE_DEFAULTS[selectedSport],
-          }),
+      const data = await createMatchMutation({
+        matchId: newMatchId,
+        sport: selectedSport,
+        gameMode: isBadminton ? gameMode : undefined,
+        category: isBadminton ? category : undefined,
+        teams: {
+          home: {
+            name:
+              homeTeam ||
+              homePlayers[0] ||
+              (isBadminton ? 'Home Player' : 'Home Team'),
+            country: homeCountry.trim() || undefined,
+            logo: homeLogo.trim() || undefined,
+            players: isBadminton
+              ? gameMode === 'single'
+                ? [{ name: homePlayers[0] }]
+                : [{ name: homePlayers[0] }, { name: homePlayers[1] }]
+              : [{ name: homeTeam || 'Home Team' }],
+          },
+          away: {
+            name:
+              awayTeam ||
+              awayPlayers[0] ||
+              (isBadminton ? 'Away Player' : 'Away Team'),
+            country: awayCountry.trim() || undefined,
+            logo: awayLogo.trim() || undefined,
+            players: isBadminton
+              ? gameMode === 'single'
+                ? [{ name: awayPlayers[0] }]
+                : [{ name: awayPlayers[0] }, { name: awayPlayers[1] }]
+              : [{ name: awayTeam || 'Away Team' }],
+          },
         },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create match');
-      }
+        pin: createPin,
+        templateId: selectedTemplate || TEMPLATE_DEFAULTS[selectedSport],
+      });
 
       if (data?.refereeToken) {
         localStorage.setItem(

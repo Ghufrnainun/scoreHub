@@ -26,8 +26,7 @@ scoreHub adalah aplikasi scoreboard real-time berbasis web, fokus untuk pertandi
 ## Teknologi
 
 - Next.js (frontend)
-- Socket.io (realtime)
-- Node/Express (server)
+- Convex (realtime + database)
 
 ## Catatan
 

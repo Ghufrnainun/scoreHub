@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from 'convex/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import { api } from '@/convex/_generated/api';
 
 // Types (Mock for now, should match MatchState)
 interface MatchSummary {
@@ -21,71 +23,52 @@ interface MatchSummary {
 const AUTH_STORAGE_KEY = 'scorehub:admin:auth';
 
 export default function AdminDashboard() {
-  const [matches, setMatches] = useState<MatchSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [adminPin, setAdminPin] = useState('');
+  const [isPinReady, setIsPinReady] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<
     'all' | MatchSummary['status']
   >('all');
   const [sportFilter, setSportFilter] = useState('all');
 
-  // Mock Fetch
   useEffect(() => {
-    const fetchMatches = async (showSpinner: boolean) => {
-      if (showSpinner) {
-        setIsLoading(true);
-      }
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (raw) {
       try {
-        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : null;
-        const pin = parsed?.pin || '';
-
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'}/api/admin/matches`,
-          {
-            headers: pin ? { 'x-admin-pin': pin } : {},
-          },
-        );
-
-        if (!response.ok) {
-          setMatches([]);
-          setIsLoading(false);
-          return;
-        }
-
-        const data = await response.json();
-        const normalized = (data || []).map((item: any, index: number) => ({
-          id: item.matchId || `${index}`,
-          matchId: item.matchId,
-          sport: item.sport,
-          status: item.status,
-          home: {
-            name: item.teams?.home || 'HOME',
-            score: item.scores?.home || 0,
-          },
-          away: {
-            name: item.teams?.away || 'AWAY',
-            score: item.scores?.away || 0,
-          },
-          startTime: new Date().toISOString(),
-          updatedAt: item.updatedAt,
-        }));
-        setMatches(normalized);
+        const parsed = JSON.parse(raw);
+        setAdminPin(parsed?.pin || '');
       } catch {
-        setMatches([]);
-      } finally {
-        if (showSpinner) {
-          setIsLoading(false);
-        }
+        setAdminPin('');
       }
-    };
-
-    fetchMatches(true);
-    const interval = setInterval(() => {
-      fetchMatches(false);
-    }, 5000);
-    return () => clearInterval(interval);
+    }
+    setIsPinReady(true);
   }, []);
+
+  const matchData = useQuery(
+    api.matches.listAdmin,
+    isPinReady ? { adminPin: adminPin || undefined } : 'skip',
+  );
+  const isLoading = !isPinReady || matchData === undefined;
+
+  const matches = useMemo<MatchSummary[]>(() => {
+    const data = matchData || [];
+    return data.map((item: any, index: number) => ({
+      id: item.matchId || `${index}`,
+      matchId: item.matchId,
+      sport: item.sport,
+      status: item.status,
+      home: {
+        name: item.teams?.home || 'HOME',
+        score: item.scores?.home || 0,
+      },
+      away: {
+        name: item.teams?.away || 'AWAY',
+        score: item.scores?.away || 0,
+      },
+      startTime: new Date().toISOString(),
+      updatedAt: item.updatedAt,
+    }));
+  }, [matchData]);
 
   const sportOptions = useMemo(() => {
     const sports = Array.from(new Set(matches.map((match) => match.sport)));

@@ -50,8 +50,8 @@ export class BasketballRules implements SportRules {
   }
 
   getServeState(state: MatchState): {
-    server: TeamSide
-    court: 'left' | 'right'
+    server: TeamSide;
+    court: 'left' | 'right';
   } {
     return {
       server: state.server || 'home',

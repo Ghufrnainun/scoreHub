@@ -808,7 +808,7 @@ export default function BwfScoreboard() {
   const [displaySettings, setDisplaySettings] =
     useState<DisplaySettings>(defaultSettings);
 
-  const { match, isLoading, error, isConnected } = useMatch({
+  const { match, isLoading, error } = useMatch({
     matchId,
     role: 'display',
   });
@@ -902,7 +902,7 @@ export default function BwfScoreboard() {
           </div>
           <p className="text-gray-500 max-w-md mx-auto">
             {error
-              ? 'Lost connection to the scoring server. Please check your internet or refresh.'
+              ? 'Lost connection to the realtime service. Please check your internet or refresh.'
               : 'Waiting for the referee to initialize the match data.'}
           </p>
         </div>

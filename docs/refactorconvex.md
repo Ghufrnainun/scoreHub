@@ -1,6 +1,6 @@
 # Refactor Plan: Migration to Convex
 
-This document outlines the step-by-step implementation plan to migrate Scorehub from a custom Node.js/Socket.io server to a **Convex** serverless backend.
+This document outlines the step-by-step implementation plan to migrate Scoreboard from a custom Node.js/Socket.io server to a **Convex** serverless backend.
 
 ## 1. Architecture Shift
 
@@ -181,10 +181,7 @@ We will recreate `MatchManager` methods as exported queries and mutations in `co
 
 ### 4.1 Install Convex
 
-```bash
-npm install convex
-npx convex dev
-```
+See **Section 5.1** for the install + first-run setup steps.
 
 ### 4.2 Auth Wrapper (`ConvexClientProvider`)
 
@@ -215,7 +212,66 @@ const updateScore = (team, delta) =>
   updateScoreMutation({ matchId, team, delta });
 ```
 
-## 5. Security Strategy
+## 5. Convex Setup & Wiring (Local + Deployment)
+
+### 5.1 Local dev: connect app to Convex
+
+1. Install Convex and run dev once:
+
+   ```bash
+   npm install convex
+   npx convex dev
+   ```
+
+2. First run creates `convex/` and writes `.env.local` (or `.env`) with:
+   - `CONVEX_DEPLOYMENT` (CLI config for the dev deployment)
+   - deployment URL for the client, using a framework-appropriate name
+     (for Next.js, use `NEXT_PUBLIC_CONVEX_URL`)
+3. Ensure the client uses:
+
+   ```typescript
+   const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+   ```
+
+> If `.env.local` is missing or stale, re-run `npx convex dev` to reconfigure.
+
+### 5.2 Convex Dashboard: Deployment Settings
+
+- **URL + Deploy Key**: Convex Dashboard -> Deployment Settings -> **URL and Deploy Key**.
+  - URL is used by the frontend (`NEXT_PUBLIC_CONVEX_URL`).
+  - Deploy Key is used by CI/hosting (`CONVEX_DEPLOY_KEY`).
+- **Environment Variables**: Add server-side secrets in Deployment Settings -> **Environment Variables**.
+  - Access in functions via `process.env.KEY`.
+
+### 5.3 Vercel production wiring
+
+1. **Build Command** (Vercel -> Project Settings -> Build & Development):
+
+   ```bash
+   npx convex deploy --cmd "npm run build"
+   ```
+
+2. **Environment Variables** (Vercel -> Project Settings -> Environment Variables):
+   - `CONVEX_DEPLOY_KEY` -> Production only (from Convex Dashboard).
+3. By default, Convex injects `CONVEX_URL` (or similar) into the build command.
+   If the build doesn't pick up `NEXT_PUBLIC_CONVEX_URL`, force it:
+
+   ```bash
+   npx convex deploy --cmd "npm run build" --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
+   ```
+
+### 5.4 Preview deployments (optional)
+
+- Use a **Preview Deploy Key** for `CONVEX_DEPLOY_KEY` in Vercel Preview env.
+- `npx convex deploy` will create a per-branch Convex backend and set the URL env for the build.
+
+### 5.5 CI or manual deploy
+
+- In CI/hosting, set `CONVEX_DEPLOY_KEY` and run `npx convex deploy`.
+- For local dev, `npx convex dev` writes `CONVEX_DEPLOYMENT` to `.env.local`.
+  Use a production deploy key when you need to deploy to prod from a pipeline.
+
+## 6. Security Strategy
 
 Since Convex is public by default, we use "Application-Level Auth":
 
@@ -225,9 +281,11 @@ Since Convex is public by default, we use "Application-Level Auth":
 4. **Token Expiry**: Reject if `expiresAt` is set and `Date.now() > expiresAt`.
 5. **Revocation**: Reject if `revokedAt` is set.
 
-## 6. Implementation Checklist
+## 7. Implementation Checklist
 
 - [ ] **Init**: `npx convex dev` & setup `ConvexClientProvider`.
+- [ ] **Wiring**: ensure `NEXT_PUBLIC_CONVEX_URL` + `CONVEX_DEPLOYMENT` are in `.env.local` (not committed).
+- [ ] **Deploy**: configure Vercel build command + `CONVEX_DEPLOY_KEY`.
 - [ ] **Schema**: Implement `convex/schema.ts` aligned with `MatchState` + sportState.
 - [ ] **Logic Migration**:
   - [ ] Copy logic from `server/sports/badminton.ts` to `convex/sports/badminton.ts` (pure functions).
@@ -252,9 +310,9 @@ Since Convex is public by default, we use "Application-Level Auth":
   - [ ] Validate role + expiry on every mutation.
 - [ ] **Cleanup**: Delete `server/` folder and `socket.io-client` dependency.
 
-## 7. Notes & Edge Cases
+## 8. Notes & Edge Cases
 
 - Keep `matchId` as the external identifier (frontend depends on it).
 - `sportState` is required for period/point breakdowns (basketball/tennis/soccer).
-- Timer behavior should match `TimerState` in `lib/socket.ts` (countup/countdown).
+- Timer behavior should match `TimerState` in `lib/match-types.ts` (countup/countdown).
 - Undo history should be capped at 50 states (mirror current server behavior).

@@ -1,13 +1,13 @@
 import { MatchState, SportRules, TeamSide } from './types';
 
-export class SoccerRules implements SportRules {
+export class FutsalRules implements SportRules {
   initMatch(): Partial<MatchState> {
     return {
       currentSet: 1,
       sets: [],
       isFlipped: false,
       sportState: {
-        soccer: {
+        futsal: {
           currentPeriod: 1,
           periods: [
             { home: 0, away: 0 },
@@ -24,8 +24,8 @@ export class SoccerRules implements SportRules {
     newState.teams[winner].score += goals;
 
     const sportState = newState.sportState || {};
-    if (!sportState.soccer) {
-      sportState.soccer = {
+    if (!sportState.futsal) {
+      sportState.futsal = {
         currentPeriod: 1,
         periods: [
           { home: 0, away: 0 },
@@ -36,17 +36,17 @@ export class SoccerRules implements SportRules {
 
     const periodIndex = Math.max(
       0,
-      Math.min(1, (sportState.soccer.currentPeriod || 1) - 1),
+      Math.min(1, (sportState.futsal.currentPeriod || 1) - 1),
     );
-    sportState.soccer.periods[periodIndex][winner] += goals;
+    sportState.futsal.periods[periodIndex][winner] += goals;
     newState.sportState = sportState;
 
     return newState;
   }
 
   getServeState(state: MatchState): {
-    server: TeamSide
-    court: 'left' | 'right'
+    server: TeamSide;
+    court: 'left' | 'right';
   } {
     return {
       server: state.server || 'home',

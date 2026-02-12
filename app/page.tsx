@@ -95,7 +95,7 @@ const faqs = [
   },
   {
     q: 'Apakah ada history match?',
-    a: 'Belum. State disimpan in-memory untuk match aktif.',
+    a: 'Ada. State match tersimpan persistent di Convex untuk recovery lintas device.',
   },
 ];
 

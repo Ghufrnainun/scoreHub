@@ -10,6 +10,7 @@ export type SportId =
 
 export interface Player {
   name: string;
+  country?: string;
 }
 
 export interface TeamState {
@@ -20,8 +21,6 @@ export interface TeamState {
   challenges: number;
   country?: string;
   logo?: string;
-  // playerPositions[0] is in Even (Right) court, playerPositions[1] is in Odd (Left) court
-  // Stores the index of the player in team.players array
   playerPositions: number[];
 }
 
@@ -34,9 +33,8 @@ export interface TimerState {
 }
 
 export interface MatchState {
-  id: string;
   matchId: string;
-  sport: string; // 'badminton', 'tennis', etc.
+  sport: string;
   gameMode?: 'single' | 'double';
   category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
   status: 'active' | 'finished' | 'scheduled' | 'paused';
@@ -45,24 +43,17 @@ export interface MatchState {
     away: TeamState;
   };
   currentSet: number;
-  sets: { home: number; away: number }[]; // History of set scores
-  server?: TeamSide; // Who is serving (home/away)
-  servingPlayerIndex?: number; // Index in team.players (0 or 1)
-  receiver?: TeamSide; // Who is receiving
-  receivingPlayerIndex?: number; // Index in team.players (0 or 1)
-  serviceCourt?: 'left' | 'right'; // For badminton/tennis
-  isFlipped?: boolean; // If true, home is right and away is left
+  sets: { home: number; away: number }[];
+  server?: TeamSide;
+  servingPlayerIndex?: number;
+  receiver?: TeamSide;
+  receivingPlayerIndex?: number;
+  serviceCourt?: 'left' | 'right';
+  isFlipped?: boolean;
   isFlippedInSet3?: boolean;
   winner?: TeamSide;
-
-  // Undo History
-  history: MatchState[];
-
+  history?: MatchState[];
   timer?: TimerState;
-
-  // SaaS Features
-  adminPin?: string;
-  refereeToken?: string;
   ads?: {
     active: boolean;
     currentAssetId?: string;
@@ -71,8 +62,6 @@ export interface MatchState {
     templateId: string;
     primaryColor?: string;
   };
-
-  // Sport-specific extended state
   sportState?: Record<string, any>;
 }
 

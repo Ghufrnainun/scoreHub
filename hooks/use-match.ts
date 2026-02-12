@@ -1,26 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  getSocket,
-  connectToMatch,
-  disconnectSocket,
-  MatchState,
-  MatchUpdate,
-  MatchRole,
-  DisplayConfig,
-  emitPoint,
-  emitScoreUpdate,
-  emitUndo,
-  emitTimerStart,
-  emitTimerPause,
-  emitTimerReset,
-  emitConfigUpdate,
-  emitChangeServe,
-  emitUseChallenge,
-  emitToggleSides,
-  emitResetMatch,
-} from '@/lib/socket';
+import { useConvexConnectionState, useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import type { DisplayConfig, MatchRole, MatchState } from '@/lib/match-types';
 
 interface UseMatchOptions {
   matchId: string;
@@ -56,90 +39,37 @@ export function useMatch({
   pin,
   token,
 }: UseMatchOptions): UseMatchReturn {
-  const [match, setMatch] = useState<MatchState | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const matchResult = useQuery(api.matches.get, { matchId });
+  const match = matchResult ?? null;
+  const connectionState = useConvexConnectionState();
+  const isConnected = connectionState.isWebSocketConnected;
+  const isLoading = matchResult === undefined;
   const [error, setError] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState(0);
 
-  useEffect(() => {
-    const socket = connectToMatch(matchId, role, pin, token);
+  const awardPointMutation = useMutation(api.matches.awardPoint);
+  const updateScoreMutation = useMutation(api.matches.updateScore);
+  const undoMutation = useMutation(api.matches.undo);
+  const timerStartMutation = useMutation(api.matches.timerStart);
+  const timerPauseMutation = useMutation(api.matches.timerPause);
+  const timerResetMutation = useMutation(api.matches.timerReset);
+  const updateConfigMutation = useMutation(api.matches.updateDisplayConfig);
+  const changeServeMutation = useMutation(api.matches.changeServe);
+  const useChallengeMutation = useMutation(api.matches.useChallenge);
+  const toggleSidesMutation = useMutation(api.matches.toggleSides);
+  const resetMatchMutation = useMutation(api.matches.resetMatch);
 
-    socket.on('connect', () => {
-      setIsConnected(true);
-      setIsLoading(false);
+  const runMutation = useCallback(async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
       setError(null);
-    });
-
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-    });
-
-    socket.on('connect_error', (err) => {
-      setError(err.message);
-      setIsLoading(false);
-    });
-
-    socket.on('match:state', (state: MatchState) => {
-      setMatch(state);
-      setIsLoading(false);
-    });
-
-    socket.on('match:update', (update: any) => {
-      // Backend now sends full state mostly on events?
-      // Actually backend code says: io.to(matchId).emit('match:state', match);
-      // But legacy code might send match:update.
-      // If backend sends match:state, we handle it in 'match:state' listener.
-      // If we need to handle partial updates, we might need to be careful.
-      // Current backend only emits 'match:state' with full match object for points/scores.
-      // It emits 'match:update' only for timer/config?
-      // Let's look at server.ts:
-      // socket.on('timer:start') -> emit('match:update', { type: 'timer', timer: match.timer })
-      // So partial updates are still used for Timers.
-
-      setMatch((prev) => {
-        if (!prev) return prev;
-        const updated = { ...prev };
-
-        // Map timer if needed
-        if (update.type === 'timer' && update.timer)
-          updated.timer = update.timer;
-        if (update.type === 'config' && update.config)
-          updated.displayConfig = update.config; // Mapped
-
-        return updated;
-      });
-    });
-
-    // Special listener for full state refresh if needed
-    socket.on('match:refresh', (state: MatchState) => {
-      setMatch(state);
-    });
-
-    socket.on('match:ended', () => {
-      setError('Match has ended');
-    });
-
-    socket.on('error:permission', (message: string) => {
-      setError(message);
-      // Clear error after 3 seconds
-      setTimeout(() => setError(null), 3000);
-    });
-
-    socket.on('error:undo', (message: string) => {
-      setError(message);
-      setTimeout(() => setError(null), 3000);
-    });
-
-    socket.on('error:action_failed', (message: string) => {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Action failed. Please try again.';
       setError(message);
       setTimeout(() => setError(null), 5000);
-    });
-
-    return () => {
-      disconnectSocket();
-    };
-  }, [matchId, role, pin, token]);
+    }
+  }, []);
 
   // Timer countdown effect
   useEffect(() => {
@@ -178,52 +108,74 @@ export function useMatch({
   }, [match?.timer]);
 
   // Action callbacks
-  const awardPoint = useCallback((winner: 'home' | 'away', value?: number) => {
-    emitPoint(winner, value);
-  }, []);
+  const awardPoint = useCallback(
+    (winner: 'home' | 'away', value?: number) => {
+      runMutation(() =>
+        awardPointMutation({ matchId, role, pin, token, winner, value }),
+      );
+    },
+    [awardPointMutation, matchId, pin, role, runMutation, token],
+  );
 
-  const updateScore = useCallback((team: 'home' | 'away', delta: number) => {
-    emitScoreUpdate(team, delta);
-  }, []);
+  const updateScore = useCallback(
+    (team: 'home' | 'away', delta: number) => {
+      runMutation(() =>
+        updateScoreMutation({ matchId, role, pin, token, team, delta }),
+      );
+    },
+    [matchId, pin, role, runMutation, token, updateScoreMutation],
+  );
 
   const undo = useCallback(() => {
-    emitUndo();
-  }, []);
+    runMutation(() => undoMutation({ matchId, role, pin, token }));
+  }, [matchId, pin, role, runMutation, token, undoMutation]);
 
   const startTimer = useCallback(() => {
-    emitTimerStart();
-  }, []);
+    runMutation(() => timerStartMutation({ matchId, role, pin, token }));
+  }, [matchId, pin, role, runMutation, timerStartMutation, token]);
 
   const pauseTimer = useCallback(() => {
-    emitTimerPause();
-  }, []);
+    runMutation(() => timerPauseMutation({ matchId, role, pin, token }));
+  }, [matchId, pin, role, runMutation, timerPauseMutation, token]);
 
   const resetTimer = useCallback(() => {
-    emitTimerReset();
-  }, []);
+    runMutation(() => timerResetMutation({ matchId, role, pin, token }));
+  }, [matchId, pin, role, runMutation, timerResetMutation, token]);
 
-  const updateConfig = useCallback((config: Partial<DisplayConfig>) => {
-    emitConfigUpdate(config);
-  }, []);
+  const updateConfig = useCallback(
+    (config: Partial<DisplayConfig>) => {
+      runMutation(() =>
+        updateConfigMutation({ matchId, role, pin, token, config }),
+      );
+    },
+    [matchId, pin, role, runMutation, token, updateConfigMutation],
+  );
 
   const changeServe = useCallback(
     (team: 'home' | 'away', position?: 'left' | 'right') => {
-      emitChangeServe(team, position);
+      runMutation(() =>
+        changeServeMutation({ matchId, role, pin, token, team, position }),
+      );
     },
-    [],
+    [changeServeMutation, matchId, pin, role, runMutation, token],
   );
 
-  const useChallenge = useCallback((team: 'home' | 'away') => {
-    emitUseChallenge(team);
-  }, []);
+  const useChallenge = useCallback(
+    (team: 'home' | 'away') => {
+      runMutation(() =>
+        useChallengeMutation({ matchId, role, pin, token, team }),
+      );
+    },
+    [matchId, pin, role, runMutation, token, useChallengeMutation],
+  );
 
   const toggleSides = useCallback(() => {
-    emitToggleSides();
-  }, []);
+    runMutation(() => toggleSidesMutation({ matchId, role, pin, token }));
+  }, [matchId, pin, role, runMutation, token, toggleSidesMutation]);
 
   const resetMatch = useCallback(() => {
-    emitResetMatch();
-  }, []);
+    runMutation(() => resetMatchMutation({ matchId, role, pin, token }));
+  }, [matchId, pin, role, resetMatchMutation, runMutation, token]);
 
   return {
     match,
