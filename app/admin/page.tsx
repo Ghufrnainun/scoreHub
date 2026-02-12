@@ -1,38 +1,52 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import Link from 'next/link';
-import { api } from '@/convex/_generated/api';
+import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
-// Types (Mock for now, should match MatchState)
+type MatchStatus =
+  | 'created'
+  | 'ready_for_referee'
+  | 'live'
+  | 'paused'
+  | 'finished';
+
 interface MatchSummary {
   id: string;
-  matchId: string; // Friendly ID
+  matchId: string;
+  displayCode?: string;
   sport: string;
-  status: 'active' | 'finished' | 'scheduled' | 'paused';
+  category?: string;
+  status: MatchStatus;
+  assignedReferee?: string;
   home: { name: string; score: number };
   away: { name: string; score: number };
-  startTime: string;
   updatedAt?: number;
 }
 
-const AUTH_STORAGE_KEY = 'scorehub:admin:auth';
+const STATUS_FILTERS: Array<'all' | MatchStatus> = [
+  'all',
+  'created',
+  'ready_for_referee',
+  'live',
+  'paused',
+  'finished',
+];
 
 export default function AdminDashboard() {
   const [adminPin, setAdminPin] = useState('');
   const [isPinReady, setIsPinReady] = useState(false);
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<
-    'all' | MatchSummary['status']
-  >('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | MatchStatus>('all');
   const [sportFilter, setSportFilter] = useState('all');
 
   useEffect(() => {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
@@ -48,6 +62,7 @@ export default function AdminDashboard() {
     api.matches.listAdmin,
     isPinReady ? { adminPin: adminPin || undefined } : 'skip',
   );
+
   const isLoading = !isPinReady || matchData === undefined;
 
   const matches = useMemo<MatchSummary[]>(() => {
@@ -55,8 +70,11 @@ export default function AdminDashboard() {
     return data.map((item: any, index: number) => ({
       id: item.matchId || `${index}`,
       matchId: item.matchId,
+      displayCode: item.displayCode || undefined,
       sport: item.sport,
+      category: item.category,
       status: item.status,
+      assignedReferee: item.assignedReferee,
       home: {
         name: item.teams?.home || 'HOME',
         score: item.scores?.home || 0,
@@ -65,7 +83,6 @@ export default function AdminDashboard() {
         name: item.teams?.away || 'AWAY',
         score: item.scores?.away || 0,
       },
-      startTime: new Date().toISOString(),
       updatedAt: item.updatedAt,
     }));
   }, [matchData]);
@@ -81,12 +98,12 @@ export default function AdminDashboard() {
       const matchesQuery =
         !term ||
         match.matchId.toLowerCase().includes(term) ||
+        (match.displayCode || '').toLowerCase().includes(term) ||
         match.home.name.toLowerCase().includes(term) ||
         match.away.name.toLowerCase().includes(term);
       const matchesStatus =
         statusFilter === 'all' || match.status === statusFilter;
-      const matchesSport =
-        sportFilter === 'all' || match.sport === sportFilter;
+      const matchesSport = sportFilter === 'all' || match.sport === sportFilter;
       return matchesQuery && matchesStatus && matchesSport;
     });
   }, [matches, query, statusFilter, sportFilter]);
@@ -100,26 +117,29 @@ export default function AdminDashboard() {
       },
       {
         total: 0,
-        active: 0,
+        created: 0,
+        ready_for_referee: 0,
+        live: 0,
         paused: 0,
-        scheduled: 0,
         finished: 0,
       } as Record<string, number>,
     );
   }, [matches]);
 
-  const statusDot: Record<MatchSummary['status'], string> = {
-    active: 'bg-emerald-500',
-    paused: 'bg-amber-500',
-    scheduled: 'bg-slate-400',
+  const statusDot: Record<MatchStatus, string> = {
+    created: 'bg-slate-400',
+    ready_for_referee: 'bg-amber-500',
+    live: 'bg-emerald-500',
+    paused: 'bg-orange-500',
     finished: 'bg-rose-500',
   };
 
-  const statusBadge: Record<MatchSummary['status'], string> = {
-    active: 'bg-emerald-500/10 text-emerald-600',
-    paused: 'bg-amber-500/10 text-amber-600',
-    scheduled: 'bg-slate-500/10 text-slate-600',
-    finished: 'bg-rose-500/10 text-rose-600',
+  const statusBadge: Record<MatchStatus, string> = {
+    created: 'bg-slate-500/10 text-slate-700',
+    ready_for_referee: 'bg-amber-500/10 text-amber-700',
+    live: 'bg-emerald-500/10 text-emerald-700',
+    paused: 'bg-orange-500/10 text-orange-700',
+    finished: 'bg-rose-500/10 text-rose-700',
   };
 
   return (
@@ -127,15 +147,16 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-[family-name:var(--font-bebas)] tracking-wide uppercase text-black text-balance">
-            Active Matches
+            Match Dashboard
           </h1>
           <p className="text-black/60 font-medium text-pretty">
-            Manage and monitor live events.
+            Create in /create, then manage and share from here.
           </p>
         </div>
-        <Link href="/">
+        <Link href="/create">
           <Button className="rounded-full bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/20 tracking-wide uppercase font-bold text-xs h-10 px-6">
-            <svg aria-hidden="true"
+            <svg
+              aria-hidden="true"
               className="w-4 h-4 mr-2"
               fill="none"
               stroke="currentColor"
@@ -164,26 +185,26 @@ export default function AdminDashboard() {
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Active
+            Live
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.active}
+            {statusCounts.live}
           </div>
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Paused
+            Ready
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.paused}
+            {statusCounts.ready_for_referee}
           </div>
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Scheduled
+            Created
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.scheduled}
+            {statusCounts.created}
           </div>
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
@@ -205,7 +226,7 @@ export default function AdminDashboard() {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by match ID or team..."
+              placeholder="Search by match ID, display code, or team..."
               className="mt-2 h-10 rounded-2xl bg-black/5 border-transparent focus:bg-white focus:border-black/20"
             />
           </div>
@@ -215,22 +236,20 @@ export default function AdminDashboard() {
                 Status
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(['all', 'active', 'paused', 'scheduled', 'finished'] as const).map(
-                  (status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => setStatusFilter(status)}
-                      className={`h-8 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                        statusFilter === status
-                          ? 'bg-black text-white'
-                          : 'bg-black/5 text-black/50 hover:bg-black/10'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ),
-                )}
+                {STATUS_FILTERS.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setStatusFilter(status)}
+                    className={`h-8 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                      statusFilter === status
+                        ? 'bg-black text-white'
+                        : 'bg-black/5 text-black/50 hover:bg-black/10'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
               </div>
             </div>
             <div>
@@ -278,22 +297,9 @@ export default function AdminDashboard() {
             />
           ))}
         </div>
-      ) : matches.length === 0 ? (
-        <div className="text-center py-20 border-2 border-dashed rounded-xl">
-          <div className="text-muted-foreground mb-4">
-            No active matches found
-          </div>
-          <Link href="/">
-            <Button className="rounded-full bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/20 tracking-wide uppercase font-bold text-xs h-10 px-6">
-              Create Match
-            </Button>
-          </Link>
-        </div>
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-xl">
-          <div className="text-muted-foreground mb-4">
-            No matches match the current filters
-          </div>
+          <div className="text-muted-foreground mb-4">No matches found</div>
           <Button
             onClick={() => {
               setQuery('');
@@ -313,13 +319,18 @@ export default function AdminDashboard() {
               className="p-5 flex flex-col gap-4 border border-black/10 shadow-sm bg-white hover:border-black/20 rounded-3xl transition-colors"
             >
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2 h-2 rounded-full ${statusDot[match.status]} ${match.status === 'active' ? 'animate-pulse motion-reduce:animate-none' : ''}`}
-                  />
-                  <span className="text-xs font-mono font-bold text-muted-foreground">
-                    {match.matchId}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${statusDot[match.status]} ${match.status === 'live' ? 'animate-pulse motion-reduce:animate-none' : ''}`}
+                    />
+                    <span className="text-xs font-mono font-bold text-muted-foreground">
+                      {match.matchId}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-black/50">
+                    CODE: {match.displayCode || '-'}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-black/5 px-2 py-1 rounded text-black/60">
@@ -340,9 +351,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="text-3xl font-black">{match.home.score}</div>
                 </div>
-                <div className="text-xs font-bold text-muted-foreground px-2">
-                  VS
-                </div>
+                <div className="text-xs font-bold text-muted-foreground px-2">VS</div>
                 <div className="text-center flex-1">
                   <div className="font-bold truncate text-sm mb-1">
                     {match.away.name}
@@ -352,10 +361,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 mt-auto">
-                <Link
-                  href={`/match/${match.matchId}/control?role=admin`}
-                  className="w-full"
-                >
+                <Link href={`/admin/matches/${match.matchId}/control`} className="w-full">
                   <Button
                     variant="secondary"
                     className="w-full text-xs h-8 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none"
@@ -364,7 +370,11 @@ export default function AdminDashboard() {
                   </Button>
                 </Link>
                 <Link
-                  href={`/match/${match.matchId}/display`}
+                  href={
+                    match.displayCode
+                      ? `/display/${match.displayCode}`
+                      : `/match/${match.matchId}/display`
+                  }
                   target="_blank"
                   className="w-full"
                 >
@@ -375,6 +385,34 @@ export default function AdminDashboard() {
                     View Display
                   </Button>
                 </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                  onClick={() => {
+                    if (!match.displayCode) return;
+                    const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(match.displayCode)}`;
+                    navigator.clipboard.writeText(link);
+                  }}
+                  disabled={!match.displayCode}
+                >
+                  Copy Referee Link
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                  onClick={() => {
+                    if (!match.displayCode) return;
+                    const msg = `Referee access\nDisplay Code: ${match.displayCode}\nPIN: [isi PIN wasit]\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(match.displayCode)}`;
+                    const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                    window.open(wa, '_blank', 'noopener,noreferrer');
+                  }}
+                  disabled={!match.displayCode}
+                >
+                  Share WhatsApp
+                </Button>
               </div>
             </Card>
           ))}

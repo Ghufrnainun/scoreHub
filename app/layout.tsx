@@ -36,7 +36,6 @@ export const metadata: Metadata = {
   description: 'Real-time scoreboard system for live sports events',
   generator: 'v0.app',
   icons: {
-    icon: '/scorehub-logo.svg',
     icon: [
       {
         url: '/icon-light-32x32.png',

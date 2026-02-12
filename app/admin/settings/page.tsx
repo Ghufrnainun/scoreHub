@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
 export default function SettingsPage() {
   const [pin, setPin] = useState('');
   useEffect(() => {
-    const stored = localStorage.getItem('scorehub:admin:auth');
+    const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
     if (stored) {
       try {
         const p = JSON.parse(stored);
@@ -113,3 +114,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

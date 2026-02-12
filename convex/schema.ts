@@ -4,6 +4,9 @@ import { v } from 'convex/values';
 const teamSide = v.union(v.literal('home'), v.literal('away'));
 const gameMode = v.union(v.literal('single'), v.literal('double'));
 const matchStatus = v.union(
+  v.literal('created'),
+  v.literal('ready_for_referee'),
+  v.literal('live'),
   v.literal('active'),
   v.literal('finished'),
   v.literal('scheduled'),
@@ -48,6 +51,12 @@ const displayConfigShape = v.object({
   primaryColor: v.optional(v.string()),
 });
 
+const refereeAuthShape = v.object({
+  failedAttempts: v.number(),
+  lockUntil: v.union(v.number(), v.null()),
+  lastAttemptAt: v.union(v.number(), v.null()),
+});
+
 const sportStateShape = v.object({
   badminton: v.optional(v.object({})),
   tennis: v.optional(
@@ -87,8 +96,12 @@ const sportStateShape = v.object({
 export default defineSchema({
   matches: defineTable({
     matchId: v.string(),
+    displayCode: v.string(),
     adminPinHash: v.string(),
+    refereePinHash: v.string(),
     refereeTokenHash: v.string(),
+    createdBy: v.optional(v.string()),
+    assignedReferee: v.optional(v.string()),
     sport: v.string(),
     status: matchStatus,
     gameMode: v.optional(gameMode),
@@ -117,7 +130,12 @@ export default defineSchema({
         currentAssetId: v.optional(v.string()),
       }),
     ),
-  }).index('by_matchId', ['matchId']),
+    refereeAuth: refereeAuthShape,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_matchId', ['matchId'])
+    .index('by_displayCode', ['displayCode']),
 
   match_events: defineTable({
     matchId: v.string(),

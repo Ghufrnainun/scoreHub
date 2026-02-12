@@ -643,7 +643,7 @@ export default function LandingPage() {
                       <span
                         className={`text-[10px] font-bold uppercase tracking-[0.2em] ${activeStep.id === step.id ? 'text-[var(--amber)]' : 'text-black/40'}`}
                       >
-                        Step {step.step}
+                        {step.label}
                       </span>
                     </div>
                     <h3

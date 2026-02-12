@@ -3,17 +3,26 @@
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useQuery } from 'convex/react';
 import { useMatch } from '@/hooks/use-match';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { api } from '@/convex/_generated/api';
 
 // --- ICONS ---
-const ShuttlecockIcon = ({ className }: { className?: string }) => (
+const ShuttlecockIcon = ({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) => (
   <svg
     aria-hidden="true"
     className={className}
     viewBox="0 -0.42 42.356 42.356"
     fill="currentColor"
+    style={style}
   >
     <path
       d="M157.288,169.268l2.295,5.865s-8.735,11.6-9.88,13.583-4.124,3.328-4.124,3.328l-1.666,3.2,2.738,2.738,1.709-1.709a49.942,49.942,0,0,1,2.636-5.656c1.212-2.013,9.826-13.669,9.826-13.669L167.7,178.3l1.354,6.882s-11.6,8.556-13.669,9.826a46.424,46.424,0,0,1-5.656,2.636l-1.709,1.709,2.693,2.693,3.363-1.745s1.327-2.963,3.3-4.1,13.5-9.8,13.5-9.8l5.852,2.307-1.6,5.511s-13.267,5.661-15.275,6.735a48.208,48.208,0,0,1-5.477,1.733l-6.765,3.887.711.711-2.45,2.45-.092-.092a6.523,6.523,0,0,1-8.253-.714l-1.83-1.83c-2.214-2.214-1.388-4.625.6-6.938l-.034-.034.942-.942h0l1.508-1.508.665.665,3.8-6.589a21.029,21.029,0,0,1,1.759-5.5c1.146-1.986,6.814-15.355,6.814-15.355l5.536-1.63M142.993,197l-1.7,3.259,2.223,2.223-.686-.686,2.479-2.479Zm3.689,3.689L144.2,203.17l1.483,1.483,3.265-1.694Z"
@@ -812,6 +821,15 @@ export default function BwfScoreboard() {
     matchId,
     role: 'display',
   });
+  const [adLoadFailed, setAdLoadFailed] = useState(false);
+  const activeAssetId =
+    match?.ads?.active && match?.ads?.currentAssetId
+      ? match.ads.currentAssetId
+      : undefined;
+  const adAsset = useQuery(
+    api.media.resolveForDisplay,
+    activeAssetId ? { assetId: activeAssetId } : 'skip',
+  );
 
   // Overlay Mode Logic
   const queryOverlay = searchParams.get('overlay') === 'true';
@@ -868,6 +886,10 @@ export default function BwfScoreboard() {
       }));
     }
   }, [match?.displayConfig?.templateId]);
+
+  useEffect(() => {
+    setAdLoadFailed(false);
+  }, [activeAssetId]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -974,6 +996,13 @@ export default function BwfScoreboard() {
     }
   };
 
+  const shouldRenderAd = Boolean(
+    match.ads?.active && activeAssetId && adAsset && !adLoadFailed,
+  );
+  const adUnavailable = Boolean(
+    match.ads?.active && activeAssetId && (adAsset === null || adLoadFailed),
+  );
+
   return (
     <div
       className={cn(
@@ -996,7 +1025,7 @@ export default function BwfScoreboard() {
       {(!isOverlay || !overlayConfig.hideHeader) && (
         <div className="h-14 bg-black/50 backdrop-blur-md flex items-center justify-between px-8 z-20 group-hover:h-16 transition-[height] duration-300">
           <div className="flex items-center gap-8">
-            <Link href="/create" className="flex items-center gap-3 group">
+            <Link href="/admin" className="flex items-center gap-3 group">
               <div className="w-8 h-8 rounded-lg bg-[#fbbf24] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Image
                   src="/scorehub-logo.svg"
@@ -1031,19 +1060,51 @@ export default function BwfScoreboard() {
         id="main-content"
         className="flex-1 relative flex flex-col overflow-hidden"
       >
-        {renderTemplate()}
-        {match.status === 'finished' && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in motion-reduce:animate-none fade-in duration-500">
-            <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter uppercase drop-shadow-2xl text-balance">
-              Match Ended
-            </h1>
-            <div className="mt-8 px-8 py-4 bg-[#fbbf24] text-black font-black text-2xl tracking-[0.2em] rounded-full uppercase shadow-xl animate-bounce motion-reduce:animate-none">
-              WINNER:{' '}
-              {match.winner === 'home'
-                ? match.teams.home.name
-                : match.teams.away.name}
-            </div>
+        {shouldRenderAd ? (
+          <div className="h-full w-full bg-black flex items-center justify-center">
+            {adAsset?.type === 'video' ? (
+              <video
+                src={adAsset.url}
+                className="h-full w-full object-contain"
+                autoPlay
+                muted
+                playsInline
+                loop
+                controls={false}
+                onError={() => setAdLoadFailed(true)}
+              />
+            ) : (
+              <img
+                src={adAsset?.url}
+                alt={adAsset?.name || 'Sponsored media'}
+                className="h-full w-full object-contain"
+                loading="lazy"
+                onError={() => setAdLoadFailed(true)}
+              />
+            )}
           </div>
+        ) : (
+          <>
+            {adUnavailable ? (
+              <div className="absolute top-3 right-3 z-40 rounded-full bg-red-500/90 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+                Ad failed - showing scoreboard
+              </div>
+            ) : null}
+            {renderTemplate()}
+            {match.status === 'finished' && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in motion-reduce:animate-none fade-in duration-500">
+                <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter uppercase drop-shadow-2xl text-balance">
+                  Match Ended
+                </h1>
+                <div className="mt-8 px-8 py-4 bg-[#fbbf24] text-black font-black text-2xl tracking-[0.2em] rounded-full uppercase shadow-xl animate-bounce motion-reduce:animate-none">
+                  WINNER:{' '}
+                  {match.winner === 'home'
+                    ? match.teams.home.name
+                    : match.teams.away.name}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 

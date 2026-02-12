@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ADMIN_AUTH_STORAGE_KEY, ADMIN_AUTH_TTL_MS } from '@/lib/auth';
 
 // Icons
 const DashboardIcon = ({ className }: { className?: string }) => (
@@ -101,9 +102,6 @@ const MENU_ITEMS = [
   { name: 'Settings', path: '/admin/settings', icon: SettingsIcon },
 ];
 
-const AUTH_STORAGE_KEY = 'scorehub:admin:auth';
-const AUTH_TTL_MS = 1000 * 60 * 60 * 8;
-
 export default function AdminLayout({
   children,
 }: {
@@ -121,7 +119,7 @@ export default function AdminLayout({
   }, []);
 
   useEffect(() => {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
     if (!adminPin) {
       setIsAuthed(true);
       setIsReady(true);
@@ -137,7 +135,7 @@ export default function AdminLayout({
         const isValid =
           parsed?.pin === adminPin &&
           typeof parsed.ts === 'number' &&
-          Date.now() - parsed.ts < AUTH_TTL_MS;
+          Date.now() - parsed.ts < ADMIN_AUTH_TTL_MS;
         if (isValid) {
           setIsAuthed(true);
         }
@@ -161,7 +159,7 @@ export default function AdminLayout({
     }
 
     localStorage.setItem(
-      AUTH_STORAGE_KEY,
+      ADMIN_AUTH_STORAGE_KEY,
       JSON.stringify({ pin: adminPin, ts: Date.now() }),
     );
     setIsAuthed(true);
@@ -172,7 +170,7 @@ export default function AdminLayout({
     return (
       <div className="min-h-dvh bg-background text-foreground flex items-center justify-center">
         <div className="text-sm text-muted-foreground font-mono">
-          Loading admin accessâ€¦
+          Loading admin access...
         </div>
       </div>
     );
@@ -352,3 +350,4 @@ export default function AdminLayout({
     </div>
   );
 }
+

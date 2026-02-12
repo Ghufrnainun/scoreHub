@@ -1,5 +1,6 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
+import type { Id } from './_generated/dataModel';
 
 export const list = query({
   args: {},
@@ -42,5 +43,31 @@ export const get = query({
   handler: async (ctx, args) => {
     if (!args.id) return null;
     return await ctx.db.get(args.id);
+  },
+});
+
+export const resolveForDisplay = query({
+  args: { assetId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (!args.assetId) return null;
+
+    const asset = await ctx.db.get(args.assetId as Id<'media_assets'>);
+    if (!asset) return null;
+
+    let resolvedUrl = asset.url;
+    if (asset.storageId) {
+      const storageUrl = await ctx.storage.getUrl(asset.storageId);
+      if (storageUrl) {
+        resolvedUrl = storageUrl;
+      }
+    }
+
+    return {
+      _id: asset._id,
+      name: asset.name,
+      type: asset.type,
+      url: resolvedUrl,
+      createdAt: asset.createdAt,
+    };
   },
 });

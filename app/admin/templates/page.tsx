@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Loader2 } from 'lucide-react';
+import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
 interface Template {
   id: string;
@@ -57,7 +58,7 @@ export default function TemplatesPage() {
 
   const [pin, setPin] = useState('');
   useEffect(() => {
-    const stored = localStorage.getItem('scorehub:admin:auth');
+    const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
     if (stored) {
       try {
         const p = JSON.parse(stored);
@@ -202,3 +203,4 @@ export default function TemplatesPage() {
     </div>
   );
 }
+

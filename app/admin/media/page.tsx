@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Loader2, Trash2, MonitorPlay } from 'lucide-react';
+import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
 export default function MediaManager() {
   const assets = useQuery(api.media.list);
@@ -16,7 +17,7 @@ export default function MediaManager() {
 
   const [pin, setPin] = useState('');
   useEffect(() => {
-    const stored = localStorage.getItem('scorehub:admin:auth');
+    const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
     if (stored) {
       try {
         const p = JSON.parse(stored);
@@ -300,3 +301,4 @@ export default function MediaManager() {
     </div>
   );
 }
+

@@ -94,7 +94,6 @@ export default function ControlPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [refereeToken, setRefereeToken] = useState<string | null>(null);
   const [displaySettings, setDisplaySettings] =
     useState<DisplaySettings>(defaultSettings);
 
@@ -106,7 +105,7 @@ export default function ControlPage() {
   };
 
   const matchId = params.id as string;
-  const role = (searchParams.get('role') || 'referee') as MatchRole;
+  const role = (searchParams.get('role') || 'admin') as MatchRole;
   const pin = searchParams.get('pin') || undefined;
   const token = searchParams.get('token') || undefined;
 
@@ -166,12 +165,6 @@ export default function ControlPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (role !== 'admin') return;
-    const storedToken = localStorage.getItem(`refereeToken:${matchId}`);
-    if (storedToken) setRefereeToken(storedToken);
-  }, [matchId, role]);
-
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -188,6 +181,9 @@ export default function ControlPage() {
 
   const home = match.teams.home;
   const away = match.teams.away;
+  const displayPath = match.displayCode
+    ? `/display/${match.displayCode}`
+    : `/match/${matchId}/display`;
   const homeServing = match.server === 'home';
   const awayServing = match.server === 'away';
   const isSingles = match.gameMode === 'single';
@@ -459,7 +455,7 @@ export default function ControlPage() {
       {/* Header */}
       <header className="p-3 px-6 flex justify-between items-center bg-white dark:bg-card/80 dark:backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm z-30">
         <div className="flex items-center gap-4">
-          <Link href="/create" className="group flex items-center gap-2">
+          <Link href="/admin" className="group flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Image
                 src="/scorehub-logo.svg"
@@ -478,21 +474,6 @@ export default function ControlPage() {
               </span>
             </div>
           </Link>
-          {role === 'admin' && refereeToken && (
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(refereeToken);
-              }}
-              className="hidden md:flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-card border-2 border-slate-200 dark:border-white/5 rounded-xl shadow-sm text-xs font-mono text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-              aria-label="Copy referee token"
-            >
-              <span className="uppercase tracking-widest text-[10px] text-slate-400">
-                Ref Token
-              </span>
-              <span className="text-sm font-black">{refereeToken}</span>
-            </button>
-          )}
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
           <div className="flex flex-col gap-1 items-start">
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-card border-2 border-slate-200 dark:border-white/5 rounded-xl shadow-sm">
@@ -505,7 +486,7 @@ export default function ControlPage() {
             </div>
             <div className="flex items-center gap-1.5">
               <Link
-                href={`/match/${matchId}/display`}
+                href={displayPath}
                 target="_blank"
                 className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-md active:scale-95 flex items-center gap-2"
               >
@@ -513,7 +494,7 @@ export default function ControlPage() {
               </Link>
               <button
                 onClick={() => {
-                  const url = `${window.location.origin}/match/${matchId}/display`;
+                  const url = `${window.location.origin}${displayPath}`;
                   navigator.clipboard.writeText(url);
                   alert('Display link copied!');
                 }}
@@ -523,7 +504,7 @@ export default function ControlPage() {
               </button>
               <button
                 onClick={() => {
-                  const url = `${window.location.origin}/match/${matchId}/display?overlay=true`;
+                  const url = `${window.location.origin}${displayPath}?overlay=true`;
                   navigator.clipboard.writeText(url);
                   alert(
                     'OBS Overlay link copied! Use this as a Browser Source in OBS.',

@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useEffect, type MouseEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -8,9 +8,18 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import sportConfig from '@/config/sports.json';
 import { cn } from '@/lib/utils';
 import { api } from '@/convex/_generated/api';
+import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
 // --- ICONS ---
 const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
@@ -358,10 +367,8 @@ export default function CreateMatchPage() {
   const createMatchMutation = useMutation(api.matches.createMatch);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  // Form State
-  const [matchIdInput, setMatchIdInput] = useState('');
-  const [pinInput, setPinInput] = useState('');
-  const [refereeTokenInput, setRefereeTokenInput] = useState('');
+  // Quick Access State
+  const [displayCodeInput, setDisplayCodeInput] = useState('');
 
   // Create Match State
   const [selectedSport, setSelectedSport] = useState<SportType>(DEFAULT_SPORT);
@@ -388,13 +395,17 @@ export default function CreateMatchPage() {
   const [homeLogo, setHomeLogo] = useState('');
   const [awayLogo, setAwayLogo] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [createdMatch, setCreatedMatch] = useState<{
+    matchId: string;
+    displayCode: string;
+    refereePin: string;
+    status: string;
+  } | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const canJoinDisplay = matchIdInput.trim().length > 0;
-  const canJoinReferee =
-    matchIdInput.trim().length > 0 &&
-    (pinInput.trim().length >= 4 || refereeTokenInput.trim().length >= 6);
+  const canJoinDisplay = displayCodeInput.trim().length >= 4;
+  const canJoinReferee = displayCodeInput.trim().length >= 4;
   const templateOptions = TEMPLATE_OPTIONS[selectedSport] || [];
 
   // Theme Logic
@@ -507,16 +518,17 @@ export default function CreateMatchPage() {
         templateId: selectedTemplate || TEMPLATE_DEFAULTS[selectedSport],
       });
 
-      if (data?.refereeToken) {
-        localStorage.setItem(
-          `refereeToken:${newMatchId}`,
-          data.refereeToken as string,
-        );
-      }
-
-      router.push(
-        `/match/${newMatchId}/control?role=admin&pin=${encodeURIComponent(createPin)}`,
+      localStorage.setItem(
+        ADMIN_AUTH_STORAGE_KEY,
+        JSON.stringify({ pin: createPin, ts: Date.now() }),
       );
+      setDisplayCodeInput((data?.displayCode as string) || '');
+      setCreatedMatch({
+        matchId: newMatchId,
+        displayCode: (data?.displayCode as string) || '',
+        refereePin: createPin,
+        status: (data?.status as string) || 'ready_for_referee',
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create match');
     } finally {
@@ -525,44 +537,16 @@ export default function CreateMatchPage() {
   };
 
   const handleJoinMatch = (role: 'referee' | 'display') => {
-    if (!matchIdInput) {
-      setError('Please enter Match ID');
+    const code = displayCodeInput.trim().toUpperCase();
+    if (!code) {
+      setError('Please enter Display Code');
       return;
     }
 
     if (role === 'referee') {
-      const token = refereeTokenInput.trim();
-      const pin = pinInput.trim();
-      if (!token && (!pin || pin.length < 4)) {
-        setError('Referee token or PIN is required');
-        return;
-      }
-      if (token) {
-        router.push(
-          `/match/${matchIdInput}/control?role=referee&token=${encodeURIComponent(token)}`,
-        );
-        return;
-      }
-      router.push(
-        `/match/${matchIdInput}/control?role=referee&pin=${encodeURIComponent(pin)}`,
-      );
+      router.push(`/referee/join?code=${encodeURIComponent(code)}`);
     } else {
-      router.push(`/match/${matchIdInput}/display`);
-    }
-  };
-
-  const handleJoinLinkClick = (
-    role: 'referee' | 'display',
-    event: MouseEvent<HTMLAnchorElement>,
-  ) => {
-    if (role === 'referee') {
-      if (!canJoinReferee) {
-        event.preventDefault();
-        handleJoinMatch('referee');
-      }
-    } else if (!canJoinDisplay) {
-      event.preventDefault();
-      handleJoinMatch('display');
+      router.push(`/display/${encodeURIComponent(code)}`);
     }
   };
 
@@ -1266,46 +1250,21 @@ export default function CreateMatchPage() {
                 </div>
               </div>
               <div className="space-y-3">
-                <label htmlFor="match-id-referee" className="sr-only">
-                  Match ID
+                <label htmlFor="display-code-referee" className="sr-only">
+                  Display Code
                 </label>
                 <Input
-                  id="match-id-referee"
-                  name="matchId"
+                  id="display-code-referee"
+                  name="displayCode"
                   autoComplete="off"
-                  placeholder="Match ID (e.g. MATCH-1A2B)..."
+                  placeholder="Display Code (e.g. A1B2C3)..."
                   className="h-9 font-mono text-xs uppercase bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                  value={matchIdInput}
+                  value={displayCodeInput}
                   onChange={(e) =>
-                    setMatchIdInput(e.target.value.toUpperCase())
+                    setDisplayCodeInput(
+                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                    )
                   }
-                />
-                <label htmlFor="token-referee" className="sr-only">
-                  Referee Token
-                </label>
-                <Input
-                  id="token-referee"
-                  name="refereeToken"
-                  autoComplete="off"
-                  placeholder="Referee Token (e.g. 3FA9C2E1)..."
-                  className="h-9 font-mono text-xs uppercase bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                  value={refereeTokenInput}
-                  onChange={(e) =>
-                    setRefereeTokenInput(e.target.value.toUpperCase())
-                  }
-                />
-                <label htmlFor="pin-referee" className="sr-only">
-                  Referee PIN
-                </label>
-                <Input
-                  id="pin-referee"
-                  name="pin"
-                  autoComplete="current-password"
-                  placeholder="PIN (e.g. 1234)..."
-                  type="password"
-                  className="h-9 font-mono text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
                 />
                 <Button
                   onClick={() => handleJoinMatch('referee')}
@@ -1313,8 +1272,11 @@ export default function CreateMatchPage() {
                   variant="secondary"
                   className="w-full text-xs font-bold uppercase tracking-widest h-10 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none border border-transparent"
                 >
-                  Enter Control Panel
+                  Open Referee Join Page
                 </Button>
+                <p className="text-[11px] text-black/50">
+                  Wasit tetap login pakai Display Code + PIN di halaman join.
+                </p>
               </div>
             </Card>
 
@@ -1342,18 +1304,20 @@ export default function CreateMatchPage() {
                 Launch the public scoreboard view for TV or projector.
               </p>
               <div className="space-y-3">
-                <label htmlFor="match-id-display" className="sr-only">
-                  Match ID
+                <label htmlFor="display-code-open" className="sr-only">
+                  Display Code
                 </label>
                 <Input
-                  id="match-id-display"
-                  name="matchIdDisplay"
+                  id="display-code-open"
+                  name="displayCodeOpen"
                   autoComplete="off"
-                  placeholder="Match ID (e.g. MATCH-1A2B)..."
+                  placeholder="Display Code (e.g. A1B2C3)..."
                   className="h-9 font-mono text-xs uppercase"
-                  value={matchIdInput}
+                  value={displayCodeInput}
                   onChange={(e) =>
-                    setMatchIdInput(e.target.value.toUpperCase())
+                    setDisplayCodeInput(
+                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                    )
                   }
                 />
                 <Button
@@ -1369,6 +1333,100 @@ export default function CreateMatchPage() {
           </aside>
         </div>
       </main>
+
+      <Dialog
+        open={Boolean(createdMatch)}
+        onOpenChange={(open) => {
+          if (!open) setCreatedMatch(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl rounded-3xl border-black/10">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-[family-name:var(--font-bebas)] uppercase tracking-[0.08em]">
+              Match Created Successfully
+            </DialogTitle>
+            <DialogDescription className="text-black/60">
+              Bagikan akses wasit dari popup ini. Admin berikutnya lanjut dari dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          {createdMatch ? (
+            <div className="grid gap-4 sm:grid-cols-3 text-sm">
+              <div className="rounded-xl border border-black/10 bg-black/5 p-3">
+                <div className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
+                  Match ID
+                </div>
+                <div className="mt-1 font-mono font-bold">{createdMatch.matchId}</div>
+              </div>
+              <div className="rounded-xl border border-black/10 bg-black/5 p-3">
+                <div className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
+                  Display Code
+                </div>
+                <div className="mt-1 font-mono font-bold">{createdMatch.displayCode}</div>
+              </div>
+              <div className="rounded-xl border border-black/10 bg-black/5 p-3">
+                <div className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
+                  Referee PIN
+                </div>
+                <div className="mt-1 font-mono font-bold">{createdMatch.refereePin}</div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full text-xs uppercase tracking-widest font-bold"
+              onClick={() => {
+                if (!createdMatch) return;
+                const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
+                navigator.clipboard.writeText(link);
+              }}
+            >
+              Copy Referee Link
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full text-xs uppercase tracking-widest font-bold"
+              onClick={() => {
+                if (!createdMatch) return;
+                const message = `Referee access\\nDisplay Code: ${createdMatch.displayCode}\\nPIN: ${createdMatch.refereePin}\\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
+                const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                window.open(waUrl, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              Share to WhatsApp
+            </Button>
+          </div>
+
+          <DialogFooter className="sm:justify-between gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-xs uppercase tracking-widest font-bold"
+              onClick={() => {
+                if (!createdMatch) return;
+                router.push(`/admin/matches/${createdMatch.matchId}/control`);
+                setCreatedMatch(null);
+              }}
+            >
+              Open Admin Control
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full bg-[#111827] hover:bg-black text-white text-xs uppercase tracking-widest font-bold"
+              onClick={() => {
+                router.push('/admin');
+                setCreatedMatch(null);
+              }}
+            >
+              Go to Dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

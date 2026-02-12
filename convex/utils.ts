@@ -37,7 +37,11 @@ export async function assertAdminAccess(
 }
 
 export async function assertRefereeOrAdminAccess(
-  match: { adminPinHash: string; refereeTokenHash?: string },
+  match: {
+    adminPinHash: string;
+    refereePinHash?: string;
+    refereeTokenHash?: string;
+  },
   role: MatchRole,
   pin?: string,
   token?: string,
@@ -53,8 +57,9 @@ export async function assertRefereeOrAdminAccess(
 
   if (isGlobalAdminPin(pin)) return;
 
-  const pinOk = pin
-    ? (await hashSecret(pin)) === match.adminPinHash
+  const pinHash = pin ? await hashSecret(pin) : null;
+  const pinOk = pinHash
+    ? pinHash === (match.refereePinHash || match.adminPinHash)
     : false;
   const tokenOk =
     token && match.refereeTokenHash
@@ -62,6 +67,6 @@ export async function assertRefereeOrAdminAccess(
       : false;
 
   if (!pinOk && !tokenOk) {
-    throw new ConvexError('Invalid referee token');
+    throw new ConvexError('Invalid referee credential');
   }
 }

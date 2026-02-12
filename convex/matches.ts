@@ -7,7 +7,6 @@ import {
   assertRefereeOrAdminAccess,
   generateToken,
   hashSecret,
-  isGlobalAdminPin,
 } from './utils';
 
 const teamSide = v.union(v.literal('home'), v.literal('away'));
@@ -37,6 +36,20 @@ const teamInput = v.object({
   logo: v.optional(v.string()),
 });
 
+const MAX_REFEREE_PIN_ATTEMPTS = 5;
+const REFEREE_LOCK_MS = 5 * 60 * 1000;
+
+const normalizeDisplayCode = (value: string) =>
+  value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+const normalizePublicStatus = (status: string) =>
+  status === 'active' ? 'live' : status;
+
+const activateMatchStatus = (status: string) =>
+  status === 'created' || status === 'ready_for_referee' || status === 'active'
+    ? 'live'
+    : status;
+
 const ensureMatch = async (ctx: any, matchId: string) => {
   const match = await ctx.db
     .query('matches')
@@ -48,8 +61,41 @@ const ensureMatch = async (ctx: any, matchId: string) => {
   return match;
 };
 
+const ensureMatchByDisplayCode = async (ctx: any, displayCode: string) => {
+  const normalizedDisplayCode = normalizeDisplayCode(displayCode);
+  const match = await ctx.db
+    .query('matches')
+    .withIndex('by_displayCode', (q: any) => q.eq('displayCode', normalizedDisplayCode))
+    .unique();
+  if (!match) {
+    throw new ConvexError('Display code not found');
+  }
+  return match;
+};
+
+const generateUniqueDisplayCode = async (ctx: any) => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate = generateToken(3);
+    const existing = await ctx.db
+      .query('matches')
+      .withIndex('by_displayCode', (q: any) => q.eq('displayCode', candidate))
+      .unique();
+    if (!existing) {
+      return candidate;
+    }
+  }
+  throw new ConvexError('Unable to generate unique display code');
+};
+
 const stripSystemFields = (match: any) => {
-  const { _id, _creationTime, adminPinHash, refereeTokenHash, ...rest } = match;
+  const {
+    _id,
+    _creationTime,
+    adminPinHash,
+    refereePinHash,
+    refereeTokenHash,
+    ...rest
+  } = match;
   return rest;
 };
 
@@ -62,12 +108,17 @@ const sanitizeMatch = (match: any) => {
   const {
     history,
     adminPinHash,
+    refereePinHash,
     refereeTokenHash,
     _id,
     _creationTime,
     ...safe
   } = match;
-  return safe;
+
+  return {
+    ...safe,
+    status: normalizePublicStatus(safe.status),
+  };
 };
 
 const snapshotMatch = (match: MatchState) =>
@@ -99,6 +150,23 @@ const recordEvent = async (
   });
 };
 
+const assertAdminAction = async (
+  match: any,
+  role: MatchRole,
+  pin?: string,
+) => {
+  if (role !== 'admin') {
+    throw new ConvexError('Only admin can perform this action');
+  }
+  await assertAdminAccess(match, pin);
+};
+
+const getRefereeAuthState = (match: any) => ({
+  failedAttempts: match.refereeAuth?.failedAttempts ?? 0,
+  lockUntil: match.refereeAuth?.lockUntil ?? null,
+  lastAttemptAt: match.refereeAuth?.lastAttemptAt ?? null,
+});
+
 export const get = query({
   args: { matchId: v.string() },
   handler: async (ctx, args) => {
@@ -111,6 +179,39 @@ export const get = query({
   },
 });
 
+export const getByDisplayCode = query({
+  args: { displayCode: v.string() },
+  handler: async (ctx, args) => {
+    const normalizedDisplayCode = normalizeDisplayCode(args.displayCode);
+    if (!normalizedDisplayCode) {
+      return null;
+    }
+
+    const match = await ctx.db
+      .query('matches')
+      .withIndex('by_displayCode', (q) =>
+        q.eq('displayCode', normalizedDisplayCode),
+      )
+      .unique();
+
+    if (!match) return null;
+
+    return {
+      matchId: match.matchId,
+      displayCode: match.displayCode,
+      sport: match.sport,
+      category: match.category,
+      status: normalizePublicStatus(match.status),
+      teams: {
+        home: match.teams.home.name,
+        away: match.teams.away.name,
+      },
+      assignedReferee: match.assignedReferee,
+      updatedAt: match.updatedAt,
+    };
+  },
+});
+
 export const listAdmin = query({
   args: { adminPin: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -118,21 +219,28 @@ export const listAdmin = query({
     if (globalPin && args.adminPin !== globalPin) {
       return [];
     }
+
     const matches = await ctx.db.query('matches').collect();
-    return matches.map((match: any) => ({
-      matchId: match.matchId,
-      sport: match.sport,
-      status: match.status,
-      teams: {
-        home: match.teams.home.name,
-        away: match.teams.away.name,
-      },
-      scores: {
-        home: match.teams.home.score,
-        away: match.teams.away.score,
-      },
-      updatedAt: Date.now(),
-    }));
+    return matches
+      .sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .map((match: any) => ({
+        matchId: match.matchId,
+        displayCode: match.displayCode,
+        sport: match.sport,
+        category: match.category,
+        status: normalizePublicStatus(match.status),
+        assignedReferee: match.assignedReferee,
+        teams: {
+          home: match.teams.home.name,
+          away: match.teams.away.name,
+        },
+        scores: {
+          home: match.teams.home.score,
+          away: match.teams.away.score,
+        },
+        createdAt: match.createdAt,
+        updatedAt: match.updatedAt,
+      }));
   },
 });
 
@@ -147,6 +255,7 @@ export const createMatch = mutation({
       away: teamInput,
     }),
     pin: v.string(),
+    createdBy: v.optional(v.string()),
     templateId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -162,16 +271,21 @@ export const createMatch = mutation({
     const rules = getRulesForSport(resolvedSport);
     const initialState = rules.initMatch(args);
 
-    const refereeToken = generateToken();
+    const now = Date.now();
+    const displayCode = await generateUniqueDisplayCode(ctx);
+    const refereeToken = generateToken(8);
     const adminPinHash = await hashSecret(args.pin);
+    const refereePinHash = await hashSecret(args.pin);
     const refereeTokenHash = await hashSecret(refereeToken);
 
     const match: MatchState = {
       matchId: args.matchId,
+      displayCode,
       sport: resolvedSport,
       gameMode: args.gameMode,
       category: args.category,
-      status: 'active',
+      status: 'ready_for_referee',
+      createdBy: args.createdBy,
       teams: {
         home: {
           name: args.teams.home.name,
@@ -207,19 +321,31 @@ export const createMatch = mutation({
       displayConfig: {
         templateId: args.templateId || 'modern',
       },
+      ads: {
+        active: false,
+      },
+      refereeAuth: {
+        failedAttempts: 0,
+        lockUntil: null,
+        lastAttemptAt: null,
+      },
+      createdAt: now,
+      updatedAt: now,
       ...initialState,
     };
 
     await ctx.db.insert('matches', {
       ...match,
       adminPinHash,
+      refereePinHash,
       refereeTokenHash,
     });
 
     await ctx.db.insert('referee_tokens', {
       matchId: args.matchId,
       tokenHash: refereeTokenHash,
-      createdAt: Date.now(),
+      expiresAt: now + 1000 * 60 * 60 * 12,
+      createdAt: now,
     });
 
     await recordEvent(ctx, {
@@ -232,7 +358,110 @@ export const createMatch = mutation({
 
     return {
       matchId: args.matchId,
+      displayCode,
       refereeToken,
+      status: match.status,
+    };
+  },
+});
+
+export const joinAsReferee = mutation({
+  args: {
+    displayCode: v.string(),
+    pin: v.string(),
+    refereeName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const match = await ensureMatchByDisplayCode(ctx, args.displayCode);
+
+    if (match.status === 'finished') {
+      throw new ConvexError('Match already finished');
+    }
+
+    const now = Date.now();
+    const authState = getRefereeAuthState(match);
+    if (authState.lockUntil && authState.lockUntil > now) {
+      const remainingSeconds = Math.ceil((authState.lockUntil - now) / 1000);
+      throw new ConvexError(
+        `Too many failed attempts. Try again in ${remainingSeconds}s.`,
+      );
+    }
+
+    const pinHash = await hashSecret(args.pin);
+    const expectedPinHash = match.refereePinHash || match.adminPinHash;
+
+    if (pinHash !== expectedPinHash) {
+      const failedAttempts = authState.failedAttempts + 1;
+      const shouldLock = failedAttempts >= MAX_REFEREE_PIN_ATTEMPTS;
+      const nextAuthState = {
+        failedAttempts: shouldLock ? 0 : failedAttempts,
+        lockUntil: shouldLock ? now + REFEREE_LOCK_MS : null,
+        lastAttemptAt: now,
+      };
+
+      await ctx.db.patch(match._id, {
+        refereeAuth: nextAuthState,
+        updatedAt: now,
+      });
+
+      if (shouldLock) {
+        throw new ConvexError('Too many failed attempts. Access temporarily locked.');
+      }
+
+      throw new ConvexError('Invalid referee PIN');
+    }
+
+    const sessionToken = generateToken(12);
+    const sessionTokenHash = await hashSecret(sessionToken);
+    const nextStatus = activateMatchStatus(match.status);
+
+    const updatedState: MatchState = {
+      ...(stripSystemFields(match) as MatchState),
+      status: nextStatus as MatchState['status'],
+      assignedReferee:
+        args.refereeName?.trim() || match.assignedReferee || undefined,
+      refereeAuth: {
+        failedAttempts: 0,
+        lockUntil: null,
+        lastAttemptAt: now,
+      },
+      updatedAt: now,
+    };
+
+    await ctx.db.patch(match._id, {
+      refereeTokenHash: sessionTokenHash,
+      status: updatedState.status,
+      assignedReferee: updatedState.assignedReferee,
+      refereeAuth: updatedState.refereeAuth,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert('referee_tokens', {
+      matchId: match.matchId,
+      tokenHash: sessionTokenHash,
+      expiresAt: now + 1000 * 60 * 60 * 12,
+      createdAt: now,
+    });
+
+    await recordEvent(ctx, {
+      matchId: match.matchId,
+      action: 'referee:join',
+      before: stripSystemFields(match) as MatchState,
+      after: updatedState,
+      role: 'referee',
+      token: sessionToken,
+    });
+
+    return {
+      matchId: match.matchId,
+      displayCode: match.displayCode,
+      token: sessionToken,
+      status: normalizePublicStatus(updatedState.status),
+      sport: match.sport,
+      teams: {
+        home: match.teams.home.name,
+        away: match.teams.away.name,
+      },
     };
   },
 });
@@ -268,13 +497,20 @@ export const updateScore = mutation({
       },
     };
 
+    const now = Date.now();
+    const nextStatus = activateMatchStatus(match.status);
+
     const afterState: MatchState = {
       ...(stripSystemFields(match) as MatchState),
       teams: updatedTeams,
+      status: nextStatus as MatchState['status'],
+      updatedAt: now,
     };
 
     await ctx.db.patch(match._id, {
       teams: updatedTeams,
+      status: nextStatus as MatchState['status'],
+      updatedAt: now,
     });
 
     await recordEvent(ctx, {
@@ -286,7 +522,7 @@ export const updateScore = mutation({
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, teams: updatedTeams });
+    return sanitizeMatch({ ...match, ...afterState });
   },
 });
 
@@ -318,23 +554,35 @@ export const awardPoint = mutation({
     if (nextHistory.length > 50) nextHistory.shift();
 
     const rules = getRulesForSport(matchState.sport);
-    const baseState = { ...matchState, history: [] };
+    const baseState = {
+      ...matchState,
+      history: [],
+      status: activateMatchStatus(matchState.status) as MatchState['status'],
+    };
     const nextState = rules.awardPoint(
       baseState,
       args.winner as TeamSide,
       args.value,
     );
 
+    const now = Date.now();
     const updated: MatchState = {
       ...nextState,
+      displayCode: match.displayCode,
+      createdBy: match.createdBy,
+      assignedReferee: match.assignedReferee,
       history: nextHistory,
       displayConfig: match.displayConfig,
       ads: match.ads,
+      refereeAuth: getRefereeAuthState(match),
+      createdAt: match.createdAt,
+      updatedAt: now,
     };
 
     await ctx.db.replace(match._id, {
       ...updated,
       adminPinHash: match.adminPinHash,
+      refereePinHash: match.refereePinHash || match.adminPinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
 
@@ -350,6 +598,7 @@ export const awardPoint = mutation({
     return sanitizeMatch({
       ...updated,
       adminPinHash: match.adminPinHash,
+      refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
   },
@@ -376,19 +625,28 @@ export const undo = mutation({
       throw new ConvexError('Nothing to undo');
     }
 
-    const previous = history[history.length - 1] as MatchState;
+    const previous = history[history.length - 1] as Partial<MatchState>;
     const nextHistory = history.slice(0, -1);
+    const now = Date.now();
 
     const restored: MatchState = {
+      ...(stripSystemFields(match) as MatchState),
       ...previous,
+      displayCode: match.displayCode,
+      createdBy: match.createdBy,
+      assignedReferee: match.assignedReferee,
       history: nextHistory,
       displayConfig: match.displayConfig,
       ads: match.ads,
+      refereeAuth: getRefereeAuthState(match),
+      createdAt: match.createdAt,
+      updatedAt: now,
     };
 
     await ctx.db.replace(match._id, {
       ...restored,
       adminPinHash: match.adminPinHash,
+      refereePinHash: match.refereePinHash || match.adminPinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
 
@@ -404,6 +662,7 @@ export const undo = mutation({
     return sanitizeMatch({
       ...restored,
       adminPinHash: match.adminPinHash,
+      refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
   },
@@ -418,12 +677,7 @@ export const resetMatch = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const matchState = stripSystemFields(match) as MatchState;
     const rules = getRulesForSport(matchState.sport);
@@ -444,10 +698,11 @@ export const resetMatch = mutation({
       },
     });
 
+    const now = Date.now();
     const resetState: MatchState = {
       ...matchState,
       ...initialState,
-      status: 'active',
+      status: 'ready_for_referee',
       currentSet: 1,
       sets: [],
       history: [],
@@ -462,11 +717,18 @@ export const resetMatch = mutation({
         home: { ...matchState.teams.home, score: 0, setsWon: 0, challenges: 2 },
         away: { ...matchState.teams.away, score: 0, setsWon: 0, challenges: 2 },
       },
+      refereeAuth: {
+        failedAttempts: 0,
+        lockUntil: null,
+        lastAttemptAt: null,
+      },
+      updatedAt: now,
     };
 
     await ctx.db.replace(match._id, {
       ...resetState,
       adminPinHash: match.adminPinHash,
+      refereePinHash: match.refereePinHash || match.adminPinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
 
@@ -482,6 +744,7 @@ export const resetMatch = mutation({
     return sanitizeMatch({
       ...resetState,
       adminPinHash: match.adminPinHash,
+      refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
   },
@@ -496,19 +759,19 @@ export const toggleSides = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
+    const now = Date.now();
     const updated = {
       ...stripSystemFields(match),
       isFlipped: !match.isFlipped,
+      updatedAt: now,
     } as MatchState;
 
-    await ctx.db.patch(match._id, { isFlipped: !match.isFlipped });
+    await ctx.db.patch(match._id, {
+      isFlipped: !match.isFlipped,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -519,7 +782,7 @@ export const toggleSides = mutation({
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, isFlipped: !match.isFlipped });
+    return sanitizeMatch({ ...match, ...updated });
   },
 });
 
@@ -534,15 +797,13 @@ export const changeServe = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
+    const now = Date.now();
     const updated: Partial<MatchState> = {
       server: args.team as TeamSide,
+      status: activateMatchStatus(match.status) as MatchState['status'],
+      updatedAt: now,
     };
     if (args.position) {
       updated.serviceCourt = args.position;
@@ -573,12 +834,7 @@ export const useChallenge = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const team = match.teams[args.team as TeamSide];
     if (team.challenges <= 0) {
@@ -593,7 +849,11 @@ export const useChallenge = mutation({
       },
     };
 
-    await ctx.db.patch(match._id, { teams: updatedTeams });
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      teams: updatedTeams,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -602,12 +862,13 @@ export const useChallenge = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         teams: updatedTeams,
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, teams: updatedTeams });
+    return sanitizeMatch({ ...match, teams: updatedTeams, updatedAt: now });
   },
 });
 
@@ -624,14 +885,15 @@ export const updateDisplayConfig = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    if (args.role !== 'admin') {
-      throw new ConvexError('Only admin can update config');
-    }
-    await assertAdminAccess(match, args.pin);
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const current = match.displayConfig || { templateId: 'modern' };
     const updatedConfig = { ...current, ...args.config };
-    await ctx.db.patch(match._id, { displayConfig: updatedConfig });
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      displayConfig: updatedConfig,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -640,12 +902,13 @@ export const updateDisplayConfig = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         displayConfig: updatedConfig,
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, displayConfig: updatedConfig });
+    return sanitizeMatch({ ...match, displayConfig: updatedConfig, updatedAt: now });
   },
 });
 
@@ -659,17 +922,18 @@ export const changeTemplate = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    if (args.role !== 'admin') {
-      throw new ConvexError('Only admin can change template');
-    }
-    await assertAdminAccess(match, args.pin);
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const displayConfig = match.displayConfig || {
       templateId: args.templateId,
     };
     const updatedConfig = { ...displayConfig, templateId: args.templateId };
+    const now = Date.now();
 
-    await ctx.db.patch(match._id, { displayConfig: updatedConfig });
+    await ctx.db.patch(match._id, {
+      displayConfig: updatedConfig,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -678,12 +942,13 @@ export const changeTemplate = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         displayConfig: updatedConfig,
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, displayConfig: updatedConfig });
+    return sanitizeMatch({ ...match, displayConfig: updatedConfig, updatedAt: now });
   },
 });
 
@@ -696,12 +961,7 @@ export const timerStart = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const timer = match.timer || {
       mode: 'stopped' as const,
@@ -718,7 +978,12 @@ export const timerStart = mutation({
       pausedAt: null,
     };
 
-    await ctx.db.patch(match._id, { timer: updatedTimer });
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      timer: updatedTimer,
+      status: activateMatchStatus(match.status) as MatchState['status'],
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -727,12 +992,14 @@ export const timerStart = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         timer: updatedTimer,
+        status: activateMatchStatus(match.status) as MatchState['status'],
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, timer: updatedTimer });
+    return sanitizeMatch({ ...match, timer: updatedTimer, updatedAt: now });
   },
 });
 
@@ -745,12 +1012,7 @@ export const timerPause = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const timer = match.timer;
     if (!timer || !timer.startedAt) {
@@ -765,7 +1027,11 @@ export const timerPause = mutation({
       pausedAt: Date.now(),
     };
 
-    await ctx.db.patch(match._id, { timer: updatedTimer });
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      timer: updatedTimer,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -774,12 +1040,13 @@ export const timerPause = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         timer: updatedTimer,
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, timer: updatedTimer });
+    return sanitizeMatch({ ...match, timer: updatedTimer, updatedAt: now });
   },
 });
 
@@ -792,12 +1059,7 @@ export const timerReset = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertRefereeOrAdminAccess(
-      match,
-      args.role as MatchRole,
-      args.pin,
-      args.token,
-    );
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const updatedTimer = {
       mode: 'stopped' as const,
@@ -807,7 +1069,11 @@ export const timerReset = mutation({
       elapsed: 0,
     };
 
-    await ctx.db.patch(match._id, { timer: updatedTimer });
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      timer: updatedTimer,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -816,12 +1082,13 @@ export const timerReset = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         timer: updatedTimer,
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, timer: updatedTimer });
+    return sanitizeMatch({ ...match, timer: updatedTimer, updatedAt: now });
   },
 });
 
@@ -836,17 +1103,18 @@ export const updateAds = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    if (args.role !== 'admin') {
-      throw new ConvexError('Only admin can update ads');
-    }
-    await assertAdminAccess(match, args.pin);
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
 
     const ads = {
       active: args.active,
       currentAssetId: args.assetId,
     };
 
-    await ctx.db.patch(match._id, { ads });
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      ads,
+      updatedAt: now,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -855,12 +1123,13 @@ export const updateAds = mutation({
       after: {
         ...(stripSystemFields(match) as MatchState),
         ads,
+        updatedAt: now,
       },
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, ads });
+    return sanitizeMatch({ ...match, ads, updatedAt: now });
   },
 });
 
@@ -873,7 +1142,6 @@ export const deleteMatch = mutation({
     const match = await ensureMatch(ctx, args.matchId);
     await assertAdminAccess(match, args.pin);
 
-    // Cascade delete events and tokens
     const events = await ctx.db
       .query('match_events')
       .withIndex('by_matchId_createdAt', (q) => q.eq('matchId', args.matchId))

@@ -34,10 +34,20 @@ export interface TimerState {
 
 export interface MatchState {
   matchId: string;
+  displayCode: string;
   sport: string;
   gameMode?: 'single' | 'double';
   category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
-  status: 'active' | 'finished' | 'scheduled' | 'paused';
+  status:
+    | 'created'
+    | 'ready_for_referee'
+    | 'live'
+    | 'active'
+    | 'finished'
+    | 'scheduled'
+    | 'paused';
+  createdBy?: string;
+  assignedReferee?: string;
   teams: {
     home: TeamState;
     away: TeamState;
@@ -58,6 +68,13 @@ export interface MatchState {
     active: boolean;
     currentAssetId?: string;
   };
+  refereeAuth: {
+    failedAttempts: number;
+    lockUntil: number | null;
+    lastAttemptAt: number | null;
+  };
+  createdAt: number;
+  updatedAt: number;
   displayConfig?: {
     templateId: string;
     primaryColor?: string;
