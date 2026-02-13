@@ -40,7 +40,10 @@ const MAX_REFEREE_PIN_ATTEMPTS = 5;
 const REFEREE_LOCK_MS = 5 * 60 * 1000;
 
 const normalizeDisplayCode = (value: string) =>
-  value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
 
 const normalizePublicStatus = (status: string) =>
   status === 'active' ? 'live' : status;
@@ -65,7 +68,9 @@ const ensureMatchByDisplayCode = async (ctx: any, displayCode: string) => {
   const normalizedDisplayCode = normalizeDisplayCode(displayCode);
   const match = await ctx.db
     .query('matches')
-    .withIndex('by_displayCode', (q: any) => q.eq('displayCode', normalizedDisplayCode))
+    .withIndex('by_displayCode', (q: any) =>
+      q.eq('displayCode', normalizedDisplayCode),
+    )
     .unique();
   if (!match) {
     throw new ConvexError('Display code not found');
@@ -150,11 +155,7 @@ const recordEvent = async (
   });
 };
 
-const assertAdminAction = async (
-  match: any,
-  role: MatchRole,
-  pin?: string,
-) => {
+const assertAdminAction = async (match: any, role: MatchRole, pin?: string) => {
   if (role !== 'admin') {
     throw new ConvexError('Only admin can perform this action');
   }
@@ -255,10 +256,19 @@ export const createMatch = mutation({
       away: teamInput,
     }),
     pin: v.string(),
+    adminPin: v.string(),
     createdBy: v.optional(v.string()),
     templateId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const globalAdminPin = process.env.ADMIN_PIN;
+    if (!globalAdminPin) {
+      throw new ConvexError('ADMIN_PIN is not configured');
+    }
+    if (args.adminPin !== globalAdminPin) {
+      throw new ConvexError('Only admin can create match');
+    }
+
     const existing = await ctx.db
       .query('matches')
       .withIndex('by_matchId', (q) => q.eq('matchId', args.matchId))
@@ -274,7 +284,7 @@ export const createMatch = mutation({
     const now = Date.now();
     const displayCode = await generateUniqueDisplayCode(ctx);
     const refereeToken = generateToken(8);
-    const adminPinHash = await hashSecret(args.pin);
+    const adminPinHash = await hashSecret(args.adminPin);
     const refereePinHash = await hashSecret(args.pin);
     const refereeTokenHash = await hashSecret(refereeToken);
 
@@ -405,7 +415,9 @@ export const joinAsReferee = mutation({
       });
 
       if (shouldLock) {
-        throw new ConvexError('Too many failed attempts. Access temporarily locked.');
+        throw new ConvexError(
+          'Too many failed attempts. Access temporarily locked.',
+        );
       }
 
       throw new ConvexError('Invalid referee PIN');
@@ -908,7 +920,11 @@ export const updateDisplayConfig = mutation({
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, displayConfig: updatedConfig, updatedAt: now });
+    return sanitizeMatch({
+      ...match,
+      displayConfig: updatedConfig,
+      updatedAt: now,
+    });
   },
 });
 
@@ -948,7 +964,11 @@ export const changeTemplate = mutation({
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, displayConfig: updatedConfig, updatedAt: now });
+    return sanitizeMatch({
+      ...match,
+      displayConfig: updatedConfig,
+      updatedAt: now,
+    });
   },
 });
 
@@ -1130,6 +1150,119 @@ export const updateAds = mutation({
     });
 
     return sanitizeMatch({ ...match, ads, updatedAt: now });
+  },
+});
+
+export const finishMatch = mutation({
+  args: {
+    matchId: v.string(),
+    role: matchRole,
+    pin: v.optional(v.string()),
+    token: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const match = await ensureMatch(ctx, args.matchId);
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
+
+    // Only allow if not already finished? Or just idempotent.
+    // If we want to toggle, we'd need a different mutation or arg.
+    // For now, "finish" means set to finished.
+
+    const now = Date.now();
+    const updated: Partial<MatchState> = {
+      status: 'finished',
+      updatedAt: now,
+      timer: match.timer
+        ? {
+            ...match.timer,
+            mode: 'stopped',
+            start: null, // clear effective start if any
+            pausedAt: null,
+            startedAt: null,
+          }
+        : undefined,
+    };
+
+    await ctx.db.patch(match._id, updated);
+
+    await recordEvent(ctx, {
+      matchId: args.matchId,
+      action: 'match:finish',
+      before: stripSystemFields(match) as MatchState,
+      after: {
+        ...(stripSystemFields(match) as MatchState),
+        ...updated,
+      },
+      role: args.role as MatchRole,
+      token: args.token,
+    });
+
+    return sanitizeMatch({ ...match, ...updated });
+  },
+});
+
+export const updateTimer = mutation({
+  args: {
+    matchId: v.string(),
+    role: matchRole,
+    pin: v.optional(v.string()),
+    token: v.optional(v.string()),
+    elapsed: v.number(), // New elapsed time in seconds
+    duration: v.optional(v.number()), // New duration (for countdowns)
+  },
+  handler: async (ctx, args) => {
+    const match = await ensureMatch(ctx, args.matchId);
+    await assertAdminAction(match, args.role as MatchRole, args.pin);
+
+    const timer = match.timer || {
+      mode: 'stopped',
+      duration: 0,
+      elapsed: 0,
+      startedAt: null,
+      pausedAt: null,
+    };
+
+    const updatedTimer = {
+      ...timer,
+      elapsed: args.elapsed,
+      duration: args.duration !== undefined ? args.duration : timer.duration,
+      // If running, we might need to reset start time to "now" implies "accumulated match time is preserved but relative start shifts"?
+      // Simplest approach: Pause the timer when editing, or just update elapsed and keep running.
+      // Usually editing time is done while paused. Let's enforce pause or handle it.
+      // If we update elapsed while running, we effectively shift the start time.
+      // startedAt = Date.now() - (newElapsed * 1000) ? No, that's for stopwatch.
+      // For simplicity/safety, let's say updating timer stops it or assumes it's stopped.
+      // If it's running, let's keep it running but shift the anchor?
+      // "startedAt" is the timestamp when it *started*.
+      // If we change elapsed to X, and it's running, effective time is (Now - StartedAt) + X_old.
+      // We want effective time to be X.
+      // So effectively: StartedAt = Now. Elapsed = X (if we want to purely track interval).
+      // actually our timer logic in frontend usually is:
+      // current = elapsed + (running ? now - startedAt : 0)
+      // So if we set elapsed = NEW_VALUE, we should reset startedAt to Now (if running) so the delta starts from 0 again.
+      startedAt: timer.startedAt ? Date.now() : null,
+    };
+
+    const now = Date.now();
+    await ctx.db.patch(match._id, {
+      timer: updatedTimer,
+      updatedAt: now,
+    });
+
+    await recordEvent(ctx, {
+      matchId: args.matchId,
+      action: 'timer:update',
+      before: stripSystemFields(match) as MatchState,
+      after: {
+        ...(stripSystemFields(match) as MatchState),
+        timer: updatedTimer,
+        updatedAt: now,
+      },
+      role: args.role as MatchRole,
+      token: args.token,
+    });
+
+    return sanitizeMatch({ ...match, timer: updatedTimer, updatedAt: now });
   },
 });
 

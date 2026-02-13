@@ -32,6 +32,8 @@ const literata = Literata({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://scorehub.app'), // Replace with actual domain or localhost for dev, but usually a placeholder or env var is best.
+  // We'll use a placeholder for now, user can update.
   title: 'Sports Scoreboard System',
   description: 'Real-time scoreboard system for live sports events',
   generator: 'v0.app',

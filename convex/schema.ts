@@ -96,9 +96,9 @@ const sportStateShape = v.object({
 export default defineSchema({
   matches: defineTable({
     matchId: v.string(),
-    displayCode: v.string(),
+    displayCode: v.optional(v.string()),
     adminPinHash: v.string(),
-    refereePinHash: v.string(),
+    refereePinHash: v.optional(v.string()),
     refereeTokenHash: v.string(),
     createdBy: v.optional(v.string()),
     assignedReferee: v.optional(v.string()),
@@ -130,9 +130,10 @@ export default defineSchema({
         currentAssetId: v.optional(v.string()),
       }),
     ),
-    refereeAuth: refereeAuthShape,
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    refereeAuth: v.optional(refereeAuthShape),
+    // Legacy matches may not have these fields yet.
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
     .index('by_matchId', ['matchId'])
     .index('by_displayCode', ['displayCode']),

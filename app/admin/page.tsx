@@ -2,11 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
 type MatchStatus =
@@ -62,6 +73,29 @@ export default function AdminDashboard() {
     api.matches.listAdmin,
     isPinReady ? { adminPin: adminPin || undefined } : 'skip',
   );
+
+  const finishMatch = useMutation(api.matches.finishMatch);
+  const deleteMatch = useMutation(api.matches.deleteMatch);
+
+  const onFinishMatch = async (matchId: string) => {
+    if (!adminPin) return;
+    try {
+      await finishMatch({ matchId, role: 'admin', pin: adminPin });
+    } catch (error) {
+      console.error('Failed to finish match:', error);
+      alert('Failed to finish match');
+    }
+  };
+
+  const onDeleteMatch = async (matchId: string) => {
+    if (!adminPin) return;
+    try {
+      await deleteMatch({ matchId, pin: adminPin });
+    } catch (error) {
+      console.error('Failed to delete match:', error);
+      alert('Failed to delete match');
+    }
+  };
 
   const isLoading = !isPinReady || matchData === undefined;
 
@@ -351,7 +385,9 @@ export default function AdminDashboard() {
                   </div>
                   <div className="text-3xl font-black">{match.home.score}</div>
                 </div>
-                <div className="text-xs font-bold text-muted-foreground px-2">VS</div>
+                <div className="text-xs font-bold text-muted-foreground px-2">
+                  VS
+                </div>
                 <div className="text-center flex-1">
                   <div className="font-bold truncate text-sm mb-1">
                     {match.away.name}
@@ -361,7 +397,10 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 mt-auto">
-                <Link href={`/admin/matches/${match.matchId}/control`} className="w-full">
+                <Link
+                  href={`/admin/matches/${match.matchId}/control`}
+                  className="w-full"
+                >
                   <Button
                     variant="secondary"
                     className="w-full text-xs h-8 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none"
@@ -387,7 +426,7 @@ export default function AdminDashboard() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 mt-auto">
                 <Button
                   variant="outline"
                   className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
@@ -413,6 +452,52 @@ export default function AdminDashboard() {
                 >
                   Share WhatsApp
                 </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3 mt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs h-8 rounded-full text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-bold"
+                  onClick={() => onFinishMatch(match.matchId)}
+                  disabled={match.status === 'finished'}
+                >
+                  END MATCH
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs h-8 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+                    >
+                      DELETE
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Match?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently
+                        delete the match{' '}
+                        <strong>
+                          {match.home.name} vs {match.away.name}
+                        </strong>{' '}
+                        and remove all associated data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                        onClick={() => onDeleteMatch(match.matchId)}
+                      >
+                        Delete Matches
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </Card>
           ))}

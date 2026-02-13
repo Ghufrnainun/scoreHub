@@ -376,6 +376,7 @@ export default function CreateMatchPage() {
     TEMPLATE_DEFAULTS[DEFAULT_SPORT],
   );
   const [createPin, setCreatePin] = useState('');
+  const [adminPin, setAdminPin] = useState('');
 
   // Category logic replaces simple gameMode toggle
   type MatchCategory = 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
@@ -427,6 +428,24 @@ export default function CreateMatchPage() {
     }
   }, [selectedSport, selectedTemplate]);
 
+  useEffect(() => {
+    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.pin) {
+          setAdminPin(parsed.pin);
+          return;
+        }
+      } catch {
+        // Ignore malformed local storage payload.
+      }
+    }
+    if (process.env.NEXT_PUBLIC_ADMIN_PIN) {
+      setAdminPin(process.env.NEXT_PUBLIC_ADMIN_PIN);
+    }
+  }, []);
+
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   // Input Handlers
@@ -447,6 +466,11 @@ export default function CreateMatchPage() {
   };
 
   const handleCreateMatch = async () => {
+    if (!adminPin || adminPin.length < 4) {
+      setError('Admin PIN required. Set admin auth first.');
+      return;
+    }
+
     if (!createPin || createPin.length < 4) {
       setError('PIN must be at least 4 digits');
       return;
@@ -515,12 +539,13 @@ export default function CreateMatchPage() {
           },
         },
         pin: createPin,
+        adminPin,
         templateId: selectedTemplate || TEMPLATE_DEFAULTS[selectedSport],
       });
 
       localStorage.setItem(
         ADMIN_AUTH_STORAGE_KEY,
-        JSON.stringify({ pin: createPin, ts: Date.now() }),
+        JSON.stringify({ pin: adminPin, ts: Date.now() }),
       );
       setDisplayCodeInput((data?.displayCode as string) || '');
       setCreatedMatch({

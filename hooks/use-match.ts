@@ -29,6 +29,7 @@ interface UseMatchReturn {
   useChallenge: (team: 'home' | 'away') => void;
   toggleSides: () => void;
   resetMatch: () => void;
+  updateTimer: (elapsed: number, duration?: number) => void;
   // Timer computed value
   remainingTime: number;
 }
@@ -57,7 +58,9 @@ export function useMatch({
   const changeServeMutation = useMutation(api.matches.changeServe);
   const useChallengeMutation = useMutation(api.matches.useChallenge);
   const toggleSidesMutation = useMutation(api.matches.toggleSides);
+
   const resetMatchMutation = useMutation(api.matches.resetMatch);
+  const updateTimerMutation = useMutation(api.matches.updateTimer);
 
   const runMutation = useCallback(async (fn: () => Promise<unknown>) => {
     try {
@@ -177,6 +180,15 @@ export function useMatch({
     runMutation(() => resetMatchMutation({ matchId, role, pin, token }));
   }, [matchId, pin, role, resetMatchMutation, runMutation, token]);
 
+  const updateTimer = useCallback(
+    (elapsed: number, duration?: number) => {
+      runMutation(() =>
+        updateTimerMutation({ matchId, role, pin, token, elapsed, duration }),
+      );
+    },
+    [matchId, pin, role, runMutation, token, updateTimerMutation],
+  );
+
   return {
     match,
     isConnected,
@@ -193,6 +205,7 @@ export function useMatch({
     useChallenge,
     toggleSides,
     resetMatch,
+    updateTimer,
     remainingTime,
   };
 }

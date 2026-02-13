@@ -5,8 +5,26 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Play, Pause, RotateCcw, Timer as TimerIcon, Edit } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { loadRefereeSession } from '@/lib/auth';
 import { useMatch } from '@/hooks/use-match';
+
+const formatTime = (seconds: number) => {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
 
 export default function RefereeMatchPage() {
   const params = useParams();
@@ -21,11 +39,42 @@ export default function RefereeMatchPage() {
     setSessionReady(true);
   }, [matchId]);
 
-  const { match, isLoading, error, awardPoint, undo } = useMatch({
+  const {
+    match,
+    isLoading,
+    error,
+    awardPoint,
+    undo,
+    startTimer,
+    pauseTimer,
+    resetTimer,
+    updateTimer,
+    remainingTime,
+  } = useMatch({
     matchId,
     role: 'referee',
     token,
   });
+
+  const [editMinutes, setEditMinutes] = useState('');
+  const [editSeconds, setEditSeconds] = useState('');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleOpenEdit = () => {
+    const m = Math.floor(remainingTime / 60);
+    const s = Math.floor(remainingTime % 60);
+    setEditMinutes(m.toString());
+    setEditSeconds(s.toString());
+    setIsEditDialogOpen(true);
+  };
+
+  const handleTimerSave = () => {
+    const m = parseInt(editMinutes) || 0;
+    const s = parseInt(editSeconds) || 0;
+    const total = m * 60 + s;
+    updateTimer(total);
+    setIsEditDialogOpen(false);
+  };
 
   const isLocked = useMemo(
     () => !sessionReady || !token || !match || match.status === 'finished',
@@ -35,7 +84,9 @@ export default function RefereeMatchPage() {
   if (!sessionReady) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] text-[#111827] flex items-center justify-center">
-        <div className="text-sm font-mono text-black/60">Preparing referee session...</div>
+        <div className="text-sm font-mono text-black/60">
+          Preparing referee session...
+        </div>
       </div>
     );
   }
@@ -51,7 +102,8 @@ export default function RefereeMatchPage() {
             Join First
           </h1>
           <p className="mt-2 text-sm text-black/60">
-            Sesi wasit tidak ditemukan. Masuk lewat halaman join menggunakan display code + PIN.
+            Sesi wasit tidak ditemukan. Masuk lewat halaman join menggunakan
+            display code + PIN.
           </p>
           <Link href="/referee/join" className="inline-block mt-6">
             <Button className="rounded-full bg-[#111827] hover:bg-black text-white text-xs uppercase tracking-widest font-bold">
@@ -92,7 +144,9 @@ export default function RefereeMatchPage() {
                 Match ID
               </p>
               <p className="text-sm font-mono font-bold">{match.matchId}</p>
-              <p className="text-xs text-black/60">Display Code: {match.displayCode}</p>
+              <p className="text-xs text-black/60">
+                Display Code: {match.displayCode}
+              </p>
             </div>
           </div>
           <div className="mt-4 text-xs text-black/60 flex flex-wrap gap-3">
@@ -107,12 +161,112 @@ export default function RefereeMatchPage() {
           ) : null}
         </Card>
 
+        {/* Timer Control */}
+        <Card className="rounded-3xl border border-black/10 bg-white p-5 sm:p-6 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
+                Timer
+              </span>
+              <span className="text-4xl font-[family-name:var(--font-bebas)] tabular-nums tracking-wider leading-none">
+                {formatTime(remainingTime)}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                className="rounded-full w-10 h-10 border-black/10 hover:bg-black/5"
+                onClick={
+                  match?.timer?.mode !== 'stopped' ? pauseTimer : startTimer
+                }
+                disabled={isLocked}
+              >
+                {match?.timer?.mode !== 'stopped' ? (
+                  <Pause className="h-4 w-4 fill-black" />
+                ) : (
+                  <Play className="h-4 w-4 fill-black translate-x-0.5" />
+                )}
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="rounded-full w-10 h-10 border-black/10 hover:bg-black/5"
+                onClick={resetTimer}
+                disabled={isLocked}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-10 rounded-full border-black/10 text-xs font-bold uppercase tracking-widest hover:bg-black/5"
+                onClick={handleOpenEdit}
+                disabled={isLocked}
+              >
+                <Edit className="mr-2 h-3.5 w-3.5" />
+                Edit Time
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md rounded-3xl">
+              <DialogHeader>
+                <DialogTitle>Edit Timer</DialogTitle>
+                <DialogDescription>
+                  Set the timer manually. This will update the time for
+                  everyone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="minutes">Minutes</Label>
+                  <Input
+                    id="minutes"
+                    type="number"
+                    min="0"
+                    value={editMinutes}
+                    onChange={(e) => setEditMinutes(e.target.value)}
+                    className="text-center text-2xl font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seconds">Seconds</Label>
+                  <Input
+                    id="seconds"
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={editSeconds}
+                    onChange={(e) => setEditSeconds(e.target.value)}
+                    className="text-center text-2xl font-mono"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  className="rounded-full w-full"
+                  onClick={handleTimerSave}
+                >
+                  Save Timer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </Card>
+
         <Card className="rounded-3xl border border-black/10 bg-white p-6 sm:p-8 shadow-sm">
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-3 rounded-full border border-black/10 bg-black/5 px-5 py-2">
-              <span className="text-4xl font-black tabular-nums">{home.score}</span>
+              <span className="text-4xl font-black tabular-nums">
+                {home.score}
+              </span>
               <span className="text-lg font-bold text-black/40">-</span>
-              <span className="text-4xl font-black tabular-nums">{away.score}</span>
+              <span className="text-4xl font-black tabular-nums">
+                {away.score}
+              </span>
             </div>
           </div>
 
