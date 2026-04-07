@@ -34,3 +34,17 @@ export const loadRefereeSession = (
     return null;
   }
 };
+
+export const isAdminAuthenticated = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed?.pin || !parsed?.ts) return false;
+    const isExpired = Date.now() - parsed.ts > ADMIN_AUTH_TTL_MS;
+    return !isExpired;
+  } catch {
+    return false;
+  }
+};

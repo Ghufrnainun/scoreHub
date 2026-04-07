@@ -10,7 +10,7 @@ import { ADMIN_AUTH_STORAGE_KEY, ADMIN_AUTH_TTL_MS } from '@/lib/auth';
 
 // Icons
 const DashboardIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true"
+  <svg
     className={className}
     fill="none"
     stroke="currentColor"
@@ -26,7 +26,7 @@ const DashboardIcon = ({ className }: { className?: string }) => (
 );
 
 const MediaIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true"
+  <svg
     className={className}
     fill="none"
     stroke="currentColor"
@@ -42,7 +42,7 @@ const MediaIcon = ({ className }: { className?: string }) => (
 );
 
 const TemplateIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true"
+  <svg
     className={className}
     fill="none"
     stroke="currentColor"
@@ -58,7 +58,7 @@ const TemplateIcon = ({ className }: { className?: string }) => (
 );
 
 const SettingsIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true"
+  <svg
     className={className}
     fill="none"
     stroke="currentColor"
@@ -80,7 +80,7 @@ const SettingsIcon = ({ className }: { className?: string }) => (
 );
 
 const LogoutIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true"
+  <svg
     className={className}
     fill="none"
     stroke="currentColor"
@@ -96,10 +96,10 @@ const LogoutIcon = ({ className }: { className?: string }) => (
 );
 
 const MENU_ITEMS = [
-  { name: 'Matches', path: '/admin', icon: DashboardIcon },
-  { name: 'Media Assets', path: '/admin/media', icon: MediaIcon },
-  { name: 'Templates', path: '/admin/templates', icon: TemplateIcon },
-  { name: 'Settings', path: '/admin/settings', icon: SettingsIcon },
+  { name: 'Pertandingan', path: '/admin', icon: DashboardIcon },
+  { name: 'Media & Iklan', path: '/admin/media', icon: MediaIcon },
+  { name: 'Templat', path: '/admin/templates', icon: TemplateIcon },
+  { name: 'Pengaturan', path: '/admin/settings', icon: SettingsIcon },
 ];
 
 export default function AdminLayout({
@@ -170,7 +170,7 @@ export default function AdminLayout({
     return (
       <div className="min-h-dvh bg-background text-foreground flex items-center justify-center">
         <div className="text-sm text-muted-foreground font-mono">
-          Loading admin access...
+          Memuat akses admin...
         </div>
       </div>
     );
@@ -191,7 +191,7 @@ export default function AdminLayout({
               />
             </div>
             <div>
-              <p className="text-sm font-semibold text-pretty">Admin Access</p>
+              <p className="text-sm font-semibold text-pretty">Akses Admin</p>
               <p className="text-xs text-muted-foreground text-pretty">
                 Masukkan PIN global untuk masuk.
               </p>
@@ -227,7 +227,7 @@ export default function AdminLayout({
               </p>
             ) : null}
             <Button className="w-full" onClick={handlePinSubmit}>
-              Unlock Admin
+              Masuk Admin
             </Button>
             <p className="text-[11px] text-muted-foreground text-pretty">
               PIN disimpan lokal selama 8 jam.
@@ -240,12 +240,6 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] flex transition-colors duration-300">
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-[#111827] focus:px-4 focus:py-2 focus:text-xs focus:font-bold focus:text-white"
-      >
-        Skip to content
-      </a>
       {/* Sidebar */}
       <aside
         className={`bg-white border-r border-black/10 transition-[width] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
@@ -253,7 +247,7 @@ export default function AdminLayout({
         }`}
       >
         <div className="h-16 flex items-center justify-center border-b px-4">
-          <div className="flex items-center gap-2 font-black text-xl tracking-tight">
+          <div className="flex items-center gap-2 font-black text-xl tracking-tight text-black">
             <div className="w-8 h-8 rounded-lg bg-[#111827] text-[#F59E0B] flex items-center justify-center">
               <Image
                 src="/scorehub-logo.svg"
@@ -283,7 +277,7 @@ export default function AdminLayout({
                 className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC]"
               >
                 <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC] ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group cursor-pointer ${
                     isActive
                       ? 'bg-[#111827] text-white font-bold'
                       : 'text-black/60 hover:bg-black/5 hover:text-black'
@@ -306,7 +300,7 @@ export default function AdminLayout({
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-black/60 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer group">
               <LogoutIcon className="w-5 h-5" />
               {isSidebarOpen && (
-                <span className="text-sm font-bold">Exit Admin</span>
+                <span className="text-sm font-bold">Keluar Admin</span>
               )}
             </div>
           </Link>
@@ -321,7 +315,7 @@ export default function AdminLayout({
             aria-label="Toggle sidebar"
             className="p-2 -ml-2 rounded-md hover:bg-muted text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <svg aria-hidden="true"
+            <svg
               className="w-5 h-5"
               fill="none"
               stroke="currentColor"
@@ -343,11 +337,10 @@ export default function AdminLayout({
           </div>
         </header>
 
-        <main id="main-content" className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <main id="main-content" className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F8FAFC]">
           {children}
         </main>
       </div>
     </div>
   );
 }
-

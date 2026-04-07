@@ -1176,7 +1176,6 @@ export const finishMatch = mutation({
         ? {
             ...match.timer,
             mode: 'stopped',
-            start: null, // clear effective start if any
             pausedAt: null,
             startedAt: null,
           }
@@ -1294,3 +1293,17 @@ export const deleteMatch = mutation({
     await ctx.db.delete(match._id);
   },
 });
+
+export const verifyAdminPin = mutation({
+  args: { pin: v.string() },
+  handler: async (ctx, args) => {
+    const globalAdminPin = process.env.ADMIN_PIN;
+    if (!globalAdminPin) {
+      console.error('ADMIN_PIN is not configured in backend');
+      return false;
+    }
+    return args.pin === globalAdminPin;
+  },
+});
+
+

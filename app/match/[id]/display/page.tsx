@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -13,13 +13,19 @@ import { api } from '@/convex/_generated/api';
 const ShuttlecockIcon = ({
   className,
   style,
+  isServing = false,
 }: {
   className?: string;
   style?: React.CSSProperties;
+  isServing?: boolean;
 }) => (
   <svg
     aria-hidden="true"
-    className={className}
+    className={cn(
+      className,
+      "transition-all duration-500",
+      isServing && "drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]"
+    )}
     viewBox="0 -0.42 42.356 42.356"
     fill="currentColor"
     style={style}
@@ -66,8 +72,8 @@ const defaultSettings: DisplaySettings = {
   fontSizes: { teamName: 24, score: 72 },
   teamCodes: { home: '', away: '', show: true },
   teamColors: { home: '#3b82f6', away: '#ef4444' },
-  teamLabels: { home: 'HOST', away: 'GUEST' },
-  courtName: 'COURT 1',
+  teamLabels: { home: 'TUAN RUMAH', away: 'TAMU' },
+  courtName: 'LAPANGAN 1',
   showServerIcon: true,
 };
 
@@ -216,7 +222,10 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
           >
             {displayNames}
             {isServing && displaySettings.showServerIcon && (
-              <ShuttlecockIcon className="w-10 h-10 text-[#fbbf24] animate-in motion-reduce:animate-none zoom-in duration-300" />
+              <ShuttlecockIcon 
+                isServing={true}
+                className="w-10 h-10 text-[#fbbf24] animate-in motion-reduce:animate-none zoom-in duration-300 animate-pulse" 
+              />
             )}
           </span>
         </div>
@@ -282,7 +291,7 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
           {showSet1 && <div className="w-40">Set 1</div>}
           {showSet2 && <div className="w-40">Set 2</div>}
           {showSet3 && <div className="w-40">Set 3</div>}
-          <div className="w-64 text-[#fbbf24]">Points</div>
+          <div className="w-64 text-[#fbbf24]">Poin</div>
         </div>
       </div>
 
@@ -323,7 +332,7 @@ const ClassicTemplate = ({ match, displaySettings }: TemplateProps) => {
               {team.name}
             </span>
             {isServing && displaySettings.showServerIcon && (
-              <ShuttlecockIcon className="w-6 h-6 text-yellow-500" />
+              <ShuttlecockIcon isServing={true} className="w-6 h-6 text-amber-500 animate-pulse" />
             )}
           </div>
           <div className="flex gap-8 items-center">
@@ -365,8 +374,8 @@ const MinimalTemplate = ({ match, displaySettings }: TemplateProps) => {
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
         <p className="text-xs font-bold uppercase tracking-[0.4em] text-slate-500 mb-4 opacity-50">
           {isHome
-            ? displaySettings.teamLabels?.home || 'HOST'
-            : displaySettings.teamLabels?.away || 'GUEST'}
+            ? displaySettings.teamLabels?.home || 'TUAN RUMAH'
+            : displaySettings.teamLabels?.away || 'TAMU'}
         </p>
         <div className="mb-6">
           <TeamMark
@@ -386,11 +395,11 @@ const MinimalTemplate = ({ match, displaySettings }: TemplateProps) => {
           >
             {team.name}
           </h2>
-          {isServing && displaySettings.showServerIcon && (
-            <div className="absolute -right-16 top-1/2 -translate-y-1/2">
-              <ShuttlecockIcon className="w-12 h-12 text-yellow-400" />
-            </div>
-          )}
+            {isServing && displaySettings.showServerIcon && (
+              <div className="absolute -right-16 top-1/2 -translate-y-1/2">
+                <ShuttlecockIcon isServing={true} className="w-12 h-12 text-amber-400 animate-pulse" />
+              </div>
+            )}
         </div>
         <div
           className="text-[240px] leading-none font-black tabular-nums transition-[color,text-shadow] duration-300"
@@ -447,8 +456,8 @@ const NeonTemplate = ({ match, displaySettings }: TemplateProps) => {
         <div className="z-10 text-center">
           <p className="text-sm font-bold uppercase tracking-[0.5em] text-white/50 mb-4">
             {isHome
-              ? displaySettings.teamLabels?.home || 'HOST'
-              : displaySettings.teamLabels?.away || 'GUEST'}
+              ? displaySettings.teamLabels?.home || 'TUAN RUMAH'
+              : displaySettings.teamLabels?.away || 'TAMU'}
           </p>
           <div className="mb-6 flex justify-center">
             <TeamMark
@@ -475,8 +484,9 @@ const NeonTemplate = ({ match, displaySettings }: TemplateProps) => {
             {isServing && (
               <div className="absolute -top-12 -right-12 animate-bounce motion-reduce:animate-none">
                 <ShuttlecockIcon
-                  className="w-16 h-16 text-yellow-300"
-                  style={{ filter: 'drop-shadow(0 0 10px #fbbf24)' }}
+                  isServing={true}
+                  className="w-16 h-16 text-amber-300"
+                  style={{ filter: 'drop-shadow(0 0 20px #fbbf24)' }}
                 />
               </div>
             )}
@@ -517,11 +527,11 @@ const BasketballTemplate = ({ match, displaySettings }: TemplateProps) => {
       <div className="w-full max-w-6xl rounded-2xl border border-slate-800 bg-black/80 p-8">
         <div className="flex items-center justify-between text-white">
           <div>
-            <p className="text-xs text-slate-400 text-pretty">Basketball</p>
-            <h2 className="text-3xl font-black text-balance">Live Score</h2>
+            <p className="text-xs text-slate-400 text-pretty">Bola Basket</p>
+            <h2 className="text-3xl font-black text-balance">Skor Langsung</h2>
           </div>
           <div className="text-right">
-            <p className="text-xs text-slate-400 text-pretty">Quarter</p>
+            <p className="text-xs text-slate-400 text-pretty">Kuarter</p>
             <p className="text-2xl font-mono font-black tabular-nums">
               {currentPeriod}
             </p>
@@ -541,11 +551,11 @@ const BasketballTemplate = ({ match, displaySettings }: TemplateProps) => {
             >
               <div className="flex items-center gap-3">
                 <TeamMark
-                  team={match.teams[side]}
-                  teamCode={undefined}
-                  showCode={false}
-                  teamColor={teamColor}
-                  size="sm"
+                    team={match.teams[side]}
+                    teamCode={undefined}
+                    showCode={false}
+                    teamColor={teamColor}
+                    size="sm"
                 />
                 <p className="text-sm font-semibold text-pretty">
                   {match.teams[side].name}
@@ -586,8 +596,8 @@ const VolleyballTemplate = ({ match, displaySettings }: TemplateProps) => {
       <div className="w-full max-w-6xl rounded-2xl border border-slate-800 bg-black/80 p-8 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-400 text-pretty">Volleyball</p>
-            <h2 className="text-3xl font-black text-balance">Set Score</h2>
+            <p className="text-xs text-slate-400 text-pretty">Bola Voli</p>
+            <h2 className="text-3xl font-black text-balance">Skor Set</h2>
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-400 text-pretty">Set</p>
@@ -610,11 +620,11 @@ const VolleyballTemplate = ({ match, displaySettings }: TemplateProps) => {
             >
               <div className="flex items-center gap-3">
                 <TeamMark
-                  team={match.teams[side]}
-                  teamCode={undefined}
-                  showCode={false}
-                  teamColor={teamColor}
-                  size="sm"
+                    team={match.teams[side]}
+                    teamCode={undefined}
+                    showCode={false}
+                    teamColor={teamColor}
+                    size="sm"
                 />
                 <p className="text-sm font-semibold text-pretty">
                   {match.teams[side].name}
@@ -664,8 +674,8 @@ const TennisTemplate = ({ match, displaySettings }: TemplateProps) => {
       <div className="w-full max-w-6xl rounded-2xl border border-slate-800 bg-black/80 p-8 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-400 text-pretty">Tennis</p>
-            <h2 className="text-3xl font-black text-balance">Scoreline</h2>
+            <p className="text-xs text-slate-400 text-pretty">Tenis</p>
+            <h2 className="text-3xl font-black text-balance">Skor</h2>
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-400 text-pretty">Set</p>
@@ -688,11 +698,11 @@ const TennisTemplate = ({ match, displaySettings }: TemplateProps) => {
             >
               <div className="flex items-center gap-3">
                 <TeamMark
-                  team={match.teams[side]}
-                  teamCode={undefined}
-                  showCode={false}
-                  teamColor={teamColor}
-                  size="sm"
+                    team={match.teams[side]}
+                    teamCode={undefined}
+                    showCode={false}
+                    teamColor={teamColor}
+                    size="sm"
                 />
                 <p className="text-sm font-semibold text-pretty">
                   {match.teams[side].name}
@@ -707,7 +717,7 @@ const TennisTemplate = ({ match, displaySettings }: TemplateProps) => {
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-slate-400 text-pretty">
-                    {tennis?.tiebreak ? 'Tiebreak' : 'Point'}
+                    {tennis?.tiebreak ? 'Tiebreak' : 'Poin'}
                   </p>
                   <p className="text-3xl font-mono font-black tabular-nums">
                     {tennis?.tiebreak
@@ -721,22 +731,20 @@ const TennisTemplate = ({ match, displaySettings }: TemplateProps) => {
           })}
         </div>
 
-        <div className="mt-8 grid grid-cols-5 gap-3">
-          {[0, 1, 2, 3, 4].map((idx) => (
-            <div
-              key={`set-${idx}`}
-              className="rounded-lg border border-slate-800 bg-[#111] px-3 py-2 text-center"
-            >
-              <p className="text-[10px] text-slate-400 text-pretty">
-                Set {idx + 1}
-              </p>
-              <p className="mt-1 text-sm font-mono font-bold tabular-nums">
-                {match.sets[idx]
-                  ? `${match.sets[idx].home} - ${match.sets[idx].away}`
-                  : '-'}
-              </p>
-            </div>
-          ))}
+        <div className="mt-8 grid grid-cols-5 gap-3 text-center">
+            {[0, 1, 2, 3, 4].map((idx) => (
+                <div
+                    key={`set-${idx}`}
+                    className="rounded-lg border border-slate-800 bg-[#111] px-3 py-2"
+                >
+                    <p className="text-[10px] text-slate-400 text-pretty">
+                        Set {idx + 1}
+                    </p>
+                    <p className="mt-1 text-sm font-mono font-bold tabular-nums">
+                        {match.sets[idx] ? `${match.sets[idx].home} - ${match.sets[idx].away}` : '-'}
+                    </p>
+                </div>
+            ))}
         </div>
       </div>
     </div>
@@ -746,18 +754,18 @@ const TennisTemplate = ({ match, displaySettings }: TemplateProps) => {
 const SoccerTemplate = ({ match, displaySettings }: TemplateProps) => {
   const sportState = match.sportState?.soccer || match.sportState?.futsal;
   const currentPeriod = sportState?.currentPeriod || 1;
-  const periodLabel = currentPeriod === 1 ? '1st Half' : '2nd Half';
+  const periodLabel = currentPeriod === 1 ? 'Babak 1' : 'Babak 2';
 
   return (
     <div className="flex-1 flex items-center justify-center px-10 py-8">
       <div className="w-full max-w-6xl rounded-2xl border border-slate-800 bg-black/80 p-8 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-400 text-pretty">Football</p>
-            <h2 className="text-3xl font-black text-balance">Match Score</h2>
+            <p className="text-xs text-slate-400 text-pretty">Sepak Bola</p>
+            <h2 className="text-3xl font-black text-balance">Skor Pertandingan</h2>
           </div>
           <div className="text-right">
-            <p className="text-xs text-slate-400 text-pretty">Period</p>
+            <p className="text-xs text-slate-400 text-pretty">Babak</p>
             <p className="text-2xl font-mono font-black tabular-nums">
               {periodLabel}
             </p>
@@ -771,27 +779,27 @@ const SoccerTemplate = ({ match, displaySettings }: TemplateProps) => {
                 ? displaySettings.teamColors.home
                 : displaySettings.teamColors.away;
             return (
-            <div
-              key={side}
-              className="rounded-xl border border-slate-800 bg-[#0a0a0a] p-6"
-            >
-              <div className="flex items-center gap-3">
-                <TeamMark
-                  team={match.teams[side]}
-                  teamCode={undefined}
-                  showCode={false}
-                  teamColor={teamColor}
-                  size="sm"
-                />
-                <p className="text-sm font-semibold text-pretty">
-                  {match.teams[side].name}
+              <div
+                key={side}
+                className="rounded-xl border border-slate-800 bg-[#0a0a0a] p-6"
+              >
+                <div className="flex items-center gap-3">
+                  <TeamMark
+                    team={match.teams[side]}
+                    teamCode={undefined}
+                    showCode={false}
+                    teamColor={teamColor}
+                    size="sm"
+                  />
+                  <p className="text-sm font-semibold text-pretty">
+                    {match.teams[side].name}
+                  </p>
+                </div>
+                <p className="mt-3 text-6xl font-black tabular-nums">
+                  {match.teams[side].score}
                 </p>
               </div>
-              <p className="mt-3 text-6xl font-black tabular-nums">
-                {match.teams[side].score}
-              </p>
-            </div>
-          );
+            );
           })}
         </div>
       </div>
@@ -800,13 +808,12 @@ const SoccerTemplate = ({ match, displaySettings }: TemplateProps) => {
 };
 
 const CATEGORY_NAMES: Record<string, string> = {
-  MS: "Men's Singles",
-  WS: "Women's Singles",
-  MD: "Men's Doubles",
-  WD: "Women's Doubles",
-  XD: 'Mixed Doubles',
-  // Fallback
-  '': "Men's Singles",
+  MS: "Tunggal Putra",
+  WS: "Tunggal Putri",
+  MD: "Ganda Putra",
+  WD: "Ganda Putri",
+  XD: 'Ganda Campuran',
+  '': "Tunggal Putra",
 };
 
 export default function BwfScoreboard() {
@@ -911,7 +918,7 @@ export default function BwfScoreboard() {
   if (isLoading) {
     return (
       <div className="w-screen h-screen flex items-center justify-center bg-black text-[#fbbf24] font-mono text-2xl tracking-widest animate-pulse motion-reduce:animate-none">
-        INITIALIZING SYSTEM...
+        MENGINISIALISASI SISTEM...
       </div>
     );
   }
@@ -920,16 +927,16 @@ export default function BwfScoreboard() {
       <div className="w-screen h-screen flex flex-col items-center justify-center bg-black text-[#fbbf24] font-mono text-lg tracking-widest gap-8 px-6 text-center">
         <div className="space-y-4">
           <div className="text-4xl font-black animate-pulse motion-reduce:animate-none">
-            {error ? 'CONNECTION ERROR' : 'WAITING FOR MATCH'}
+            {error ? 'KESALAHAN KONEKSI' : 'MENUNGGU PERTANDINGAN'}
           </div>
           <p className="text-gray-500 max-w-md mx-auto">
             {error
-              ? 'Lost connection to the realtime service. Please check your internet or refresh.'
-              : 'Waiting for the referee to initialize the match data.'}
+              ? 'Terputus dari layanan realtime. Silakan periksa internet Anda atau segarkan halaman.'
+              : 'Menunggu wasit untuk mengaktifkan data pertandingan.'}
           </p>
         </div>
         <div className="px-6 py-3 bg-slate-900 border border-slate-800 rounded-xl">
-          <span className="text-xs text-slate-500 block mb-1">TRACKING ID</span>
+          <span className="text-xs text-slate-500 block mb-1">ID PELACAKAN</span>
           <span className="text-xl font-black text-white">{matchId}</span>
         </div>
         <Link
@@ -944,7 +951,7 @@ export default function BwfScoreboard() {
           >
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8h5z" />
           </svg>
-          Return Home
+          Kembali ke Beranda
         </Link>
       </div>
     );
@@ -1049,7 +1056,7 @@ export default function BwfScoreboard() {
               }}
               className="px-5 py-2 text-[10px] font-black uppercase tracking-widest text-black bg-[#fbbf24] rounded-full hover:bg-[#fcd34d] shadow-lg active:scale-95 transition-[transform,background-color,box-shadow]"
             >
-              {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              {isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
             </button>
           </div>
         </div>
@@ -1076,7 +1083,7 @@ export default function BwfScoreboard() {
             ) : (
               <img
                 src={adAsset?.url}
-                alt={adAsset?.name || 'Sponsored media'}
+                alt={adAsset?.name || 'Media sponsor'}
                 className="h-full w-full object-contain"
                 loading="lazy"
                 onError={() => setAdLoadFailed(true)}
@@ -1087,23 +1094,10 @@ export default function BwfScoreboard() {
           <>
             {adUnavailable ? (
               <div className="absolute top-3 right-3 z-40 rounded-full bg-red-500/90 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
-                Ad failed - showing scoreboard
+                Iklan gagal - menampilkan skor
               </div>
             ) : null}
             {renderTemplate()}
-            {match.status === 'finished' && (
-              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm animate-in motion-reduce:animate-none fade-in duration-500">
-                <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter uppercase drop-shadow-2xl text-balance">
-                  Match Ended
-                </h1>
-                <div className="mt-8 px-8 py-4 bg-[#fbbf24] text-black font-black text-2xl tracking-[0.2em] rounded-full uppercase shadow-xl animate-bounce motion-reduce:animate-none">
-                  WINNER:{' '}
-                  {match.winner === 'home'
-                    ? match.teams.home.name
-                    : match.teams.away.name}
-                </div>
-              </div>
-            )}
           </>
         )}
       </main>
@@ -1122,7 +1116,7 @@ export default function BwfScoreboard() {
             <span>{displaySettings.courtName}</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="opacity-50">TRACKING ID:</span>
+            <span className="opacity-50">ID PELACAKAN:</span>
             <span className="text-white/40">{matchId}</span>
           </div>
         </div>
@@ -1130,10 +1124,9 @@ export default function BwfScoreboard() {
 
       {!isFullscreen && !isOverlay && (
         <div className="absolute bottom-12 right-4 text-[9px] font-mono text-white/10 uppercase tracking-[0.2em] pointer-events-none group-hover:opacity-100 opacity-0 transition-opacity">
-          Click anywhere for Fullscreen
+          Klik di mana saja untuk Layar Penuh
         </div>
       )}
     </div>
   );
 }
-

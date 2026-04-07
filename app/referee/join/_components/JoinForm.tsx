@@ -72,7 +72,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
       router.push(`/referee/match/${result.matchId}`);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to join as referee',
+        err instanceof Error ? err.message : 'Gagal masuk sebagai wasit',
       );
     } finally {
       setIsSubmitting(false);
@@ -83,13 +83,13 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
     <div className="mx-auto max-w-3xl">
       <div className="mb-8 text-center">
         <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-black/50">
-          Referee Access
+          Akses Wasit
         </p>
         <h1 className="mt-3 text-4xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
-          Join Match Control
+          Masuk Kontrol Pertandingan
         </h1>
         <p className="mt-2 text-sm text-black/60">
-          Masukkan display code dan PIN wasit dari admin.
+          Masukkan kode display dan PIN wasit dari admin.
         </p>
       </div>
 
@@ -140,7 +140,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
               htmlFor="referee-name"
               className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
             >
-              Referee Name (optional)
+              Nama Wasit (opsional)
             </label>
             <Input
               id="referee-name"
@@ -163,7 +163,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
             disabled={!canSubmit}
             className="w-full h-11 rounded-full bg-[#111827] hover:bg-black text-white text-xs uppercase tracking-widest font-bold"
           >
-            {isSubmitting ? 'Joining...' : 'Enter Referee Control'}
+            {isSubmitting ? 'Memproses...' : 'Masuk Kontrol Wasit'}
           </Button>
         </form>
       </Card>
@@ -172,15 +172,15 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
         {canPreview && matchPreview ? (
           <div className="space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-black/50">
-              Match Preview
+              Pratinjau Pertandingan
             </p>
             <p className="text-sm font-semibold">
               {matchPreview.teams.home} vs {matchPreview.teams.away}
             </p>
             <div className="text-xs text-black/60 flex flex-wrap gap-3">
-              <span>Sport: {matchPreview.sport}</span>
+              <span>Olahraga: {matchPreview.sport}</span>
               <span>Status: {matchPreview.status}</span>
-              <span>Match ID: {matchPreview.matchId}</span>
+              <span>ID Match: {matchPreview.matchId}</span>
             </div>
           </div>
         ) : (
@@ -195,7 +195,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
           href="/"
           className="text-xs font-bold uppercase tracking-widest text-black/50 hover:text-black"
         >
-          Back to Home
+          Kembali ke Beranda
         </Link>
       </div>
     </div>

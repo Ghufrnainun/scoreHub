@@ -23,9 +23,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   if (!code || code.length < 4) {
     return {
-      title: 'Join as Referee - Scorehub',
+      title: 'Masuk sebagai Wasit - Scorehub',
       description:
-        'Enter display code and PIN to control the match scoreboard.',
+        'Masukkan kode display dan PIN untuk mengontrol papan skor pertandingan.',
     };
   }
 
@@ -36,17 +36,17 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   if (!match) {
     return {
-      title: 'Match Not Found - Scorehub',
-      description: 'The display code provided does not exist.',
+      title: 'Pertandingan Tidak Ditemukan - Scorehub',
+      description: 'Kode display yang dimasukkan tidak terdaftar.',
     };
   }
 
   return {
-    title: `Referee: ${match.teams.home} vs ${match.teams.away}`,
-    description: `Control the ${match.sport} match scoreboard. Status: ${match.status}.`,
+    title: `Wasit: ${match.teams.home} vs ${match.teams.away}`,
+    description: `Kontrol papan skor pertandingan ${match.sport}. Status: ${match.status}.`,
     openGraph: {
-      title: `Referee: ${match.teams.home} vs ${match.teams.away}`,
-      description: `Control the ${match.sport} match scoreboard. Status: ${match.status}.`,
+      title: `Wasit: ${match.teams.home} vs ${match.teams.away}`,
+      description: `Kontrol papan skor pertandingan ${match.sport}. Status: ${match.status}.`,
     },
   };
 }

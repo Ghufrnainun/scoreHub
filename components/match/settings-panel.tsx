@@ -204,7 +204,7 @@ export function SettingsPanel({
                   key={tpl.id}
                   onClick={() => updateDraft({ template: tpl.id as any })}
                   className={cn(
-                    'px-3 py-2 rounded-md text-xs font-bold uppercase transition-all border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
+                    'px-3 py-2 rounded-md text-xs font-bold uppercase transition-[background-color,border-color,color,box-shadow] border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
                     draft.template === tpl.id
                       ? 'bg-blue-600 border-blue-600 text-white shadow-md'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400',

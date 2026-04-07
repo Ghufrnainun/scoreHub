@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
@@ -19,7 +19,7 @@ import {
 import sportConfig from '@/config/sports.json';
 import { cn } from '@/lib/utils';
 import { api } from '@/convex/_generated/api';
-import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
+import { ADMIN_AUTH_STORAGE_KEY, isAdminAuthenticated } from '@/lib/auth';
 
 // --- ICONS ---
 const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
@@ -65,91 +65,6 @@ const BadmintonIcon = ({ className }: { className?: string }) => (
       strokeLinejoin="round"
       strokeWidth={2}
       d="M15.5 15.5l3 3m-1.5-4.5a2.12 2.12 0 013 3"
-    />
-  </svg>
-);
-
-const TennisIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="6" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 9c2 2 6 2 8 0m-8 6c2-2 6-2 8 0"
-    />
-  </svg>
-);
-
-const VolleyballIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="9" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M3 12a9 9 0 009 9m0-18a9 9 0 019 9M4.5 7.5c4 1.5 6.5 5.5 7.5 12"
-    />
-  </svg>
-);
-
-const BasketballIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="9" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"
-    />
-  </svg>
-);
-
-const SoccerIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="9" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 7l3 2-1 3h-4l-1-3 3-2zm-5 7l2-1m8 1l-2-1M8 18l2-2m4 2l-2-2"
-    />
-  </svg>
-);
-
-const FutsalIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-  >
-    <circle cx="12" cy="12" r="9" strokeWidth={2} />
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 6.5l2.5 1.5-.7 2.8h-3.6L9.5 8l2.5-1.5zm-4.5 7l2-1m10 1l-2-1M9 18l3-1 3 1"
     />
   </svg>
 );
@@ -211,36 +126,6 @@ const SPORTS = [
     name: SPORT_NAMES.get('badminton') || 'Badminton',
     icon: BadmintonIcon,
     available: SPORT_TOGGLES.get('badminton') ?? true,
-  },
-  {
-    id: 'basketball',
-    name: SPORT_NAMES.get('basketball') || 'Basketball',
-    icon: BasketballIcon,
-    available: SPORT_TOGGLES.get('basketball') ?? false,
-  },
-  {
-    id: 'soccer',
-    name: SPORT_NAMES.get('soccer') || 'Soccer',
-    icon: SoccerIcon,
-    available: SPORT_TOGGLES.get('soccer') ?? false,
-  },
-  {
-    id: 'futsal',
-    name: SPORT_NAMES.get('futsal') || 'Futsal',
-    icon: FutsalIcon,
-    available: SPORT_TOGGLES.get('futsal') ?? false,
-  },
-  {
-    id: 'tennis',
-    name: SPORT_NAMES.get('tennis') || 'Tennis',
-    icon: TennisIcon,
-    available: SPORT_TOGGLES.get('tennis') ?? false,
-  },
-  {
-    id: 'volleyball',
-    name: SPORT_NAMES.get('volleyball') || 'Volleyball',
-    icon: VolleyballIcon,
-    available: SPORT_TOGGLES.get('volleyball') ?? false,
   },
 ];
 
@@ -369,6 +254,13 @@ export default function CreateMatchPage() {
 
   // Quick Access State
   const [displayCodeInput, setDisplayCodeInput] = useState('');
+
+  // Protect Route - Admin Auth Check
+  useEffect(() => {
+    if (!isAdminAuthenticated()) {
+      router.replace('/');
+    }
+  }, [router]);
 
   // Create Match State
   const [selectedSport, setSelectedSport] = useState<SportType>(DEFAULT_SPORT);
@@ -620,7 +512,7 @@ export default function CreateMatchPage() {
             asChild
             className="text-xs font-bold uppercase tracking-widest hidden sm:flex"
           >
-            <Link href="/docs">Guide</Link>
+            <Link href="/docs">Panduan</Link>
           </Button>
           <button
             onClick={toggleTheme}
@@ -669,22 +561,21 @@ export default function CreateMatchPage() {
             />
             <div className="relative">
               <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
-                Your Arena Workspace
+                Ruang Kerja Arena Anda
               </div>
               <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h2 className="font-display text-3xl lg:text-4xl font-black tracking-tight text-foreground">
-                    Match Control Hub
+                    Pusat Kontrol Pertandingan
                   </h2>
                   <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Launch new matches fast, keep officials synced, and run
-                    broadcast-ready displays from one console.
+                    Mulai pertandingan baru dengan cepat, sinkronkan wasit, dan tayangkan skor standar broadcast dari satu konsol.
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-xl border bg-background/80 px-4 py-3">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Active
+                      Aktif
                     </div>
                     <div className="mt-1 text-2xl font-black text-foreground">
                       1
@@ -692,7 +583,7 @@ export default function CreateMatchPage() {
                   </div>
                   <div className="rounded-xl border bg-background/80 px-4 py-3">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Displays
+                      Layar
                     </div>
                     <div className="mt-1 text-2xl font-black text-foreground">
                       2
@@ -700,7 +591,7 @@ export default function CreateMatchPage() {
                   </div>
                   <div className="rounded-xl border bg-background/80 px-4 py-3">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Templates
+                      Templat
                     </div>
                     <div className="mt-1 text-2xl font-black text-foreground">
                       4
@@ -720,60 +611,18 @@ export default function CreateMatchPage() {
                 Match Builder
               </div>
               <h2 className="mt-2 text-4xl font-[family-name:var(--font-bebas)] text-black tracking-wide uppercase">
-                Start Match
+                Mulai Pertandingan
               </h2>
               <p className="text-sm text-black/60 font-medium">
-                Select your sport and configure the match details.
+                Atur detail pertandingan badminton Anda di bawah ini.
               </p>
             </div>
 
             <Card className="p-6 lg:p-8 border border-black/10 shadow-xl bg-white rounded-[32px]">
-              {/* Sport Selector (SaaS Style) */}
-              <div className="mb-8">
-                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-3 block tracking-widest">
-                  Select Sport
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {SPORTS.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() =>
-                        s.available && setSelectedSport(s.id as SportType)
-                      }
-                      disabled={!s.available}
-                      aria-pressed={selectedSport === s.id}
-                      aria-disabled={!s.available}
-                      type="button"
-                      className={`
-                        relative group flex flex-col items-center justify-center p-4 rounded-3xl border transition-all duration-300
-                        ${
-                          selectedSport === s.id
-                            ? 'border-black bg-black text-white shadow-lg scale-105'
-                            : 'border-black/5 bg-white hover:border-black/20 hover:bg-black/5'
-                        }
-                        ${!s.available ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}
-                      `}
-                    >
-                      <span className="text-3xl mb-2">
-                        <s.icon className="w-7 h-7" />
-                      </span>
-                      <span className="text-xs font-bold uppercase tracking-wider">
-                        {s.name}
-                      </span>
-                      {!s.available && (
-                        <span className="absolute top-2 right-2 text-[8px] font-bold bg-muted-foreground/20 text-muted-foreground px-1.5 py-0.5 rounded">
-                          SOON
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Template Gallery */}
               <div className="mb-10">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground mb-3 block tracking-widest">
-                  Display Template
+                  Templat Tampilan
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {templateOptions.map((template) => {
@@ -800,7 +649,7 @@ export default function CreateMatchPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            Template
+                            Templat
                           </div>
                           <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground">
                             {template.id}
@@ -870,14 +719,14 @@ export default function CreateMatchPage() {
                         <div className="w-2 h-2 rounded-full bg-[var(--accent-b)]" />{' '}
                         {/* Red marker */}
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Home Side
+                          Sisi Tuan Rumah
                         </span>
                       </div>
 
                       <div className="space-y-3">
                         <div className="relative">
                           <label htmlFor="home-player-1" className="sr-only">
-                            Home player 1
+                            Pemain tuan rumah 1
                           </label>
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             <UserIcon className="w-4 h-4" />
@@ -886,8 +735,8 @@ export default function CreateMatchPage() {
                             id="home-player-1"
                             name="homePlayer1"
                             autoComplete="off"
-                            placeholder="Player 1 (e.g. Andi)..."
-                            className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-all rounded-xl"
+                            placeholder="Pemain 1 (misal, Andi)…"
+                            className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
                             value={homePlayers[0]}
                             onChange={(e) =>
                               handlePlayerChange('home', 0, e.target.value)
@@ -897,7 +746,7 @@ export default function CreateMatchPage() {
                         {gameMode === 'double' && (
                           <div className="relative">
                             <label htmlFor="home-player-2" className="sr-only">
-                              Home player 2
+                              Pemain tuan rumah 2
                             </label>
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                               <UserIcon className="w-4 h-4" />
@@ -906,8 +755,8 @@ export default function CreateMatchPage() {
                               id="home-player-2"
                               name="homePlayer2"
                               autoComplete="off"
-                              placeholder="Player 2 (e.g. Budi)..."
-                              className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-all rounded-xl"
+                              placeholder="Pemain 2 (misal, Budi)…"
+                              className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
                               value={homePlayers[1]}
                               onChange={(e) =>
                                 handlePlayerChange('home', 1, e.target.value)
@@ -924,14 +773,14 @@ export default function CreateMatchPage() {
                         <div className="w-2 h-2 rounded-full bg-[var(--accent-a)]" />{' '}
                         {/* Blue marker */}
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Away Side
+                          Sisi Tamu
                         </span>
                       </div>
 
                       <div className="space-y-3">
                         <div className="relative">
                           <label htmlFor="away-player-1" className="sr-only">
-                            Away player 1
+                            Pemain tamu 1
                           </label>
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                             <UserIcon className="w-4 h-4" />
@@ -940,8 +789,8 @@ export default function CreateMatchPage() {
                             id="away-player-1"
                             name="awayPlayer1"
                             autoComplete="off"
-                            placeholder="Player 1 (e.g. Sari)..."
-                            className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-all rounded-xl"
+                            placeholder="Pemain 1 (misal, Sari)…"
+                            className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
                             value={awayPlayers[0]}
                             onChange={(e) =>
                               handlePlayerChange('away', 0, e.target.value)
@@ -951,7 +800,7 @@ export default function CreateMatchPage() {
                         {gameMode === 'double' && (
                           <div className="relative">
                             <label htmlFor="away-player-2" className="sr-only">
-                              Away player 2
+                              Pemain tamu 2
                             </label>
                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                               <UserIcon className="w-4 h-4" />
@@ -960,8 +809,8 @@ export default function CreateMatchPage() {
                               id="away-player-2"
                               name="awayPlayer2"
                               autoComplete="off"
-                              placeholder="Player 2 (e.g. Rina)..."
-                              className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-all rounded-xl"
+                              placeholder="Pemain 2 (misal, Rina)…"
+                              className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
                               value={awayPlayers[1]}
                               onChange={(e) =>
                                 handlePlayerChange('away', 1, e.target.value)
@@ -979,7 +828,7 @@ export default function CreateMatchPage() {
                       onClick={() => setShowAdvanced(!showAdvanced)}
                       className="flex items-center gap-2 text-xs font-bold text-black/40 hover:text-black transition-colors uppercase tracking-widest"
                     >
-                      Advanced Options{' '}
+                      Opsi Lanjutan{' '}
                       <ChevronDownIcon
                         className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
                       />
@@ -988,73 +837,73 @@ export default function CreateMatchPage() {
                     {showAdvanced && (
                       <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                         <label htmlFor="home-team" className="sr-only">
-                          Home team or club name
+                          Nama klub tuan rumah
                         </label>
                         <Input
                           id="home-team"
                           name="homeTeam"
                           autoComplete="organization"
-                          placeholder="Home Team/Club Name (e.g. PB Jaya)..."
+                          placeholder="Nama Klub Tuan Rumah (misal, PB Jaya)..."
                           value={homeTeam}
                           onChange={(e) => setHomeTeam(e.target.value)}
                           className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
                         />
                         <label htmlFor="away-team" className="sr-only">
-                          Away team or club name
+                          Nama klub tamu
                         </label>
                         <Input
                           id="away-team"
                           name="awayTeam"
                           autoComplete="organization"
-                          placeholder="Away Team/Club Name (e.g. PB Maju)..."
+                          placeholder="Nama Klub Tamu (misal, PB Maju)..."
                           value={awayTeam}
                           onChange={(e) => setAwayTeam(e.target.value)}
                           className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
                         />
                         <label htmlFor="home-country" className="sr-only">
-                          Home country code
+                          Kode negara tuan rumah
                         </label>
                         <Input
                           id="home-country"
                           name="homeCountry"
                           autoComplete="off"
-                          placeholder="Home Country (e.g. ID)..."
+                          placeholder="Negara (misal, ID)..."
                           value={homeCountry}
                           onChange={(e) => setHomeCountry(e.target.value)}
                           className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
                         />
                         <label htmlFor="away-country" className="sr-only">
-                          Away country code
+                          Kode negara tamu
                         </label>
                         <Input
                           id="away-country"
                           name="awayCountry"
                           autoComplete="off"
-                          placeholder="Away Country (e.g. TH)..."
+                          placeholder="Negara (misal, TH)..."
                           value={awayCountry}
                           onChange={(e) => setAwayCountry(e.target.value)}
                           className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
                         />
                         <label htmlFor="home-logo" className="sr-only">
-                          Home logo URL
+                          URL logo tuan rumah
                         </label>
                         <Input
                           id="home-logo"
                           name="homeLogo"
                           autoComplete="off"
-                          placeholder="Home Logo URL (optional)..."
+                          placeholder="URL Logo Tuan Rumah (opsional)..."
                           value={homeLogo}
                           onChange={(e) => setHomeLogo(e.target.value)}
                           className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
                         />
                         <label htmlFor="away-logo" className="sr-only">
-                          Away logo URL
+                          URL logo tamu
                         </label>
                         <Input
                           id="away-logo"
                           name="awayLogo"
                           autoComplete="off"
-                          placeholder="Away Logo URL (optional)..."
+                          placeholder="URL Logo Tamu (opsional)..."
                           value={awayLogo}
                           onChange={(e) => setAwayLogo(e.target.value)}
                           className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
@@ -1070,13 +919,13 @@ export default function CreateMatchPage() {
                         htmlFor="create-pin"
                         className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
                       >
-                        Set Referee PIN
+                        Tentukan PIN Wasit
                       </label>
                       <Input
                         id="create-pin"
                         name="createPin"
                         autoComplete="new-password"
-                        placeholder="PIN (e.g. 1234)..."
+                        placeholder="PIN (misal, 1234)..."
                         type="number"
                         pattern="[0-9]*"
                         inputMode="numeric"
@@ -1098,10 +947,10 @@ export default function CreateMatchPage() {
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating Match...
+                          Membuat Pertandingan...
                         </span>
                       ) : (
-                        'Start Match'
+                        'Mulai Pertandingan'
                       )}
                     </Button>
                   </div>
@@ -1113,14 +962,14 @@ export default function CreateMatchPage() {
                       <div className="flex items-center gap-2 pb-2 border-b">
                         <div className="w-2 h-2 rounded-full bg-[var(--accent-b)]" />{' '}
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Home Team
+                          Tim Tuan Rumah
                         </span>
                       </div>
                       <Input
                         id="home-team-primary"
                         name="homeTeamPrimary"
                         autoComplete="organization"
-                        placeholder="Home Team (e.g. Tigers)"
+                        placeholder="Tim Tuan Rumah (misal, Tigers)"
                         className="h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                         value={homeTeam}
                         onChange={(e) => setHomeTeam(e.target.value)}
@@ -1130,14 +979,14 @@ export default function CreateMatchPage() {
                       <div className="flex items-center gap-2 pb-2 border-b">
                         <div className="w-2 h-2 rounded-full bg-[var(--accent-a)]" />{' '}
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Away Team
+                          Tim Tamu
                         </span>
                       </div>
                       <Input
                         id="away-team-primary"
                         name="awayTeamPrimary"
                         autoComplete="organization"
-                        placeholder="Away Team (e.g. Falcons)"
+                        placeholder="Tim Tamu (misal, Falcons)"
                         className="h-11 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                         value={awayTeam}
                         onChange={(e) => setAwayTeam(e.target.value)}
@@ -1148,25 +997,25 @@ export default function CreateMatchPage() {
                   <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <label htmlFor="home-country-primary" className="sr-only">
-                        Home country code
+                        Kode negara tuan rumah
                       </label>
                       <Input
                         id="home-country-primary"
                         name="homeCountryPrimary"
                         autoComplete="off"
-                        placeholder="Home Country (e.g. ID)..."
+                        placeholder="Negara Tuan Rumah (misal, ID)..."
                         className="h-10 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                         value={homeCountry}
                         onChange={(e) => setHomeCountry(e.target.value)}
                       />
                       <label htmlFor="home-logo-primary" className="sr-only">
-                        Home logo URL
+                        URL logo tuan rumah
                       </label>
                       <Input
                         id="home-logo-primary"
                         name="homeLogoPrimary"
                         autoComplete="off"
-                        placeholder="Home Logo URL (optional)..."
+                        placeholder="URL Logo Tuan Rumah (opsional)..."
                         className="h-10 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                         value={homeLogo}
                         onChange={(e) => setHomeLogo(e.target.value)}
@@ -1174,25 +1023,25 @@ export default function CreateMatchPage() {
                     </div>
                     <div className="space-y-3">
                       <label htmlFor="away-country-primary" className="sr-only">
-                        Away country code
+                        Kode negara tamu
                       </label>
                       <Input
                         id="away-country-primary"
                         name="awayCountryPrimary"
                         autoComplete="off"
-                        placeholder="Away Country (e.g. TH)..."
+                        placeholder="Negara Tamu (misal, TH)..."
                         className="h-10 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                         value={awayCountry}
                         onChange={(e) => setAwayCountry(e.target.value)}
                       />
                       <label htmlFor="away-logo-primary" className="sr-only">
-                        Away logo URL
+                        URL logo tamu
                       </label>
                       <Input
                         id="away-logo-primary"
                         name="awayLogoPrimary"
                         autoComplete="off"
-                        placeholder="Away Logo URL (optional)..."
+                        placeholder="URL Logo Tamu (opsional)..."
                         className="h-10 bg-secondary/50 border-transparent focus:bg-background focus:border-border transition-colors"
                         value={awayLogo}
                         onChange={(e) => setAwayLogo(e.target.value)}
@@ -1206,13 +1055,13 @@ export default function CreateMatchPage() {
                         htmlFor="create-pin"
                         className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
                       >
-                        Set Referee PIN
+                        Tentukan PIN Wasit
                       </label>
                       <Input
                         id="create-pin"
                         name="createPin"
                         autoComplete="new-password"
-                        placeholder="PIN (e.g. 1234)..."
+                        placeholder="PIN (misal, 1234)..."
                         type="number"
                         pattern="[0-9]*"
                         inputMode="numeric"
@@ -1234,10 +1083,10 @@ export default function CreateMatchPage() {
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating Match...
+                          Membuat Pertandingan...
                         </span>
                       ) : (
-                        'Start Match'
+                        'Mulai Pertandingan'
                       )}
                     </Button>
                   </div>
@@ -1250,14 +1099,14 @@ export default function CreateMatchPage() {
           <aside className="flex flex-col gap-6">
             <div className="mb-2">
               <h2 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">
-                Join Existing
+                Masuk yang Sudah Ada
               </h2>
             </div>
 
             {/* Join as Referee */}
             <Card className="p-5 border border-black/10 shadow-sm bg-white hover:border-black/20 transition-colors group rounded-3xl">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Join as Referee</h3>
+                <h3 className="font-bold text-foreground">Masuk sebagai Wasit</h3>
                 <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-[var(--accent-b)] transition-colors">
                   <svg
                     className="w-3 h-3"
@@ -1276,13 +1125,13 @@ export default function CreateMatchPage() {
               </div>
               <div className="space-y-3">
                 <label htmlFor="display-code-referee" className="sr-only">
-                  Display Code
+                  Kode Tampilan
                 </label>
                 <Input
                   id="display-code-referee"
                   name="displayCode"
                   autoComplete="off"
-                  placeholder="Display Code (e.g. A1B2C3)..."
+                  placeholder="Kode Tampilan (misal, A1B2C3)..."
                   className="h-9 font-mono text-xs uppercase bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
                   value={displayCodeInput}
                   onChange={(e) =>
@@ -1297,10 +1146,10 @@ export default function CreateMatchPage() {
                   variant="secondary"
                   className="w-full text-xs font-bold uppercase tracking-widest h-10 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none border border-transparent"
                 >
-                  Open Referee Join Page
+                  Buka Halaman Wasit
                 </Button>
                 <p className="text-[11px] text-black/50">
-                  Wasit tetap login pakai Display Code + PIN di halaman join.
+                  Wasit tetap login pakai Kode Tampilan + PIN di halaman join.
                 </p>
               </div>
             </Card>
@@ -1308,7 +1157,7 @@ export default function CreateMatchPage() {
             {/* Join as Display */}
             <Card className="p-5 border border-black/10 shadow-sm bg-white hover:border-black/20 transition-colors group rounded-3xl">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Open Display</h3>
+                <h3 className="font-bold text-foreground">Buka Tampilan Layar</h3>
                 <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-[var(--accent-a)] transition-colors">
                   <svg
                     className="w-3 h-3"
@@ -1326,17 +1175,17 @@ export default function CreateMatchPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mb-4">
-                Launch the public scoreboard view for TV or projector.
+                Buka tampilan papan skor publik untuk TV atau proyektor.
               </p>
               <div className="space-y-3">
                 <label htmlFor="display-code-open" className="sr-only">
-                  Display Code
+                  Kode Tampilan
                 </label>
                 <Input
                   id="display-code-open"
                   name="displayCodeOpen"
                   autoComplete="off"
-                  placeholder="Display Code (e.g. A1B2C3)..."
+                  placeholder="Kode Tampilan (misal, A1B2C3)..."
                   className="h-9 font-mono text-xs uppercase"
                   value={displayCodeInput}
                   onChange={(e) =>
@@ -1351,7 +1200,7 @@ export default function CreateMatchPage() {
                   variant="outline"
                   className="w-full text-xs font-bold uppercase tracking-widest h-10"
                 >
-                  Launch Display
+                  Buka Layar
                 </Button>
               </div>
             </Card>
@@ -1368,7 +1217,7 @@ export default function CreateMatchPage() {
         <DialogContent className="sm:max-w-2xl rounded-3xl border-black/10">
           <DialogHeader>
             <DialogTitle className="text-2xl font-[family-name:var(--font-bebas)] uppercase tracking-[0.08em]">
-              Match Created Successfully
+              Pertandingan Berhasil Dibuat
             </DialogTitle>
             <DialogDescription className="text-black/60">
               Bagikan akses wasit dari popup ini. Admin berikutnya lanjut dari dashboard.
@@ -1409,7 +1258,7 @@ export default function CreateMatchPage() {
                 navigator.clipboard.writeText(link);
               }}
             >
-              Copy Referee Link
+              Salin Link Wasit
             </Button>
             <Button
               type="button"
@@ -1417,12 +1266,12 @@ export default function CreateMatchPage() {
               className="rounded-full text-xs uppercase tracking-widest font-bold"
               onClick={() => {
                 if (!createdMatch) return;
-                const message = `Referee access\\nDisplay Code: ${createdMatch.displayCode}\\nPIN: ${createdMatch.refereePin}\\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
+                const message = `Akses wasit\\nKode Tampilan: ${createdMatch.displayCode}\\nPIN: ${createdMatch.refereePin}\\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
                 const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(waUrl, '_blank', 'noopener,noreferrer');
               }}
             >
-              Share to WhatsApp
+              Bagikan ke WhatsApp
             </Button>
           </div>
 
@@ -1437,7 +1286,7 @@ export default function CreateMatchPage() {
                 setCreatedMatch(null);
               }}
             >
-              Open Admin Control
+              Buka Kontrol Admin
             </Button>
             <Button
               type="button"
@@ -1447,7 +1296,7 @@ export default function CreateMatchPage() {
                 setCreatedMatch(null);
               }}
             >
-              Go to Dashboard
+              Ke Dashboard
             </Button>
           </DialogFooter>
         </DialogContent>

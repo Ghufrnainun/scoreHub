@@ -85,7 +85,7 @@ export default function RefereeMatchPage() {
     return (
       <div className="min-h-screen bg-[#F8FAFC] text-[#111827] flex items-center justify-center">
         <div className="text-sm font-mono text-black/60">
-          Preparing referee session...
+          Menyiapkan sesi wasit...
         </div>
       </div>
     );
@@ -96,10 +96,10 @@ export default function RefereeMatchPage() {
       <div className="min-h-screen bg-[#F8FAFC] text-[#111827] px-4 py-16">
         <div className="max-w-xl mx-auto rounded-3xl border border-black/10 bg-white p-8 text-center shadow-sm">
           <p className="text-xs uppercase tracking-widest text-black/50 font-bold">
-            Referee Session Missing
+            Sesi Wasit Tidak Ditemukan
           </p>
           <h1 className="mt-3 text-3xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
-            Join First
+            Masuk Terlebih Dahulu
           </h1>
           <p className="mt-2 text-sm text-black/60">
             Sesi wasit tidak ditemukan. Masuk lewat halaman join menggunakan
@@ -107,7 +107,7 @@ export default function RefereeMatchPage() {
           </p>
           <Link href="/referee/join" className="inline-block mt-6">
             <Button className="rounded-full bg-[#111827] hover:bg-black text-white text-xs uppercase tracking-widest font-bold">
-              Go to Referee Join
+              Ke Halaman Masuk Wasit
             </Button>
           </Link>
         </div>
@@ -118,7 +118,7 @@ export default function RefereeMatchPage() {
   if (isLoading || !match) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] text-[#111827] flex items-center justify-center">
-        <div className="text-sm font-mono text-black/60">Loading match...</div>
+        <div className="text-sm font-mono text-black/60">Memuat pertandingan...</div>
       </div>
     );
   }
@@ -133,7 +133,7 @@ export default function RefereeMatchPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-bold">
-                Referee Control
+                KONTROL WASIT
               </p>
               <h1 className="text-2xl font-[family-name:var(--font-bebas)] uppercase tracking-[0.08em]">
                 {home.name} vs {away.name}
@@ -141,17 +141,17 @@ export default function RefereeMatchPage() {
             </div>
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-bold">
-                Match ID
+                ID PERTANDINGAN
               </p>
               <p className="text-sm font-mono font-bold">{match.matchId}</p>
               <p className="text-xs text-black/60">
-                Display Code: {match.displayCode}
+                Kode Display: {match.displayCode}
               </p>
             </div>
           </div>
           <div className="mt-4 text-xs text-black/60 flex flex-wrap gap-3">
             <span>Status: {match.status}</span>
-            <span>Sport: {match.sport}</span>
+            <span>Olahraga: {match.sport}</span>
             <span>Set: {match.currentSet}</span>
           </div>
           {error ? (
@@ -166,7 +166,7 @@ export default function RefereeMatchPage() {
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
-                Timer
+                PENGATUR WAKTU
               </span>
               <span className="text-4xl font-[family-name:var(--font-bebas)] tabular-nums tracking-wider leading-none">
                 {formatTime(remainingTime)}
@@ -209,20 +209,20 @@ export default function RefereeMatchPage() {
                 disabled={isLocked}
               >
                 <Edit className="mr-2 h-3.5 w-3.5" />
-                Edit Time
+                Ubah Waktu
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md rounded-3xl">
               <DialogHeader>
-                <DialogTitle>Edit Timer</DialogTitle>
+                <DialogTitle>Ubah Pengatur Waktu</DialogTitle>
                 <DialogDescription>
-                  Set the timer manually. This will update the time for
-                  everyone.
+                  Atur pengatur waktu secara manual. Ini akan memperbarui waktu untuk
+                  semua orang.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="minutes">Minutes</Label>
+                  <Label htmlFor="minutes">Menit</Label>
                   <Input
                     id="minutes"
                     type="number"
@@ -233,7 +233,7 @@ export default function RefereeMatchPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="seconds">Seconds</Label>
+                  <Label htmlFor="seconds">Detik</Label>
                   <Input
                     id="seconds"
                     type="number"
@@ -250,7 +250,7 @@ export default function RefereeMatchPage() {
                   className="rounded-full w-full"
                   onClick={handleTimerSave}
                 >
-                  Save Timer
+                  Simpan Waktu
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -277,7 +277,7 @@ export default function RefereeMatchPage() {
               disabled={isLocked}
               className="h-36 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black text-base uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Point {home.name}
+              Poin {home.name}
             </button>
             <button
               type="button"
@@ -285,7 +285,7 @@ export default function RefereeMatchPage() {
               disabled={isLocked}
               className="h-36 rounded-3xl bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-base uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Point {away.name}
+              Poin {away.name}
             </button>
           </div>
 
@@ -297,7 +297,7 @@ export default function RefereeMatchPage() {
               disabled={isLocked}
               className="rounded-full px-6 text-xs uppercase tracking-widest font-bold"
             >
-              Undo Last Rally
+              Batalkan Reli Terakhir
             </Button>
           </div>
         </Card>
@@ -308,7 +308,7 @@ export default function RefereeMatchPage() {
             target="_blank"
             className="text-xs uppercase tracking-widest font-bold text-black/50 hover:text-black"
           >
-            Open Display
+            Buka Tampilan Layar
           </Link>
         </div>
       </div>

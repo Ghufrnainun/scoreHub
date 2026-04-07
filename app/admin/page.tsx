@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
+import { ADMIN_AUTH_STORAGE_KEY, isAdminAuthenticated } from '@/lib/auth';
 
 type MatchStatus =
   | 'created'
@@ -50,6 +51,7 @@ const STATUS_FILTERS: Array<'all' | MatchStatus> = [
 ];
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [adminPin, setAdminPin] = useState('');
   const [isPinReady, setIsPinReady] = useState(false);
   const [query, setQuery] = useState('');
@@ -68,6 +70,12 @@ export default function AdminDashboard() {
     }
     setIsPinReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!isAdminAuthenticated()) {
+      router.replace('/');
+    }
+  }, [router]);
 
   const matchData = useQuery(
     api.matches.listAdmin,
@@ -181,10 +189,10 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-[family-name:var(--font-bebas)] tracking-wide uppercase text-black text-balance">
-            Match Dashboard
+            Dashboard Pertandingan
           </h1>
           <p className="text-black/60 font-medium text-pretty">
-            Create in /create, then manage and share from here.
+            Buat di /create, lalu kelola dan bagikan dari sini.
           </p>
         </div>
         <Link href="/create">
@@ -203,7 +211,7 @@ export default function AdminDashboard() {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Create Match
+            Buat Pertandingan
           </Button>
         </Link>
       </div>
@@ -219,7 +227,7 @@ export default function AdminDashboard() {
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Live
+            Langsung
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
             {statusCounts.live}
@@ -227,7 +235,7 @@ export default function AdminDashboard() {
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Ready
+            Siap Wasit
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
             {statusCounts.ready_for_referee}
@@ -235,7 +243,7 @@ export default function AdminDashboard() {
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Created
+            Baru
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
             {statusCounts.created}
@@ -243,7 +251,7 @@ export default function AdminDashboard() {
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Finished
+            Selesai
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
             {statusCounts.finished}
@@ -255,12 +263,12 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
           <div>
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Search
+              Cari
             </label>
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by match ID, display code, or team..."
+              placeholder="Cari ID match, kode tampilan, atau tim..."
               className="mt-2 h-10 rounded-2xl bg-black/5 border-transparent focus:bg-white focus:border-black/20"
             />
           </div>
@@ -288,7 +296,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Sport
+                Cabang Olahraga
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
@@ -300,7 +308,7 @@ export default function AdminDashboard() {
                       : 'bg-black/5 text-black/50 hover:bg-black/10'
                   }`}
                 >
-                  All
+                  Semua
                 </button>
                 {sportOptions.map((sport) => (
                   <button
@@ -333,7 +341,7 @@ export default function AdminDashboard() {
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-xl">
-          <div className="text-muted-foreground mb-4">No matches found</div>
+          <div className="text-muted-foreground mb-4">Pertandingan tidak ditemukan</div>
           <Button
             onClick={() => {
               setQuery('');
@@ -350,7 +358,7 @@ export default function AdminDashboard() {
           {filteredMatches.map((match) => (
             <Card
               key={match.id}
-              className="p-5 flex flex-col gap-4 border border-black/10 shadow-sm bg-white hover:border-black/20 rounded-3xl transition-colors"
+              className="p-5 flex flex-col gap-4 border border-black/10 shadow-sm bg-white hover:border-black/20 rounded-3xl transition-[border-color,box-shadow]"
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
@@ -405,7 +413,7 @@ export default function AdminDashboard() {
                     variant="secondary"
                     className="w-full text-xs h-8 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none"
                   >
-                    Control
+                    Kontrol
                   </Button>
                 </Link>
                 <Link
@@ -421,7 +429,7 @@ export default function AdminDashboard() {
                     variant="outline"
                     className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
                   >
-                    View Display
+                    Buka Tampilan
                   </Button>
                 </Link>
               </div>
@@ -437,7 +445,7 @@ export default function AdminDashboard() {
                   }}
                   disabled={!match.displayCode}
                 >
-                  Copy Referee Link
+                  Salin Link Wasit
                 </Button>
                 <Button
                   variant="outline"
@@ -450,7 +458,7 @@ export default function AdminDashboard() {
                   }}
                   disabled={!match.displayCode}
                 >
-                  Share WhatsApp
+                  Bagikan WhatsApp
                 </Button>
               </div>
 
@@ -462,7 +470,7 @@ export default function AdminDashboard() {
                   onClick={() => onFinishMatch(match.matchId)}
                   disabled={match.status === 'finished'}
                 >
-                  END MATCH
+                  AKHIRI MATCH
                 </Button>
 
                 <AlertDialog>
@@ -477,23 +485,23 @@ export default function AdminDashboard() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Match?</AlertDialogTitle>
+                      <AlertDialogTitle>Hapus Pertandingan?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently
-                        delete the match{' '}
+                        Tindakan ini tidak dapat dibatalkan. Ini akan secara permanen
+                        menghapus pertandingan{' '}
                         <strong>
                           {match.home.name} vs {match.away.name}
                         </strong>{' '}
-                        and remove all associated data.
+                        dan menghapus semua data terkait.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
                       <AlertDialogAction
                         className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
                         onClick={() => onDeleteMatch(match.matchId)}
                       >
-                        Delete Matches
+                        Hapus Pertandingan
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
