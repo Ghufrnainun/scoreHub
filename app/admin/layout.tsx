@@ -108,7 +108,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -142,6 +142,10 @@ export default function AdminLayout({
       } catch {
         // Ignore invalid storage
       }
+    }
+    // Set sidebar open by default on desktop
+    if (window.innerWidth >= 768) {
+      setIsSidebarOpen(true);
     }
     setIsReady(true);
   }, [adminPin]);
@@ -239,11 +243,19 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] flex transition-colors duration-300">
+    <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] flex transition-colors duration-300 overflow-x-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-10 md:hidden animate-in fade-in duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className={`bg-white border-r border-black/10 transition-[width] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
-          isSidebarOpen ? 'w-64' : 'w-20'
+        className={`bg-white border-r border-black/10 transition-[width,transform] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
+          isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-20 md:translate-x-0'
         }`}
       >
         <div className="h-16 flex items-center justify-center border-b px-4">
@@ -277,6 +289,9 @@ export default function AdminLayout({
                 className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC]"
               >
                 <div
+                  onClick={() => {
+                    if (window.innerWidth < 768) setIsSidebarOpen(false);
+                  }}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group cursor-pointer ${
                     isActive
                       ? 'bg-[#111827] text-white font-bold'

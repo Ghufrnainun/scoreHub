@@ -198,8 +198,8 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
     const showCode = displaySettings.teamCodes.show;
 
     return (
-      <div className="grid grid-cols-[1fr_auto] border-b border-slate-800 last:border-0 flex-1 min-h-[160px]">
-        <div className="flex items-center px-12 gap-8 bg-[#111] relative">
+      <div className="grid grid-cols-[1fr_auto] border-b border-slate-800 last:border-0 flex-1 min-h-[120px] sm:min-h-[160px]">
+        <div className="flex items-center px-4 sm:px-12 gap-4 sm:gap-8 bg-[#111] relative overflow-hidden">
           {isServing && (
             <div
               className="absolute left-0 top-0 bottom-0 w-3 animate-pulse motion-reduce:animate-none"
@@ -232,8 +232,8 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
 
         <div className="flex bg-black">
           {showSet1 && (
-            <div className="w-40 flex items-center justify-center bg-[#0a0a0a]">
-              <span className="text-5xl font-mono font-bold text-[#fbbf24] opacity-80 tabular-nums">
+            <div className="w-16 sm:w-24 md:w-40 flex items-center justify-center bg-[#0a0a0a]">
+              <span className="text-2xl sm:text-3xl md:text-5xl font-mono font-bold text-[#fbbf24] opacity-80 tabular-nums">
                 {sets[0]
                   ? isHome
                     ? sets[0].home
@@ -245,8 +245,8 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
             </div>
           )}
           {showSet2 && (
-            <div className="w-40 flex items-center justify-center bg-[#0a0a0a]">
-              <span className="text-5xl font-mono font-bold text-[#fbbf24] opacity-80 tabular-nums">
+            <div className="w-16 sm:w-24 md:w-40 flex items-center justify-center bg-[#0a0a0a]">
+              <span className="text-2xl sm:text-3xl md:text-5xl font-mono font-bold text-[#fbbf24] opacity-80 tabular-nums">
                 {sets[1]
                   ? isHome
                     ? sets[1].home
@@ -258,8 +258,8 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
             </div>
           )}
           {showSet3 && (
-            <div className="w-40 flex items-center justify-center bg-[#0a0a0a]">
-              <span className="text-5xl font-mono font-bold text-[#fbbf24] opacity-80 tabular-nums">
+            <div className="w-16 sm:w-24 md:w-40 flex items-center justify-center bg-[#0a0a0a]">
+              <span className="text-2xl sm:text-3xl md:text-5xl font-mono font-bold text-[#fbbf24] opacity-80 tabular-nums">
                 {sets[2]
                   ? isHome
                     ? sets[2].home
@@ -270,10 +270,10 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
               </span>
             </div>
           )}
-          <div className="w-64 flex items-center justify-center border-l-4 border-slate-700 bg-black">
+          <div className="w-24 sm:w-32 md:w-64 flex items-center justify-center border-l-2 sm:border-l-4 border-slate-700 bg-black">
             <span
               className="font-mono font-black tabular-nums tracking-tighter text-[#4ade80]"
-              style={{ fontSize: `${displaySettings.fontSizes.score}px` }}
+              style={{ fontSize: `clamp(24px, 10vw, ${displaySettings.fontSizes.score}px)` }}
             >
               {team.score}
             </span>
@@ -287,11 +287,11 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
     <div className="flex-1 flex flex-col justify-center max-w-[95%] mx-auto w-full py-8">
       <div className="grid grid-cols-[1fr_auto] mb-2 px-2">
         <div></div>
-        <div className="flex text-gray-500 font-mono text-sm font-bold uppercase tracking-widest text-center">
-          {showSet1 && <div className="w-40">Set 1</div>}
-          {showSet2 && <div className="w-40">Set 2</div>}
-          {showSet3 && <div className="w-40">Set 3</div>}
-          <div className="w-64 text-[#fbbf24]">Poin</div>
+        <div className="flex text-gray-500 font-mono text-[10px] sm:text-sm font-bold uppercase tracking-widest text-center">
+          {showSet1 && <div className="w-16 sm:w-24 md:w-40">Set 1</div>}
+          {showSet2 && <div className="w-16 sm:w-24 md:w-40">Set 2</div>}
+          {showSet3 && <div className="w-16 sm:w-24 md:w-40">Set 3</div>}
+          <div className="w-24 sm:w-32 md:w-64 text-[#fbbf24]">Poin</div>
         </div>
       </div>
 
@@ -314,7 +314,7 @@ const ClassicTemplate = ({ match, displaySettings }: TemplateProps) => {
       ? displaySettings.teamColors.home
       : displaySettings.teamColors.away;
     return (
-      <div className="flex items-center h-24 border-b border-slate-700 bg-[#1a1a1a]">
+      <div className="flex items-center min-h-[6rem] border-b border-slate-700 bg-[#1a1a1a]">
         <div
           className="w-4 h-full"
           style={{ backgroundColor: isServing ? teamColor : 'transparent' }}
@@ -328,7 +328,7 @@ const ClassicTemplate = ({ match, displaySettings }: TemplateProps) => {
               teamColor={teamColor}
               size="sm"
             />
-            <span className="font-bold text-3xl uppercase text-white">
+            <span className="font-bold text-xl sm:text-3xl uppercase text-white truncate max-w-[150px] sm:max-w-none">
               {team.name}
             </span>
             {isServing && displaySettings.showServerIcon && (
@@ -341,7 +341,7 @@ const ClassicTemplate = ({ match, displaySettings }: TemplateProps) => {
                 {isHome ? s.home : s.away}
               </div>
             ))}
-            <div className="text-6xl font-mono font-black text-white tabular-nums px-4 bg-black/40 rounded">
+            <div className="text-3xl sm:text-6xl font-mono font-black text-white tabular-nums px-2 sm:px-4 bg-black/40 rounded">
               {team.score}
             </div>
           </div>
@@ -389,7 +389,7 @@ const MinimalTemplate = ({ match, displaySettings }: TemplateProps) => {
         <div className="mb-8 relative">
           <h2
             className={cn(
-              'text-6xl font-black uppercase tracking-tighter',
+              'text-2xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter truncate max-w-[200px] sm:max-w-none',
               isServing ? 'text-white' : 'text-slate-600',
             )}
           >
@@ -402,7 +402,7 @@ const MinimalTemplate = ({ match, displaySettings }: TemplateProps) => {
             )}
         </div>
         <div
-          className="text-[240px] leading-none font-black tabular-nums transition-[color,text-shadow] duration-300"
+          className="text-[120px] sm:text-[180px] md:text-[240px] leading-none font-black tabular-nums transition-[color,text-shadow] duration-300"
           style={{
             color: isServing
               ? isHome
@@ -468,12 +468,12 @@ const NeonTemplate = ({ match, displaySettings }: TemplateProps) => {
               size="md"
             />
           </div>
-          <h2 className="text-4xl font-black uppercase tracking-widest text-white mb-8 group-hover:scale-110 transition-transform">
+          <h2 className="text-xl sm:text-2xl md:text-4xl font-black uppercase tracking-widest text-white mb-4 sm:mb-8 transition-transform truncate max-w-[250px] sm:max-w-none">
             {team.name}
           </h2>
           <div className="relative">
             <span
-              className="text-[180px] font-black leading-none tabular-nums italic"
+              className="text-[100px] sm:text-[140px] md:text-[180px] font-black leading-none tabular-nums italic"
               style={{
                 color: color,
                 filter: `drop-shadow(0 0 20px ${color}80)`,
@@ -1030,8 +1030,8 @@ export default function BwfScoreboard() {
     >
       {/* Universal Header - Simplified */}
       {(!isOverlay || !overlayConfig.hideHeader) && (
-        <div className="h-14 bg-black/50 backdrop-blur-md flex items-center justify-between px-8 z-20 group-hover:h-16 transition-[height] duration-300">
-          <div className="flex items-center gap-8">
+        <div className="h-14 bg-black/50 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-20 group-hover:h-16 transition-[height] duration-300">
+          <div className="flex items-center gap-4 sm:gap-8">
             <Link href="/admin" className="flex items-center gap-3 group">
               <div className="w-8 h-8 rounded-lg bg-[#fbbf24] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Image
@@ -1104,8 +1104,8 @@ export default function BwfScoreboard() {
 
       {/* Subtle Metadata Footer - Clean Info */}
       {(!isOverlay || !overlayConfig.hideFooter) && (
-        <div className="h-10 px-8 flex items-center justify-between text-[10px] font-mono text-white/20 uppercase tracking-[0.3em] border-t border-white/5 bg-black/20">
-          <div className="flex items-center gap-6">
+        <div className="h-auto sm:h-10 px-4 sm:px-8 py-2 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between text-[8px] sm:text-[10px] font-mono text-white/20 uppercase tracking-[0.2em] sm:tracking-[0.3em] border-t border-white/5 bg-black/20 gap-2">
+          <div className="flex items-center gap-4 sm:gap-6">
             <div className="flex items-center gap-2">
               <span className="text-white/40 font-bold">
                 {match.category || 'MS'}

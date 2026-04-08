@@ -130,22 +130,22 @@ export default function RefereeMatchPage() {
     <div className="min-h-screen bg-[#F8FAFC] text-[#111827] px-4 py-6 sm:py-10">
       <div className="mx-auto w-full max-w-4xl space-y-4">
         <Card className="rounded-3xl border border-black/10 bg-white p-5 sm:p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-bold">
                 KONTROL WASIT
               </p>
-              <h1 className="text-2xl font-[family-name:var(--font-bebas)] uppercase tracking-[0.08em]">
-                {home.name} vs {away.name}
+              <h1 className="text-xl sm:text-2xl font-[family-name:var(--font-bebas)] uppercase tracking-[0.08em] text-balance">
+                {home.name} <span className="text-black/30">vs</span> {away.name}
               </h1>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-black/5">
               <p className="text-[10px] uppercase tracking-[0.2em] text-black/50 font-bold">
                 ID PERTANDINGAN
               </p>
-              <p className="text-sm font-mono font-bold">{match.matchId}</p>
+              <p className="text-sm font-mono font-bold truncate max-w-[200px] sm:max-w-none">{match.matchId}</p>
               <p className="text-xs text-black/60">
-                Kode Display: {match.displayCode}
+                Kode Display: <span className="font-bold text-[#F59E0B]">{match.displayCode}</span>
               </p>
             </div>
           </div>
@@ -162,8 +162,8 @@ export default function RefereeMatchPage() {
         </Card>
 
         {/* Timer Control */}
-        <Card className="rounded-3xl border border-black/10 bg-white p-5 sm:p-6 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <Card className="rounded-3xl border border-black/10 bg-white p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center justify-between sm:justify-start gap-4">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
                 PENGATUR WAKTU
@@ -204,7 +204,7 @@ export default function RefereeMatchPage() {
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="h-10 rounded-full border-black/10 text-xs font-bold uppercase tracking-widest hover:bg-black/5"
+                className="h-10 w-full sm:w-auto rounded-full border-black/10 text-xs font-bold uppercase tracking-widest hover:bg-black/5"
                 onClick={handleOpenEdit}
                 disabled={isLocked}
               >
@@ -275,17 +275,19 @@ export default function RefereeMatchPage() {
               type="button"
               onClick={() => awardPoint('home')}
               disabled={isLocked}
-              className="h-36 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black text-base uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-32 sm:h-36 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-black text-sm sm:text-base uppercase tracking-[0.1em] sm:tracking-[0.15em] shadow-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center p-4"
             >
-              Poin {home.name}
+              <span className="opacity-60 text-[10px] mb-1">Poin</span>
+              <span className="truncate w-full">{home.name}</span>
             </button>
             <button
               type="button"
               onClick={() => awardPoint('away')}
               disabled={isLocked}
-              className="h-36 rounded-3xl bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-base uppercase tracking-[0.15em] shadow-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-32 sm:h-36 rounded-3xl bg-gradient-to-br from-red-500 to-red-700 text-white font-black text-sm sm:text-base uppercase tracking-[0.1em] sm:tracking-[0.15em] shadow-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center p-4"
             >
-              Poin {away.name}
+              <span className="opacity-60 text-[10px] mb-1">Poin</span>
+              <span className="truncate w-full">{away.name}</span>
             </button>
           </div>
 

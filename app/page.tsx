@@ -303,10 +303,10 @@ export default function LandingPage() {
                 </div>
 
                 <h1
-                  className={`${displayFont.className} mt-8 text-5xl sm:text-7xl lg:text-8xl uppercase leading-[0.85] tracking-[0.05em] text-black text-balance`}
+                  className={`${displayFont.className} mt-8 text-4xl sm:text-7xl lg:text-8xl uppercase leading-[0.9] sm:leading-[0.85] tracking-[0.05em] text-black text-balance`}
                 >
                   Sensasi Pro <br />
-                  <span className="text-black/20 text-4xl sm:text-6xl lg:text-7xl">Di mana saja,</span> <br />
+                  <span className="text-black/20 text-3xl sm:text-6xl lg:text-7xl">Di mana saja,</span> <br />
                   <span className="text-[var(--amber)]">Kapan saja.</span>
                 </h1>
 
@@ -439,7 +439,7 @@ export default function LandingPage() {
           </section>
 
           {/* ADDED MISSING SECTIONS HERE */}
-          <section id="replace" className="py-24 lg:py-32 scroll-mt-24">
+          <section id="replace" className="py-12 lg:py-32 scroll-mt-24">
             <div className="rounded-[40px] bg-neutral-900 p-8 lg:p-20 text-white shadow-2xl overflow-hidden relative">
               <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
               <div className="relative z-10 grid gap-16 lg:grid-cols-2 lg:items-center">
@@ -472,7 +472,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="features" className="py-24 space-y-32 scroll-mt-24">
+          <section id="features" className="py-12 lg:py-32 space-y-24 lg:space-y-32 scroll-mt-24">
             <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
               <div className="order-2 lg:order-1 relative">
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-purple-500/5 rounded-full blur-3xl" />
@@ -505,7 +505,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="flow" className="py-24 lg:py-32 scroll-mt-24 border-t border-black/5">
+          <section id="flow" className="py-12 lg:py-32 scroll-mt-24 border-t border-black/5">
             <div className="text-center mb-20 px-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">Cara Kerja</div>
               <h2 className={`${displayFont.className} mt-6 text-5xl uppercase tracking-wide`}>Satu Sistem. <br /> Tiga Peran Utama.</h2>
@@ -541,7 +541,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="pricing" className="py-24 lg:py-32 scroll-mt-24">
+          <section id="pricing" className="py-12 lg:py-32 scroll-mt-24">
             <div className="grid gap-8 lg:grid-cols-2">
               {/* Free Tier */}
               <div className="rounded-[40px] border border-black/10 bg-white p-10 shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col">

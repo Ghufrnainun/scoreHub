@@ -186,12 +186,12 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-[family-name:var(--font-bebas)] tracking-wide uppercase text-black text-balance">
+          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-bebas)] tracking-wide uppercase text-black text-balance">
             Dashboard Pertandingan
           </h1>
-          <p className="text-black/60 font-medium text-pretty">
+          <p className="text-xs sm:text-sm text-black/60 font-medium text-pretty">
             Buat di /create, lalu kelola dan bagikan dari sini.
           </p>
         </div>
