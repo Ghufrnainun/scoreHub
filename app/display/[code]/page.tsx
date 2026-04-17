@@ -7,7 +7,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
 const normalizeCode = (value: string) =>
-  value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 
 export default function DisplayByCodePage() {
   const params = useParams();
@@ -25,7 +25,7 @@ export default function DisplayByCodePage() {
     }
   }, [matchRef?.matchId, router]);
 
-  if (!code) {
+  if (code.length !== 6) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center space-y-3">

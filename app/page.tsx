@@ -96,25 +96,6 @@ const useCases = [
   },
 ];
 
-const faqs = [
-  {
-    q: 'Apakah butuh akun untuk mulai?',
-    a: 'Belum. Kamu bisa langsung Start Match tanpa login.',
-  },
-  {
-    q: 'Bisa dipakai tanpa internet?',
-    a: 'Ya. Scorehub dirancang untuk LAN/WiFi lokal.',
-  },
-  {
-    q: 'Berapa match gratis yang bisa aktif?',
-    a: 'Free tier: 1 match aktif. Pro tier (planned) untuk multi-match.',
-  },
-  {
-    q: 'Apakah ada history match?',
-    a: 'Ada. State match tersimpan persistent di Convex untuk recovery lintas device.',
-  },
-];
-
 function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-black/70 shadow-sm">
@@ -263,8 +244,8 @@ export default function LandingPage() {
               {[
                 { label: 'Fitur', href: '#features' },
                 { label: 'Alur', href: '#flow' },
+                { label: 'Panduan', href: '/guide' },
                 { label: 'Pro', href: '#pricing' },
-                { label: 'Tanya Jawab', href: '#faq' },
               ].map((item) => (
                 <a
                   key={item.href}
@@ -277,6 +258,12 @@ export default function LandingPage() {
             </nav>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/guide"
+                className="hidden sm:inline-flex rounded-full border border-black/20 px-3 sm:px-4 py-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] text-black/70 transition-all hover:border-black/50 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
+              >
+                Panduan
+              </Link>
               <button
                 onClick={() => setRoleModalOpen(true)}
                 className="hidden sm:block rounded-full border border-black/20 px-3 sm:px-4 py-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] text-black/70 transition-all hover:border-black/50 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
@@ -322,6 +309,12 @@ export default function LandingPage() {
                   >
                     Mulai Pertandingan
                   </button>
+                  <Link
+                    href="/guide"
+                    className="inline-flex h-14 items-center justify-center rounded-full border border-black/10 px-8 text-[11px] font-bold uppercase tracking-[0.3em] text-black/60 transition-colors hover:border-black/30 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
+                  >
+                    Buka Panduan
+                  </Link>
                   <a
                     href="#flow"
                     className="inline-flex h-14 items-center justify-center rounded-full border border-black/10 px-8 text-[11px] font-bold uppercase tracking-[0.3em] text-black/60 transition-colors hover:border-black/30 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
@@ -598,18 +591,6 @@ export default function LandingPage() {
               ))}
             </div>
           </section>
-
-          <section id="faq" className="py-24 scroll-mt-24 border-t border-black/5">
-            <div className="mb-16"><h2 className={`${displayFont.className} text-4xl uppercase tracking-wide text-black/30`}>FAQ</h2></div>
-            <div className="grid gap-8 md:grid-cols-2">
-              {faqs.map((faq, i) => (
-                <div key={i} className="rounded-3xl border border-black/5 bg-white p-8">
-                  <h3 className="text-lg font-bold text-black mb-2">{faq.q}</h3>
-                  <p className="text-black/60">{faq.a}</p>
-                </div>
-              ))}
-            </div>
-          </section>
         </main>
       </div>
 
@@ -622,22 +603,22 @@ export default function LandingPage() {
               <DialogDescription className="text-black/60 font-medium">Pilih bagaimana Anda ingin menggunakan sistem papan skor hari ini.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
-              <button onClick={() => { setRoleModalOpen(false); setAdminAuthOpen(true); setAuthError(""); setPinInput(""); }} className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-black/10 transition-[background-color,transform,box-shadow] hover:bg-neutral-900 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10">
-                <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-xl bg-black text-[var(--amber)] group-hover:bg-white/10 transition-colors">
+              <button onClick={() => { setRoleModalOpen(false); setAdminAuthOpen(true); setAuthError(""); setPinInput(""); }} className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-black/10 transition-[background-color,transform,box-shadow] hover:bg-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10">
+                <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-xl bg-black text-amber-500 group-hover:bg-white/10 transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
                 </div>
                 <h4 className={`${displayFont.className} text-2xl uppercase tracking-wider text-black group-hover:text-white`}>Administrator</h4>
                 <p className="text-[10px] text-black/50 group-hover:text-white/40 mt-1 uppercase tracking-widest font-black leading-none">Buat pertandingan & kelola dashboard</p>
               </button>
-              <button onClick={() => { setRoleModalOpen(false); setRefereeJoinOpen(true); setAuthError(""); setCodeInput(""); }} className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-black/10 transition-[background-color,transform,box-shadow] hover:bg-neutral-900 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10">
-                <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-xl bg-black text-[var(--amber)] group-hover:bg-white/10 transition-colors">
+              <button onClick={() => { setRoleModalOpen(false); setRefereeJoinOpen(true); setAuthError(""); setCodeInput(""); }} className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-black/10 transition-[background-color,transform,box-shadow] hover:bg-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10">
+                <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-xl bg-black text-amber-500 group-hover:bg-white/10 transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
                 </div>
                 <h4 className={`${displayFont.className} text-2xl uppercase tracking-wider text-black group-hover:text-white`}>Wasit Lapangan</h4>
                 <p className="text-[10px] text-black/50 group-hover:text-white/40 mt-1 uppercase tracking-widest font-black leading-none">Kontrol papan skor pertandingan live</p>
               </button>
-              <button onClick={() => { setRoleModalOpen(false); setDisplayJoinOpen(true); setDisplayCodeInput(""); }} className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-black/10 transition-[background-color,transform,box-shadow] hover:bg-neutral-900 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10">
-                <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-xl bg-black text-[var(--amber)] group-hover:bg-white/10 transition-colors">
+              <button onClick={() => { setRoleModalOpen(false); setDisplayJoinOpen(true); setDisplayCodeInput(""); }} className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-black/10 transition-[background-color,transform,box-shadow] hover:bg-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10">
+                <div className="mb-4 h-10 w-10 flex items-center justify-center rounded-xl bg-black text-amber-500 group-hover:bg-white/10 transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </div>
                 <h4 className={`${displayFont.className} text-2xl uppercase tracking-wider text-black group-hover:text-white`}>Layar Scoreboard</h4>
@@ -690,8 +671,8 @@ export default function LandingPage() {
               <DialogDescription className="text-black/60 font-medium">Masukkan kode display untuk pertandingan yang Anda pimpin.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
-              <Input placeholder="KODE-MATCH" value={codeInput} onChange={(e) => setCodeInput(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && codeInput.length >= 4 && router.push(`/referee/join?code=${codeInput}`)} className="h-14 text-center text-xl tracking-[0.2em] font-black rounded-2xl border-black/10 bg-black/5 focus:bg-white focus:border-black/20 uppercase" />
-              <Button onClick={() => router.push(`/referee/join?code=${codeInput}`)} disabled={codeInput.length < 4} className="w-full h-14 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold uppercase tracking-[0.3em] disabled:opacity-50">Lanjut ke PIN</Button>
+              <Input placeholder="A1B2C3" value={codeInput} onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} onKeyDown={(e) => e.key === 'Enter' && codeInput.length === 6 && router.push(`/referee/join?code=${codeInput}`)} className="h-14 text-center text-xl tracking-[0.2em] font-black rounded-2xl border-black/10 bg-black/5 focus:bg-white focus:border-black/20 uppercase" />
+              <Button onClick={() => router.push(`/referee/join?code=${codeInput}`)} disabled={codeInput.length !== 6} className="w-full h-14 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold uppercase tracking-[0.3em] disabled:opacity-50">Lanjut ke PIN</Button>
             </div>
           </div>
         </DialogContent>
@@ -703,22 +684,21 @@ export default function LandingPage() {
           <div className="p-6 sm:p-8">
             <DialogHeader className="mb-8">
               <DialogTitle className={`${displayFont.className} text-4xl uppercase tracking-wider text-black`}>Kode Tampilan</DialogTitle>
-              <DialogDescription className="text-black/60 font-medium">Masukkan 8-karakter kode match untuk melihat papan skor.</DialogDescription>
+              <DialogDescription className="text-black/60 font-medium">Masukkan 6 karakter kode tampilan untuk melihat papan skor.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               <div className="relative group">
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 text-black/20 font-black text-xl tracking-[0.1em] transition-colors group-focus-within:text-black/40">MATCH-</div>
                 <Input 
-                  placeholder="MM3J57GL" 
+                  placeholder="A1B2C3" 
                   value={displayCodeInput} 
-                  onChange={(e) => setDisplayCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))} 
-                  onKeyDown={(e) => e.key === 'Enter' && displayCodeInput.length === 8 && router.push(`/display/MATCH-${displayCodeInput}`)} 
-                  className="h-14 pl-28 text-left text-xl tracking-[0.2em] font-black rounded-2xl border-black/10 bg-black/5 focus:bg-white focus:border-black/20 uppercase" 
+                  onChange={(e) => setDisplayCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} 
+                  onKeyDown={(e) => e.key === 'Enter' && displayCodeInput.length === 6 && router.push(`/display/${displayCodeInput}`)} 
+                  className="h-14 text-center text-xl tracking-[0.2em] font-black rounded-2xl border-black/10 bg-black/5 focus:bg-white focus:border-black/20 uppercase" 
                 />
               </div>
               <Button 
-                onClick={() => router.push(`/display/MATCH-${displayCodeInput}`)} 
-                disabled={displayCodeInput.length < 8} 
+                onClick={() => router.push(`/display/${displayCodeInput}`)} 
+                disabled={displayCodeInput.length !== 6} 
                 className="w-full h-14 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold uppercase tracking-[0.3em] disabled:opacity-50"
               >
                 Buka Skor

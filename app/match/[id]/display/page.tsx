@@ -141,11 +141,13 @@ const TeamMark = ({
         style={teamColor ? { backgroundColor: teamColor } : { backgroundColor: '#111' }}
       >
         {team.logo ? (
-          <img
+          <Image
             src={team.logo}
             alt={`${team.name} logo`}
+            fill
+            sizes="64px"
+            unoptimized
             className="h-full w-full object-contain bg-black/10"
-            loading="lazy"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-white/80 font-bold tracking-widest uppercase">
@@ -877,10 +879,8 @@ export default function BwfScoreboard() {
       }
     };
     loadSettings();
-    const interval = setInterval(loadSettings, 1000);
     window.addEventListener('storage', loadSettings);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('storage', loadSettings);
     };
   }, []);
@@ -1013,19 +1013,9 @@ export default function BwfScoreboard() {
   return (
     <div
       className={cn(
-        'w-screen h-screen overflow-hidden flex flex-col font-sans cursor-pointer select-none group relative transition-colors duration-500',
+        'w-screen h-screen overflow-hidden flex flex-col font-sans select-none group relative transition-colors duration-500',
         isOverlay ? bgStyles[overlayConfig.background] : 'bg-black',
       )}
-      onClick={toggleFullscreen}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          toggleFullscreen();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label="Toggle fullscreen"
       style={themeStyles}
     >
       {/* Universal Header - Simplified */}
@@ -1050,11 +1040,11 @@ export default function BwfScoreboard() {
 
           <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <button
-              onClick={(event) => {
-                event.stopPropagation();
-                toggleFullscreen();
-              }}
+              onClick={toggleFullscreen}
               className="px-5 py-2 text-[10px] font-black uppercase tracking-widest text-black bg-[#fbbf24] rounded-full hover:bg-[#fcd34d] shadow-lg active:scale-95 transition-[transform,background-color,box-shadow]"
+              aria-label={
+                isFullscreen ? 'Keluar dari layar penuh' : 'Masuk layar penuh'
+              }
             >
               {isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
             </button>
@@ -1068,7 +1058,7 @@ export default function BwfScoreboard() {
         className="flex-1 relative flex flex-col overflow-hidden"
       >
         {shouldRenderAd ? (
-          <div className="h-full w-full bg-black flex items-center justify-center">
+          <div className="h-full w-full bg-black flex items-center justify-center relative">
             {adAsset?.type === 'video' ? (
               <video
                 src={adAsset.url}
@@ -1081,11 +1071,13 @@ export default function BwfScoreboard() {
                 onError={() => setAdLoadFailed(true)}
               />
             ) : (
-              <img
-                src={adAsset?.url}
+              <Image
+                src={adAsset?.url || ''}
                 alt={adAsset?.name || 'Media sponsor'}
+                fill
+                sizes="100vw"
+                unoptimized
                 className="h-full w-full object-contain"
-                loading="lazy"
                 onError={() => setAdLoadFailed(true)}
               />
             )}
@@ -1122,10 +1114,17 @@ export default function BwfScoreboard() {
         </div>
       )}
 
-      {!isFullscreen && !isOverlay && (
-        <div className="absolute bottom-12 right-4 text-[9px] font-mono text-white/10 uppercase tracking-[0.2em] pointer-events-none group-hover:opacity-100 opacity-0 transition-opacity">
-          Klik di mana saja untuk Layar Penuh
-        </div>
+      {!isOverlay && (
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="absolute bottom-12 right-4 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-black bg-[#fbbf24] hover:bg-[#fcd34d] shadow-lg transition-[transform,background-color] active:scale-95"
+          aria-label={
+            isFullscreen ? 'Keluar dari layar penuh' : 'Masuk layar penuh'
+          }
+        >
+          {isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+        </button>
       )}
     </div>
   );

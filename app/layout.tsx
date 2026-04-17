@@ -32,11 +32,10 @@ const literata = Literata({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://scorehub.app'), // Replace with actual domain or localhost for dev, but usually a placeholder or env var is best.
-  // We'll use a placeholder for now, user can update.
-  title: 'Sports Scoreboard System',
-  description: 'Real-time scoreboard system for live sports events',
-  generator: 'v0.app',
+  metadataBase: new URL('https://scorehub.app'),
+  title: 'ScoreHub | Real-time Sports Scoreboard',
+  description:
+    'ScoreHub adalah sistem scoreboard olahraga realtime untuk operator, wasit, dan display venue.',
   icons: {
     icon: [
       {
@@ -62,7 +61,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body
         className={`${barlow.className} ${barlowCondensed.variable} ${bebas.variable} ${literata.variable} antialiased`}
       >

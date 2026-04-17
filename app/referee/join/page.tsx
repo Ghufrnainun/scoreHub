@@ -10,7 +10,7 @@ const normalizeCode = (value: string) =>
   value
     ?.toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 8) || '';
+    .slice(0, 6) || '';
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -21,7 +21,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const code =
     typeof searchParams.code === 'string' ? searchParams.code : undefined;
 
-  if (!code || code.length < 4) {
+  if (!code || normalizeCode(code).length !== 6) {
     return {
       title: 'Masuk sebagai Wasit - Scorehub',
       description:

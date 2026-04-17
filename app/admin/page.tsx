@@ -9,6 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -57,6 +65,12 @@ export default function AdminDashboard() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | MatchStatus>('all');
   const [sportFilter, setSportFilter] = useState('all');
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [shareMatch, setShareMatch] = useState<MatchSummary | null>(null);
+  const [sharePin, setSharePin] = useState('');
 
   useEffect(() => {
     const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
@@ -89,9 +103,13 @@ export default function AdminDashboard() {
     if (!adminPin) return;
     try {
       await finishMatch({ matchId, role: 'admin', pin: adminPin });
+      setFeedback({ type: 'success', message: 'Match berhasil diakhiri.' });
     } catch (error) {
       console.error('Failed to finish match:', error);
-      alert('Failed to finish match');
+      setFeedback({
+        type: 'error',
+        message: 'Gagal mengakhiri match. Silakan coba lagi.',
+      });
     }
   };
 
@@ -99,9 +117,13 @@ export default function AdminDashboard() {
     if (!adminPin) return;
     try {
       await deleteMatch({ matchId, pin: adminPin });
+      setFeedback({ type: 'success', message: 'Match berhasil dihapus.' });
     } catch (error) {
       console.error('Failed to delete match:', error);
-      alert('Failed to delete match');
+      setFeedback({
+        type: 'error',
+        message: 'Gagal menghapus match. Silakan coba lagi.',
+      });
     }
   };
 
@@ -216,6 +238,20 @@ export default function AdminDashboard() {
         </Link>
       </div>
 
+      {feedback ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+            feedback.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {feedback.message}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
           <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -283,7 +319,7 @@ export default function AdminDashboard() {
                     key={status}
                     type="button"
                     onClick={() => setStatusFilter(status)}
-                    className={`h-8 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                    className={`h-11 px-4 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
                       statusFilter === status
                         ? 'bg-black text-white'
                         : 'bg-black/5 text-black/50 hover:bg-black/10'
@@ -302,7 +338,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setSportFilter('all')}
-                  className={`h-8 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  className={`h-11 px-4 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
                     sportFilter === 'all'
                       ? 'bg-black text-white'
                       : 'bg-black/5 text-black/50 hover:bg-black/10'
@@ -315,7 +351,7 @@ export default function AdminDashboard() {
                     key={sport}
                     type="button"
                     onClick={() => setSportFilter(sport)}
-                    className={`h-8 px-4 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                    className={`h-11 px-4 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
                       sportFilter === sport
                         ? 'bg-black text-white'
                         : 'bg-black/5 text-black/50 hover:bg-black/10'
@@ -411,7 +447,7 @@ export default function AdminDashboard() {
                 >
                   <Button
                     variant="secondary"
-                    className="w-full text-xs h-8 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none"
+                    className="w-full text-xs h-11 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none"
                   >
                     Kontrol
                   </Button>
@@ -427,7 +463,7 @@ export default function AdminDashboard() {
                 >
                   <Button
                     variant="outline"
-                    className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                    className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
                   >
                     Buka Tampilan
                   </Button>
@@ -437,11 +473,15 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-2 mt-auto">
                 <Button
                   variant="outline"
-                  className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
                   onClick={() => {
                     if (!match.displayCode) return;
                     const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(match.displayCode)}`;
                     navigator.clipboard.writeText(link);
+                    setFeedback({
+                      type: 'success',
+                      message: 'Link wasit berhasil disalin.',
+                    });
                   }}
                   disabled={!match.displayCode}
                 >
@@ -449,12 +489,11 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-xs h-8 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
                   onClick={() => {
                     if (!match.displayCode) return;
-                    const msg = `Referee access\nDisplay Code: ${match.displayCode}\nPIN: [isi PIN wasit]\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(match.displayCode)}`;
-                    const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-                    window.open(wa, '_blank', 'noopener,noreferrer');
+                    setSharePin('');
+                    setShareMatch(match);
                   }}
                   disabled={!match.displayCode}
                 >
@@ -466,7 +505,7 @@ export default function AdminDashboard() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs h-8 rounded-full text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-bold"
+                  className="w-full text-xs h-11 rounded-full text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-bold"
                   onClick={() => onFinishMatch(match.matchId)}
                   disabled={match.status === 'finished'}
                 >
@@ -478,7 +517,7 @@ export default function AdminDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full text-xs h-8 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+                      className="w-full text-xs h-11 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
                     >
                       DELETE
                     </Button>
@@ -511,6 +550,65 @@ export default function AdminDashboard() {
           ))}
         </div>
       )}
+
+      <Dialog
+        open={Boolean(shareMatch)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShareMatch(null);
+            setSharePin('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bagikan Akses Wasit</DialogTitle>
+            <DialogDescription>
+              Masukkan PIN wasit (opsional) sebelum kirim ke WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Kode tampilan: <span className="font-mono font-bold">{shareMatch?.displayCode || '-'}</span>
+            </p>
+            <Input
+              value={sharePin}
+              onChange={(event) =>
+                setSharePin(event.target.value.replace(/\D/g, '').slice(0, 6))
+              }
+              placeholder="PIN wasit (opsional)"
+              inputMode="numeric"
+              className="h-11"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShareMatch(null);
+                setSharePin('');
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!shareMatch?.displayCode) return;
+                const pinText = sharePin || '[isi PIN wasit]';
+                const msg = `Referee access\nDisplay Code: ${shareMatch.displayCode}\nPIN: ${pinText}\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(shareMatch.displayCode)}`;
+                const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                window.open(wa, '_blank', 'noopener,noreferrer');
+                setShareMatch(null);
+                setSharePin('');
+              }}
+            >
+              Kirim ke WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

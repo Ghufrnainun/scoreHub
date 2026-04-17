@@ -14,7 +14,7 @@ const normalizeCode = (value: string) =>
   value
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 8);
+    .slice(0, 6);
 
 interface JoinFormProps {
   initialCode?: string;
@@ -37,14 +37,14 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
     }
   }, [initialCode]);
 
-  const canPreview = displayCode.length >= 4;
+  const canPreview = displayCode.length === 6;
   const matchPreview = useQuery(
     api.matches.getByDisplayCode,
     canPreview ? { displayCode } : 'skip',
   );
 
   const canSubmit = useMemo(
-    () => displayCode.length >= 4 && pin.trim().length >= 4 && !isSubmitting,
+    () => displayCode.length === 6 && pin.trim().length >= 4 && !isSubmitting,
     [displayCode.length, isSubmitting, pin],
   );
 
@@ -185,7 +185,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
           </div>
         ) : (
           <p className="text-xs text-black/60">
-            Preview match akan muncul otomatis setelah display code valid.
+            Preview match akan muncul otomatis setelah 6 karakter display code valid.
           </p>
         )}
       </Card>

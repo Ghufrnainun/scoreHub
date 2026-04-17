@@ -297,8 +297,8 @@ export default function CreateMatchPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const canJoinDisplay = displayCodeInput.trim().length >= 4;
-  const canJoinReferee = displayCodeInput.trim().length >= 4;
+  const canJoinDisplay = displayCodeInput.trim().length === 6;
+  const canJoinReferee = displayCodeInput.trim().length === 6;
   const templateOptions = TEMPLATE_OPTIONS[selectedSport] || [];
 
   // Theme Logic
@@ -455,8 +455,8 @@ export default function CreateMatchPage() {
 
   const handleJoinMatch = (role: 'referee' | 'display') => {
     const code = displayCodeInput.trim().toUpperCase();
-    if (!code) {
-      setError('Please enter Display Code');
+    if (code.length !== 6) {
+      setError('Display Code harus 6 karakter alfanumerik');
       return;
     }
 
@@ -468,7 +468,7 @@ export default function CreateMatchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground font-[family-name:var(--font-literata)] relative overflow-hidden transition-colors duration-300">
       <div className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.35),transparent_70%)] blur-3xl opacity-50" />
       <div className="pointer-events-none absolute bottom-[-120px] left-[-10%] h-[360px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.18),transparent_70%)] blur-3xl opacity-50" />
       <div className="pointer-events-none absolute left-1/2 top-24 h-[380px] w-[900px] -translate-x-1/2 border border-black/10 bg-[linear-gradient(120deg,rgba(0,0,0,0.04),transparent)] opacity-70" />
@@ -510,9 +510,9 @@ export default function CreateMatchPage() {
             variant="ghost"
             size="sm"
             asChild
-            className="text-xs font-bold uppercase tracking-widest hidden sm:flex"
+            className="text-xs font-bold uppercase tracking-widest inline-flex"
           >
-            <Link href="/docs">Panduan</Link>
+            <Link href="/guide">Panduan</Link>
           </Button>
           <button
             onClick={toggleTheme}
@@ -916,13 +916,13 @@ export default function CreateMatchPage() {
                   <div className="mt-8 pt-8 border-t grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-end">
                     <div>
                       <label
-                        htmlFor="create-pin"
+                        htmlFor="create-pin-team"
                         className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
                       >
                         Tentukan PIN Wasit
                       </label>
                       <Input
-                        id="create-pin"
+                        id="create-pin-team"
                         name="createPin"
                         autoComplete="new-password"
                         placeholder="PIN (misal, 1234)..."
@@ -1136,7 +1136,7 @@ export default function CreateMatchPage() {
                   value={displayCodeInput}
                   onChange={(e) =>
                     setDisplayCodeInput(
-                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6),
                     )
                   }
                 />
@@ -1190,7 +1190,7 @@ export default function CreateMatchPage() {
                   value={displayCodeInput}
                   onChange={(e) =>
                     setDisplayCodeInput(
-                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6),
                     )
                   }
                 />

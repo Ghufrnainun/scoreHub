@@ -8,6 +8,7 @@ import { useMatch } from '@/hooks/use-match';
 import { useState, useEffect } from 'react';
 import type { MatchRole } from '@/lib/match-types';
 import { cn } from '@/lib/utils';
+import { loadRefereeSession } from '@/lib/auth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,6 +97,7 @@ export default function ControlPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [displaySettings, setDisplaySettings] =
     useState<DisplaySettings>(defaultSettings);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const formatTime = (seconds: number) => {
     const safeSeconds = Math.max(0, Math.floor(seconds));
@@ -107,7 +109,20 @@ export default function ControlPage() {
   const matchId = params.id as string;
   const role = (searchParams.get('role') || 'admin') as MatchRole;
   const pin = searchParams.get('pin') || undefined;
-  const token = searchParams.get('token') || undefined;
+  const queryToken = searchParams.get('token') || undefined;
+  const [sessionReady, setSessionReady] = useState(role !== 'referee');
+  const [token, setToken] = useState<string | undefined>(queryToken);
+
+  useEffect(() => {
+    if (role !== 'referee' || queryToken) {
+      setToken(queryToken);
+      setSessionReady(true);
+      return;
+    }
+    const session = loadRefereeSession(matchId);
+    setToken(session?.token);
+    setSessionReady(true);
+  }, [matchId, queryToken, role]);
 
   const {
     match,
@@ -131,13 +146,35 @@ export default function ControlPage() {
   });
 
   const isTimerRunning = Boolean(match?.timer?.startedAt && !match?.timer?.pausedAt);
+  const canAdminActions = role === 'admin';
 
   const toggleTimer = () => {
+    if (!canAdminActions) return;
     if (isTimerRunning) {
       pauseTimer();
       return;
     }
     startTimer();
+  };
+
+  const handleChangeServe = (team: 'home' | 'away', position?: 'left' | 'right') => {
+    if (!canAdminActions) return;
+    changeServe(team, position);
+  };
+
+  const handleToggleSides = () => {
+    if (!canAdminActions) return;
+    toggleSides();
+  };
+
+  const handleResetMatch = () => {
+    if (!canAdminActions) return;
+    resetMatch();
+  };
+
+  const pushCopyFeedback = (message: string) => {
+    setCopyFeedback(message);
+    window.setTimeout(() => setCopyFeedback(null), 2200);
   };
 
   useEffect(() => {
@@ -172,6 +209,39 @@ export default function ControlPage() {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
+
+  if (role === 'referee' && !sessionReady) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <p className="text-sm font-mono text-muted-foreground">
+          Menyiapkan sesi wasit...
+        </p>
+      </div>
+    );
+  }
+
+  if (role === 'referee' && !token) {
+    return (
+      <div className="min-h-screen bg-background text-foreground px-4 py-16">
+        <div className="max-w-xl mx-auto rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+            Sesi Wasit Tidak Ditemukan
+          </p>
+          <h1 className="mt-3 text-3xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
+            Masuk Terlebih Dahulu
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Masuk lagi melalui halaman join menggunakan display code + PIN.
+          </p>
+          <Link href="/referee/join" className="inline-block mt-6">
+            <Button className="rounded-full text-xs uppercase tracking-widest font-bold">
+              Ke Halaman Masuk Wasit
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !match)
     return (
@@ -497,7 +567,7 @@ export default function ControlPage() {
                 onClick={() => {
                   const url = `${window.location.origin}${displayPath}`;
                   navigator.clipboard.writeText(url);
-                  alert('Display link copied!');
+                  pushCopyFeedback('Display link copied');
                 }}
                 className="px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-colors border border-slate-200 dark:border-white/5 active:scale-95"
               >
@@ -507,9 +577,7 @@ export default function ControlPage() {
                 onClick={() => {
                   const url = `${window.location.origin}${displayPath}?overlay=true`;
                   navigator.clipboard.writeText(url);
-                  alert(
-                    'OBS Overlay link copied! Use this as a Browser Source in OBS.',
-                  );
+                  pushCopyFeedback('OBS overlay link copied');
                 }}
                 className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-green-500 transition-colors shadow-md active:scale-95 flex items-center gap-1.5"
               >
@@ -517,6 +585,11 @@ export default function ControlPage() {
                 OBS LINK
               </button>
             </div>
+            {copyFeedback ? (
+              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                {copyFeedback}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -534,7 +607,9 @@ export default function ControlPage() {
           <button
             className="flex flex-col items-center select-none group px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg"
             onClick={toggleTimer}
+            disabled={!canAdminActions}
             onContextMenu={(e) => {
+              if (!canAdminActions) return;
               e.preventDefault();
               resetTimer();
             }}
@@ -558,9 +633,10 @@ export default function ControlPage() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={toggleSides}
+            onClick={handleToggleSides}
             title="Swap Sides"
             aria-label="Swap sides on court"
+            disabled={!canAdminActions}
             className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 group active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
           >
             <SwapIcon className="w-6 h-6 group-active:rotate-180 transition-transform duration-500" />
@@ -605,6 +681,11 @@ export default function ControlPage() {
         id="main-content"
         className="flex-1 p-2 sm:p-4 flex flex-col gap-3 max-w-7xl mx-auto w-full overflow-hidden"
       >
+        {error ? (
+          <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+            {error}
+          </div>
+        ) : null}
         {/* Score Strip */}
         <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md flex items-center justify-center py-2 px-3 border border-slate-200 dark:border-slate-800 relative">
           <button
@@ -647,7 +728,8 @@ export default function ControlPage() {
                     return (
                       <button
                         key={pos}
-                        onClick={() => changeServe(side, isSingles ? undefined : pos)}
+                        onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                        disabled={!canAdminActions}
                         className={cn(
                           "w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden boarder-2",
                           isActive 
@@ -667,7 +749,7 @@ export default function ControlPage() {
                           {isSingles ? 'SERVE' : playerName.split(' ')[0]}
                         </span>
                         {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse mix-blend-overlay"></div>
+                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
                         )}
                       </button>
                     );
@@ -828,7 +910,7 @@ export default function ControlPage() {
                     >
                       <div className="flex flex-col items-center gap-1">
                         {isServer && (
-                          <ShuttlecockIcon className="w-5 h-5 lg:w-8 lg:h-8 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] animate-bounce" />
+                          <ShuttlecockIcon className="w-5 h-5 lg:w-8 lg:h-8 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] animate-bounce motion-reduce:animate-none" />
                         )}
                         <span className={cn(
                           'font-black text-[10px] sm:text-xs lg:text-base text-center shadow-lg leading-tight tracking-tight uppercase px-2 py-1 rounded border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300',
@@ -849,7 +931,8 @@ export default function ControlPage() {
                       
                       <div className="col-start-2 row-span-2 flex flex-col items-center justify-end pb-4 pointer-events-none">
                         <button
-                          onClick={toggleSides}
+                          onClick={handleToggleSides}
+                          disabled={!canAdminActions}
                           className="pointer-events-auto bg-black/40 backdrop-blur-md border border-white/10 text-white/50 hover:text-white hover:bg-black/60 rounded-full p-2 transition-all active:scale-90 flex items-center gap-2 group mb-2"
                           title="Switch sides"
                         >
@@ -906,7 +989,8 @@ export default function ControlPage() {
                     return (
                       <button
                         key={pos}
-                        onClick={() => changeServe(side, isSingles ? undefined : pos)}
+                        onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                        disabled={!canAdminActions}
                         className={cn(
                           "w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden border-2",
                           isActive 
@@ -926,7 +1010,7 @@ export default function ControlPage() {
                           {isSingles ? 'SERVE' : playerName.split(' ')[0]}
                         </span>
                         {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse mix-blend-overlay"></div>
+                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
                         )}
                       </button>
                     );
@@ -972,7 +1056,8 @@ export default function ControlPage() {
                     return (
                       <button
                         key={pos}
-                        onClick={() => changeServe(side, isSingles ? undefined : pos)}
+                        onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                        disabled={!canAdminActions}
                         className={cn(
                           "flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-90 px-3 relative overflow-hidden border-2",
                           isActive 
@@ -991,7 +1076,7 @@ export default function ControlPage() {
                           {isSingles ? 'SERVE' : playerName.split(' ')[0]}
                         </span>
                         {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse mix-blend-overlay"></div>
+                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
                         )}
                       </button>
                     );
@@ -1023,7 +1108,8 @@ export default function ControlPage() {
                     return (
                       <button
                         key={pos}
-                        onClick={() => changeServe(side, isSingles ? undefined : pos)}
+                        onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                        disabled={!canAdminActions}
                         className={cn(
                           "flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-90 px-3 relative overflow-hidden border-2",
                           isActive 
@@ -1042,7 +1128,7 @@ export default function ControlPage() {
                           {isSingles ? 'SERVE' : playerName.split(' ')[0]}
                         </span>
                         {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse mix-blend-overlay"></div>
+                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
                         )}
                       </button>
                     );
@@ -1158,11 +1244,12 @@ export default function ControlPage() {
             variant="ghost"
             className="h-auto p-0 flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors bg-transparent hover:bg-transparent"
           >
-            <Link href="/docs" target="_blank">
+            <Link href="/guide" target="_blank">
               <HelpIcon className="w-4 h-4" /> HELP
             </Link>
           </Button>
-          <AlertDialog>
+          {canAdminActions ? (
+            <AlertDialog>
             <AlertDialogTrigger asChild>
               <button className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors">
                 <div className="w-4 h-4 border-2 border-current rounded-full flex items-center justify-center font-black text-[8px]">
@@ -1186,14 +1273,15 @@ export default function ControlPage() {
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={resetMatch}
+                  onClick={handleResetMatch}
                   className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-tight transition-transform active:scale-95 px-8"
                 >
                   Reset Match
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+            </AlertDialog>
+          ) : null}
         </div>
         <div className="flex items-center gap-4">
           <span className="text-[10px] font-mono">BUILD: 2.4.0-STABLE</span>
