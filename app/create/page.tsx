@@ -1247,31 +1247,43 @@ export default function CreateMatchPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-full text-xs uppercase tracking-widest font-bold"
+              className="rounded-full text-[10px] uppercase tracking-widest font-bold px-1"
               onClick={() => {
                 if (!createdMatch) return;
                 const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
                 navigator.clipboard.writeText(link);
               }}
             >
-              Salin Link Wasit
+              Link Wasit
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="rounded-full text-xs uppercase tracking-widest font-bold"
+              className="rounded-full text-[10px] uppercase tracking-widest font-bold px-1"
               onClick={() => {
                 if (!createdMatch) return;
-                const message = `Akses wasit\\nKode Tampilan: ${createdMatch.displayCode}\\nPIN: ${createdMatch.refereePin}\\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
+                const link = `${window.location.origin}/display/${createdMatch.displayCode}`;
+                navigator.clipboard.writeText(link);
+              }}
+            >
+              Link Layar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full text-[10px] uppercase tracking-widest font-bold px-1"
+              onClick={() => {
+                if (!createdMatch) return;
+                const message = `Akses Wasit\n\nKode Tampilan: ${createdMatch.displayCode}\nPIN: ${createdMatch.refereePin}\n\nLink Wasit:\n${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}\n\nLink Display:\n${window.location.origin}/display/${createdMatch.displayCode}`;
                 const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(waUrl, '_blank', 'noopener,noreferrer');
               }}
             >
-              Bagikan ke WhatsApp
+              WhatsApp
             </Button>
           </div>
 

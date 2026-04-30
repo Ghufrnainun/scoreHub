@@ -470,10 +470,10 @@ export default function AdminDashboard() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-auto">
+              <div className="grid grid-cols-3 gap-2 mt-auto">
                 <Button
                   variant="outline"
-                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                  className="w-full text-[10px] h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
                   onClick={() => {
                     if (!match.displayCode) return;
                     const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(match.displayCode)}`;
@@ -485,11 +485,27 @@ export default function AdminDashboard() {
                   }}
                   disabled={!match.displayCode}
                 >
-                  Salin Link Wasit
+                  Link Wasit
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                  className="w-full text-[10px] h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
+                  onClick={() => {
+                    if (!match.displayCode) return;
+                    const link = `${window.location.origin}/display/${match.displayCode}`;
+                    navigator.clipboard.writeText(link);
+                    setFeedback({
+                      type: 'success',
+                      message: 'Link display berhasil disalin.',
+                    });
+                  }}
+                  disabled={!match.displayCode}
+                >
+                  Link Layar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full text-[10px] h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
                   onClick={() => {
                     if (!match.displayCode) return;
                     setSharePin('');
@@ -497,7 +513,7 @@ export default function AdminDashboard() {
                   }}
                   disabled={!match.displayCode}
                 >
-                  Bagikan WhatsApp
+                  WhatsApp
                 </Button>
               </div>
 
@@ -597,7 +613,7 @@ export default function AdminDashboard() {
               onClick={() => {
                 if (!shareMatch?.displayCode) return;
                 const pinText = sharePin || '[isi PIN wasit]';
-                const msg = `Referee access\nDisplay Code: ${shareMatch.displayCode}\nPIN: ${pinText}\nLink: ${window.location.origin}/referee/join?code=${encodeURIComponent(shareMatch.displayCode)}`;
+                const msg = `Akses Wasit\n\nKode Tampilan: ${shareMatch.displayCode}\nPIN: ${pinText}\n\nLink Wasit:\n${window.location.origin}/referee/join?code=${encodeURIComponent(shareMatch.displayCode)}\n\nLink Display:\n${window.location.origin}/display/${shareMatch.displayCode}`;
                 const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
                 window.open(wa, '_blank', 'noopener,noreferrer');
                 setShareMatch(null);
