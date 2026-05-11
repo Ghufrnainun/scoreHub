@@ -9,8 +9,12 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
 
-export default function SettingsPage() {
-  const [pin, setPin] = useState('');
+export default function SettingsPage() { 
+  const [pin, setPin] = useState(''); 
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
   useEffect(() => {
     const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
     if (stored) {
@@ -33,37 +37,58 @@ export default function SettingsPage() {
     }
   }, [existingColor]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await updateSetting({
-        key: 'primaryColor',
-        value: primaryColor,
-        adminPin: pin,
+  const handleSave = async () => { 
+    setIsSaving(true); 
+    setFeedback(null);
+    try { 
+      await updateSetting({ 
+        key: 'primaryColor', 
+        value: primaryColor, 
+        adminPin: pin, 
+      }); 
+      setFeedback({
+        type: 'success',
+        message: 'Pengaturan berhasil disimpan.',
       });
-      alert('Settings saved!');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save settings');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    } catch (e) { 
+      console.error(e); 
+      setFeedback({
+        type: 'error',
+        message: 'Gagal menyimpan pengaturan. Silakan coba lagi.',
+      });
+    } finally { 
+      setIsSaving(false); 
+    } 
+  }; 
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Configure global application settings and defaults.
-        </p>
-      </div>
+      <div> 
+        <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1> 
+        <p className="text-muted-foreground"> 
+          Atur pengaturan global dan nilai bawaan aplikasi. 
+        </p> 
+      </div> 
 
-      <Card className="p-6">
-        <h3 className="font-bold text-lg mb-4">Display Defaults</h3>
-        <div className="space-y-4 max-w-md">
-          <div className="space-y-2">
-            <Label htmlFor="primary-color">Primary Color</Label>
+      {feedback ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+            feedback.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {feedback.message}
+        </div>
+      ) : null}
+
+      <Card className="p-6"> 
+        <h3 className="font-bold text-lg mb-4">Nilai Bawaan Display</h3> 
+        <div className="space-y-4 max-w-md"> 
+          <div className="space-y-2"> 
+            <Label htmlFor="primary-color">Warna Utama</Label> 
             <div className="flex gap-2">
               <Input
                 id="primary-color"
@@ -78,39 +103,39 @@ export default function SettingsPage() {
                 className="font-mono"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Used for accents, highlights, and active states on the scoreboard.
-            </p>
-          </div>
+            <p className="text-xs text-muted-foreground"> 
+              Dipakai untuk aksen, sorotan, dan state aktif pada scoreboard. 
+            </p> 
+          </div> 
 
-          <div className="pt-4">
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
-      </Card>
+          <div className="pt-4"> 
+            <Button onClick={handleSave} disabled={isSaving}> 
+              {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'} 
+            </Button> 
+          </div> 
+        </div> 
+      </Card> 
 
-      <Card className="p-6">
-        <h3 className="font-bold text-lg mb-4">System Info</h3>
-        <div className="text-sm text-muted-foreground space-y-2">
-          <div className="flex justify-between border-b pb-2">
-            <span>Version</span>
-            <span className="font-mono">v1.0.0-beta</span>
-          </div>
-          <div className="flex justify-between border-b pb-2">
-            <span>Environment</span>
-            <span className="font-mono">Production (Convex)</span>
-          </div>
-          <div className="flex justify-between py-2">
-            <span>Status</span>
-            <span className="text-emerald-500 font-bold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Operational
-            </span>
-          </div>
-        </div>
-      </Card>
+      <Card className="p-6"> 
+        <h3 className="font-bold text-lg mb-4">Informasi Sistem</h3> 
+        <div className="text-sm text-muted-foreground space-y-2"> 
+          <div className="flex justify-between border-b pb-2"> 
+            <span>Versi</span> 
+            <span className="font-mono">v1.0.0-beta</span> 
+          </div> 
+          <div className="flex justify-between border-b pb-2"> 
+            <span>Lingkungan</span> 
+            <span className="font-mono">Production (Convex)</span> 
+          </div> 
+          <div className="flex justify-between py-2"> 
+            <span>Status</span> 
+            <span className="text-emerald-500 font-bold flex items-center gap-1"> 
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> 
+              Operasional 
+            </span> 
+          </div> 
+        </div> 
+      </Card> 
     </div>
   );
 }

@@ -18,17 +18,36 @@ const normalizeCode = (value: string) =>
 
 interface JoinFormProps {
   initialCode?: string;
+  initialMatchId?: string;
+  initialPin?: string;
 }
 
-export default function JoinForm({ initialCode = '' }: JoinFormProps) {
+export default function JoinForm({
+  initialCode = '',
+  initialMatchId = '',
+  initialPin = '',
+}: JoinFormProps) {
   const router = useRouter();
   const joinAsReferee = useMutation(api.matches.joinAsReferee);
 
   const [displayCode, setDisplayCode] = useState(initialCode);
-  const [pin, setPin] = useState('');
+  const [pin, setPin] = useState(initialPin);
   const [refereeName, setRefereeName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // If a matchId was passed, look up its display code automatically
+  const matchById = useQuery(
+    api.matches.get,
+    initialMatchId && !initialCode ? { matchId: initialMatchId } : 'skip',
+  );
+
+  // Once we have the match from matchId, fill in the display code
+  useEffect(() => {
+    if (matchById?.displayCode && !displayCode) {
+      setDisplayCode(normalizeCode(matchById.displayCode));
+    }
+  }, [matchById, displayCode]);
 
   // Sync with prop if it changes (though usually valid on mount)
   useEffect(() => {
@@ -47,6 +66,21 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
     () => displayCode.length === 6 && pin.trim().length >= 4 && !isSubmitting,
     [displayCode.length, isSubmitting, pin],
   );
+
+  // Auto-submit if both are provided in URL
+  useEffect(() => {
+    if (initialCode && initialPin && !isSubmitting) {
+      const normCode = normalizeCode(initialCode);
+      if (normCode.length === 6 && initialPin.trim().length >= 4) {
+        // Short delay to allow user to visually see fields were populated
+        const timer = setTimeout(() => {
+          const syntheticEvent = { preventDefault: () => {} } as any;
+          handleSubmit(syntheticEvent);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,7 +103,8 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
         joinedAt: Date.now(),
       });
 
-      router.push(`/referee/match/${result.matchId}`);
+      // Go directly to control page via absolute navigation for absolute reliability
+      window.location.assign(`/match/${result.matchId}/control?role=referee&token=${result.token}`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Gagal masuk sebagai wasit',
@@ -98,9 +133,9 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
           <div>
             <label
               htmlFor="display-code"
-              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
             >
-              Display Code
+              Kode Tampilan
             </label>
             <Input
               id="display-code"
@@ -111,15 +146,16 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
               placeholder="Contoh: A1B2C3"
               className="mt-2 h-11 rounded-xl text-center font-mono tracking-[0.3em]"
               autoComplete="off"
+              readOnly={!!matchById?.displayCode}
             />
           </div>
 
           <div>
             <label
               htmlFor="referee-pin"
-              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
             >
-              Referee PIN
+              PIN Wasit
             </label>
             <Input
               id="referee-pin"
@@ -132,13 +168,14 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
               inputMode="numeric"
               autoComplete="one-time-code"
               type="password"
+              autoFocus={!!initialPin || !!initialMatchId}
             />
           </div>
 
           <div>
             <label
               htmlFor="referee-name"
-              className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
             >
               Nama Wasit (opsional)
             </label>
@@ -171,7 +208,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
       <Card className="mt-6 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
         {canPreview && matchPreview ? (
           <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-black/50">
+            <p className="text-xs font-bold uppercase tracking-widest text-black/50">
               Pratinjau Pertandingan
             </p>
             <p className="text-sm font-semibold">
@@ -185,7 +222,7 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
           </div>
         ) : (
           <p className="text-xs text-black/60">
-            Preview match akan muncul otomatis setelah 6 karakter display code valid.
+            Pratinjau pertandingan akan muncul otomatis setelah 6 karakter kode valid.
           </p>
         )}
       </Card>
@@ -201,3 +238,4 @@ export default function JoinForm({ initialCode = '' }: JoinFormProps) {
     </div>
   );
 }
+

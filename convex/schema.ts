@@ -3,6 +3,7 @@ import { v } from 'convex/values';
 
 const teamSide = v.union(v.literal('home'), v.literal('away'));
 const gameMode = v.union(v.literal('single'), v.literal('double'));
+const matchFormat = v.union(v.literal('perorangan'), v.literal('beregu'));
 const matchStatus = v.union(
   v.literal('created'),
   v.literal('ready_for_referee'),
@@ -44,6 +45,20 @@ const timerShape = v.object({
 const setScoreShape = v.object({
   home: v.number(),
   away: v.number(),
+});
+
+const teamLineupRowShape = v.object({
+  home: v.string(),
+  homeSecond: v.optional(v.string()),
+  away: v.string(),
+  awaySecond: v.optional(v.string()),
+  type: v.union(
+    v.literal('MS'),
+    v.literal('WS'),
+    v.literal('MD'),
+    v.literal('WD'),
+    v.literal('XD'),
+  ),
 });
 
 const displayConfigShape = v.object({
@@ -101,11 +116,14 @@ export default defineSchema({
     refereePinHash: v.optional(v.string()),
     refereeTokenHash: v.string(),
     createdBy: v.optional(v.string()),
+    tournamentName: v.optional(v.string()),
     assignedReferee: v.optional(v.string()),
     sport: v.string(),
     status: matchStatus,
     gameMode: v.optional(gameMode),
+    matchFormat: v.optional(matchFormat),
     category: v.optional(v.string()),
+    teamLineup: v.optional(v.array(teamLineupRowShape)),
     teams: v.object({
       home: teamShape,
       away: teamShape,

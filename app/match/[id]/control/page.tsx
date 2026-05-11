@@ -8,7 +8,7 @@ import { useMatch } from '@/hooks/use-match';
 import { useState, useEffect } from 'react';
 import type { MatchRole } from '@/lib/match-types';
 import { cn } from '@/lib/utils';
-import { loadRefereeSession } from '@/lib/auth';
+import { loadRefereeSession, saveRefereeSession } from '@/lib/auth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,11 +18,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
   SettingsPanel,
   DisplaySettings,
+  MatchSettingsDraft,
+  SettingsSavePayload,
   defaultSettings,
 } from '@/components/match/settings-panel';
 
@@ -98,6 +99,12 @@ export default function ControlPage() {
   const [displaySettings, setDisplaySettings] =
     useState<DisplaySettings>(defaultSettings);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    action: () => void;
+  } | null>(null);
 
   const formatTime = (seconds: number) => {
     const safeSeconds = Math.max(0, Math.floor(seconds));
@@ -110,15 +117,21 @@ export default function ControlPage() {
   const role = (searchParams.get('role') || 'admin') as MatchRole;
   const pin = searchParams.get('pin') || undefined;
   const queryToken = searchParams.get('token') || undefined;
-  const [sessionReady, setSessionReady] = useState(role !== 'referee');
+  const [sessionReady, setSessionReady] = useState(role !== 'referee' || !!queryToken);
   const [token, setToken] = useState<string | undefined>(queryToken);
 
   useEffect(() => {
-    if (role !== 'referee' || queryToken) {
+    if (role !== 'referee') {
+      setSessionReady(true);
+      return;
+    }
+
+    if (queryToken) {
       setToken(queryToken);
       setSessionReady(true);
       return;
     }
+
     const session = loadRefereeSession(matchId);
     setToken(session?.token);
     setSessionReady(true);
@@ -134,9 +147,11 @@ export default function ControlPage() {
     pauseTimer,
     resetTimer,
     changeServe,
-    useChallenge,
     toggleSides,
     resetMatch,
+    finishMatch,
+    updateConfig,
+    updateMatchMetadata,
     remainingTime,
   } = useMatch({
     matchId,
@@ -145,11 +160,40 @@ export default function ControlPage() {
     token,
   });
 
+  // Auto-persist referee session once match is successfully loaded and token is verified
+  useEffect(() => {
+    if (role === 'referee' && token && match?.displayCode) {
+      saveRefereeSession({
+        matchId,
+        token,
+        displayCode: match.displayCode,
+        joinedAt: Date.now(),
+      });
+    }
+  }, [role, token, match?.displayCode, matchId]);
+
   const isTimerRunning = Boolean(match?.timer?.startedAt && !match?.timer?.pausedAt);
-  const canAdminActions = role === 'admin';
+  const isReferee = role === 'referee';
+  const canOperateActions = role === 'admin' || role === 'referee';
+
+  const runRiskyAction = (
+    config: {
+      title: string;
+      description: string;
+      confirmLabel: string;
+    },
+    action: () => void,
+    forceConfirm = false,
+  ) => {
+    if (forceConfirm || isReferee) {
+      setPendingAction({ ...config, action });
+      return;
+    }
+    action();
+  };
 
   const toggleTimer = () => {
-    if (!canAdminActions) return;
+    if (!canOperateActions) return;
     if (isTimerRunning) {
       pauseTimer();
       return;
@@ -158,18 +202,57 @@ export default function ControlPage() {
   };
 
   const handleChangeServe = (team: 'home' | 'away', position?: 'left' | 'right') => {
-    if (!canAdminActions) return;
-    changeServe(team, position);
+    if (!canOperateActions) return;
+    runRiskyAction(
+      {
+        title: 'Ubah Server?',
+        description:
+          'Perubahan server dilakukan manual dan dapat memengaruhi alur servis pertandingan.',
+        confirmLabel: 'Ubah Server',
+      },
+      () => changeServe(team, position),
+    );
   };
 
   const handleToggleSides = () => {
-    if (!canAdminActions) return;
-    toggleSides();
+    if (!canOperateActions) return;
+    runRiskyAction(
+      {
+        title: 'Tukar Sisi Lapangan?',
+        description:
+          'Aksi ini menukar posisi tim pada tampilan dan control. Pastikan ini memang diperlukan.',
+        confirmLabel: 'Tukar Sisi',
+      },
+      () => toggleSides(),
+    );
   };
 
   const handleResetMatch = () => {
-    if (!canAdminActions) return;
-    resetMatch();
+    if (!canOperateActions) return;
+    runRiskyAction(
+      {
+        title: 'Reset Match?',
+        description:
+          'Ini akan menghapus semua skor, set, dan riwayat pertandingan secara permanen.',
+        confirmLabel: 'Reset Match',
+      },
+      () => resetMatch(),
+      true,
+    );
+  };
+
+  const handleFinishMatch = () => {
+    if (!canOperateActions || match?.status === 'finished') return;
+    runRiskyAction(
+      {
+        title: 'Akhiri Match?',
+        description:
+          'Match akan ditandai selesai dan input poin tidak bisa dilanjutkan kecuali dilakukan reset.',
+        confirmLabel: 'Akhiri Match',
+      },
+      () => finishMatch(),
+      true,
+    );
   };
 
   const pushCopyFeedback = (message: string) => {
@@ -188,9 +271,41 @@ export default function ControlPage() {
     }
   }, []);
 
-  const handleSettingsChange = (newSettings: DisplaySettings) => {
-    setDisplaySettings(newSettings);
-    localStorage.setItem('displaySettings', JSON.stringify(newSettings));
+  const handleSettingsSave = (payload: SettingsSavePayload) => {
+    const { displaySettings: newSettings, matchSettings } = payload;
+    const applySettings = () => {
+      setDisplaySettings(newSettings);
+      localStorage.setItem('displaySettings', JSON.stringify(newSettings));
+      updateConfig({ templateId: newSettings.template });
+      const metadataPayload: Parameters<typeof updateMatchMetadata>[0] = {
+        tournamentName: matchSettings.tournamentName,
+        assignedReferee: matchSettings.assignedReferee,
+        matchFormat: matchSettings.matchFormat,
+        homeTeamName: matchSettings.homeTeamName,
+        awayTeamName: matchSettings.awayTeamName,
+        homePlayers: matchSettings.homePlayers.map((name) => ({ name })),
+        awayPlayers: matchSettings.awayPlayers.map((name) => ({ name })),
+      };
+      if (matchSettings.matchFormat === 'beregu') {
+        metadataPayload.teamLineup = matchSettings.teamLineup;
+      }
+      updateMatchMetadata(metadataPayload);
+    };
+
+    if (isReferee) {
+      runRiskyAction(
+        {
+          title: 'Simpan Pengaturan Match?',
+          description:
+            'Perubahan display dan data pertandingan akan tersinkron ke semua client aktif.',
+          confirmLabel: 'Simpan Pengaturan',
+        },
+        applySettings,
+      );
+      return;
+    }
+
+    applySettings();
   };
 
   useEffect(() => {
@@ -233,7 +348,7 @@ export default function ControlPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Masuk lagi melalui halaman join menggunakan display code + PIN.
           </p>
-          <Link href="/referee/join" className="inline-block mt-6">
+          <Link href={`/referee/join?matchId=${matchId}`} className="inline-block mt-6">
             <Button className="rounded-full text-xs uppercase tracking-widest font-bold">
               Ke Halaman Masuk Wasit
             </Button>
@@ -246,12 +361,39 @@ export default function ControlPage() {
   if (isLoading || !match)
     return (
       <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center text-center p-10 font-bold">
-        Loading…
+        Memuat data pertandingan...
       </div>
     );
 
   const home = match.teams.home;
   const away = match.teams.away;
+  const matchSettingsDraft: MatchSettingsDraft = {
+    tournamentName: match.tournamentName || '',
+    assignedReferee: match.assignedReferee || '',
+    matchFormat: match.matchFormat || 'perorangan',
+    homeTeamName: home.name,
+    awayTeamName: away.name,
+    homePlayers: home.players.map((player) => player.name),
+    awayPlayers: away.players.map((player) => player.name),
+    teamLineup:
+      match.teamLineup && match.teamLineup.length > 0
+        ? match.teamLineup
+        : [
+            {
+              home: home.players[0]?.name || '',
+              homeSecond: home.players[1]?.name || '',
+              away: away.players[0]?.name || '',
+              awaySecond: away.players[1]?.name || '',
+              type: match.category || 'MS',
+            },
+          ],
+    category: match.category,
+    gameMode: match.gameMode,
+  };
+  const leftDisplaySide: 'home' | 'away' = match.isFlipped ? 'away' : 'home';
+  const rightDisplaySide: 'home' | 'away' = match.isFlipped ? 'home' : 'away';
+  const leftDisplayTeam = match.teams[leftDisplaySide];
+  const rightDisplayTeam = match.teams[rightDisplaySide];
   const displayPath = match.displayCode
     ? `/display/${match.displayCode}`
     : `/match/${matchId}/display`;
@@ -524,8 +666,8 @@ export default function ControlPage() {
         Skip to content
       </a>
       {/* Header */}
-      <header className="p-3 px-6 flex justify-between items-center bg-white dark:bg-card/80 dark:backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm z-30">
-        <div className="flex items-center gap-4">
+      <header className="p-3 px-6 flex justify-between items-center gap-4 bg-white dark:bg-card/80 dark:backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm z-30">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
           <Link href="/admin" className="group flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Image
@@ -545,21 +687,21 @@ export default function ControlPage() {
               </span>
             </div>
           </Link>
-          <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
-          <div className="flex flex-col gap-1 items-start">
-            <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-card border-2 border-slate-200 dark:border-white/5 rounded-xl shadow-sm">
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+          <div className="hidden lg:block h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-card px-3 py-1.5 shadow-sm">
+              <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
                 Match ID
               </span>
-              <span className="text-sm font-mono font-black text-slate-900 dark:text-foreground leading-none">
+              <span className="text-sm font-mono font-black text-slate-900 dark:text-foreground leading-none tracking-tight">
                 {matchId}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <Link
                 href={displayPath}
                 target="_blank"
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-colors shadow-md active:scale-95 flex items-center gap-2"
+                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-md transition-colors hover:bg-blue-500 active:scale-95"
               >
                 <NorthEastIcon className="w-3.5 h-3.5" /> OPEN DISPLAY
               </Link>
@@ -569,7 +711,7 @@ export default function ControlPage() {
                   navigator.clipboard.writeText(url);
                   pushCopyFeedback('Display link copied');
                 }}
-                className="px-3 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-white/10 transition-colors border border-slate-200 dark:border-white/5 active:scale-95"
+                className="inline-flex items-center rounded-full border border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-white/5 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95"
               >
                 COPY LINK
               </button>
@@ -579,14 +721,14 @@ export default function ControlPage() {
                   navigator.clipboard.writeText(url);
                   pushCopyFeedback('OBS overlay link copied');
                 }}
-                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-green-500 transition-colors shadow-md active:scale-95 flex items-center gap-1.5"
+                className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-md transition-colors hover:bg-green-500 active:scale-95"
               >
                 <div className="w-2 h-2 rounded-full bg-white animate-pulse motion-reduce:animate-none"></div>
                 OBS LINK
               </button>
             </div>
             {copyFeedback ? (
-              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
                 {copyFeedback}
               </p>
             ) : null}
@@ -594,7 +736,7 @@ export default function ControlPage() {
         </div>
 
         {/* Central Match Status & Timer */}
-        <div className="flex items-center gap-4 bg-slate-100 dark:bg-card/50 dark:backdrop-blur-md px-5 py-2 rounded-2xl border border-slate-200 dark:border-white/5 shadow-inner">
+        <div className="flex items-center gap-4 bg-slate-100 dark:bg-card/50 dark:backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-200 dark:border-white/5 shadow-inner">
           <div className="flex flex-col items-center min-w-[50px]">
             <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase leading-none mb-1.5">
               {phaseLabel}
@@ -607,9 +749,9 @@ export default function ControlPage() {
           <button
             className="flex flex-col items-center select-none group px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg"
             onClick={toggleTimer}
-            disabled={!canAdminActions}
+            disabled={!canOperateActions}
             onContextMenu={(e) => {
-              if (!canAdminActions) return;
+              if (!canOperateActions) return;
               e.preventDefault();
               resetTimer();
             }}
@@ -625,18 +767,18 @@ export default function ControlPage() {
             >
               {formatTime(remainingTime)}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 group-hover:text-blue-500 transition-colors">
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 group-hover:text-blue-500 transition-colors">
               {isTimerRunning ? 'PAUSE' : 'START'}
             </span>
           </button>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleToggleSides}
-            title="Swap Sides"
-            aria-label="Swap sides on court"
-            disabled={!canAdminActions}
+          <button 
+            onClick={handleToggleSides} 
+            title="Tukar Sisi" 
+            aria-label="Tukar sisi di lapangan" 
+            disabled={!canOperateActions} 
             className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 group active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
           >
             <SwapIcon className="w-6 h-6 group-active:rotate-180 transition-transform duration-500" />
@@ -644,29 +786,28 @@ export default function ControlPage() {
 
           <SettingsPanel
             settings={displaySettings}
-            onSettingsChange={handleSettingsChange}
-            homeTeamName={home.name}
-            awayTeamName={away.name}
+            matchSettings={matchSettingsDraft}
+            onSave={handleSettingsSave}
             sportId={match.sport}
             trigger={
-              <button
-                title="Display Settings"
-                aria-label="Open display settings"
-                className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 group active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
-              >
-                <SettingsIcon className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
-              </button>
+              <button 
+                title="Pengaturan Display" 
+                aria-label="Buka pengaturan display" 
+                className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 group active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm" 
+              > 
+                <SettingsIcon className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" /> 
+              </button> 
             }
           />
 
           <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
-          <button
-            onClick={toggleTheme}
-            title="Toggle Theme"
-            aria-label="Toggle dark mode"
-            className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
-          >
+          <button 
+            onClick={toggleTheme} 
+            title="Ubah Tema" 
+            aria-label="Ubah mode gelap" 
+            className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm" 
+          > 
             {theme === 'light' ? (
               <MoonIcon className="w-6 h-6" />
             ) : (
@@ -687,25 +828,48 @@ export default function ControlPage() {
           </div>
         ) : null}
         {/* Score Strip */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md flex items-center justify-center py-2 px-3 border border-slate-200 dark:border-slate-800 relative">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900 shadow-md">
           <button
             onClick={undo}
             aria-label="Undo last point"
-            className="w-12 h-12 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full absolute left-2 transition-[background-color,transform] active:scale-90 text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
+            className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-sky-400 transition-[background-color,transform] hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
           >
             <UndoIcon className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
 
-          <div className="flex items-center gap-4 sm:gap-6">
-            <span className="text-3xl sm:text-5xl lg:text-6xl font-mono font-black text-blue-600 dark:text-blue-400 tracking-tighter tabular-nums">
-              {home.score}
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-400">
-              -
-            </span>
-            <span className="text-3xl sm:text-5xl lg:text-6xl font-mono font-black text-red-600 dark:text-red-400 tracking-tighter tabular-nums">
-              {away.score}
-            </span>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-14 py-3 sm:px-16 sm:py-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-blue-500/80">
+                Left side
+              </p>
+              <p className="truncate text-sm sm:text-base font-semibold text-slate-500 dark:text-slate-400">
+                {leftDisplayTeam.name}
+              </p>
+              <span className="mt-1 block text-4xl sm:text-5xl lg:text-6xl font-mono font-black text-blue-600 dark:text-blue-400 tracking-tighter tabular-nums">
+                {leftDisplayTeam.score}
+              </span>
+            </div>
+
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-2xl sm:text-3xl font-black text-slate-300 dark:text-slate-600">
+                -
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                {phaseLabel} {phaseValue}
+              </span>
+            </div>
+
+            <div className="min-w-0 text-right">
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-red-500/80">
+                Right side
+              </p>
+              <p className="truncate text-sm sm:text-base font-semibold text-slate-500 dark:text-slate-400">
+                {rightDisplayTeam.name}
+              </p>
+              <span className="mt-1 block text-4xl sm:text-5xl lg:text-6xl font-mono font-black text-red-600 dark:text-red-400 tracking-tighter tabular-nums">
+                {rightDisplayTeam.score}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -715,7 +879,7 @@ export default function ControlPage() {
           {isBadminton ? (
             <div className="hidden landscape:flex flex-col gap-2 items-center">
               {/* Manual Service Selectors Left */}
-              <div className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5 min-w-[80px] lg:min-w-[120px]">
+              <div className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5 min-w-[92px] lg:min-w-[128px]">
                 {(() => {
                   const side = match.isFlipped ? 'away' : 'home';
                   const team = match.teams[side];
@@ -729,9 +893,9 @@ export default function ControlPage() {
                       <button
                         key={pos}
                         onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
-                        disabled={!canAdminActions}
+                        disabled={!canOperateActions}
                         className={cn(
-                          "w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden boarder-2",
+                          "w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden border-2",
                           isActive 
                             ? "bg-gradient-to-br from-amber-300 via-amber-500 to-orange-600 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-200/50" 
                             : "bg-slate-800/40 backdrop-blur-md text-slate-400 border-white/5 hover:bg-white/10 hover:border-white/20"
@@ -743,7 +907,7 @@ export default function ControlPage() {
                           isActive ? "drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] scale-110" : "group-hover:translate-x-1"
                         )} />
                         <span className={cn(
-                          "text-[10px] lg:text-[11px] font-black truncate uppercase tracking-widest leading-none",
+                          "text-xs lg:text-[11px] font-black truncate uppercase tracking-widest leading-none",
                           isActive ? "text-slate-900" : "text-slate-400"
                         )}>
                           {isSingles ? 'SERVE' : playerName.split(' ')[0]}
@@ -759,16 +923,16 @@ export default function ControlPage() {
               
               {/* Award Point Button */}
               {match.status === 'finished' ? (
-                <div className="flex-shrink-0 w-24 sm:w-28 lg:w-40 flex-col items-center justify-center opacity-50 cursor-not-allowed border-2 border-white/5 rounded-xl lg:rounded-3xl bg-slate-900/50 flex py-6 lg:py-10">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">ENDED</span>
+                <div className="flex-shrink-0 w-28 sm:w-32 lg:w-40 flex-col items-center justify-center opacity-50 cursor-not-allowed border-2 border-white/5 rounded-xl lg:rounded-3xl bg-slate-900/50 flex py-6 lg:py-9">
+                  <span className="text-xs font-black uppercase text-slate-500 tracking-widest text-center">ENDED</span>
                 </div>
               ) : (
                 <button
                   onClick={() => awardPoint(match.isFlipped ? 'away' : 'home')}
-                  className="flex-shrink-0 w-24 sm:w-28 lg:w-40 bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white rounded-2xl lg:rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(37,99,235,0.5)] active:scale-90 transition-all duration-300 flex flex-col items-center justify-center py-6 lg:py-10 border-2 border-white/20 group overflow-hidden relative"
+                  className="flex-shrink-0 w-28 sm:w-32 lg:w-40 bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white rounded-2xl lg:rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(37,99,235,0.5)] active:scale-90 transition-all duration-300 flex flex-col items-center justify-center py-6 lg:py-9 border-2 border-white/20 group overflow-hidden relative"
                 >
                   <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="text-[9px] lg:text-[10px] font-black opacity-60 mb-1 lg:mb-2 uppercase tracking-[0.2em] leading-none">AWARD POINT</span>
+                  <span className="text-xs font-black opacity-60 mb-1 lg:mb-2 uppercase tracking-[0.2em] leading-none">AWARD POINT</span>
                   <span className="text-xs lg:text-base font-black text-center leading-tight px-3 mb-2 lg:mb-4 uppercase tracking-tighter drop-shadow-md">
                     {match.isFlipped ? away.name : home.name}
                   </span>
@@ -913,7 +1077,7 @@ export default function ControlPage() {
                           <ShuttlecockIcon className="w-5 h-5 lg:w-8 lg:h-8 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] animate-bounce motion-reduce:animate-none" />
                         )}
                         <span className={cn(
-                          'font-black text-[10px] sm:text-xs lg:text-base text-center shadow-lg leading-tight tracking-tight uppercase px-2 py-1 rounded border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300',
+                          'font-black text-xs sm:text-xs lg:text-base text-center shadow-lg leading-tight tracking-tight uppercase px-2 py-1 rounded border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300',
                           isServer ? 'text-yellow-200 border-yellow-400/30 scale-110 shadow-yellow-500/20' : 'text-white',
                         )}>
                           {content}
@@ -930,15 +1094,15 @@ export default function ControlPage() {
                       <QuadrantCell quadrant="BL" className="col-start-1 row-start-2 m-2 pointer-events-auto" />
                       
                       <div className="col-start-2 row-span-2 flex flex-col items-center justify-end pb-4 pointer-events-none">
-                        <button
-                          onClick={handleToggleSides}
-                          disabled={!canAdminActions}
-                          className="pointer-events-auto bg-black/40 backdrop-blur-md border border-white/10 text-white/50 hover:text-white hover:bg-black/60 rounded-full p-2 transition-all active:scale-90 flex items-center gap-2 group mb-2"
-                          title="Switch sides"
-                        >
-                          <SwapIcon className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                          <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Swap Sides</span>
-                        </button>
+                        <button 
+                          onClick={handleToggleSides} 
+                          disabled={!canOperateActions} 
+                          className="pointer-events-auto bg-black/40 backdrop-blur-md border border-white/10 text-white/50 hover:text-white hover:bg-black/60 rounded-full p-2 transition-all active:scale-90 flex items-center gap-2 group mb-2" 
+                          title="Tukar sisi" 
+                        > 
+                          <SwapIcon className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" /> 
+                          <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Tukar Sisi</span> 
+                        </button> 
                       </div>
 
                       <QuadrantCell quadrant="TR" className="col-start-3 row-start-1 m-2 pointer-events-auto" />
@@ -976,7 +1140,7 @@ export default function ControlPage() {
           {isBadminton ? (
             <div className="hidden landscape:flex flex-col gap-2 items-center">
               {/* Manual Service Selectors Right */}
-              <div className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5 min-w-[80px] lg:min-w-[120px]">
+              <div className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5 min-w-[92px] lg:min-w-[128px]">
                 {(() => {
                   const side = match.isFlipped ? 'home' : 'away';
                   const team = match.teams[side];
@@ -990,7 +1154,7 @@ export default function ControlPage() {
                       <button
                         key={pos}
                         onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
-                        disabled={!canAdminActions}
+                        disabled={!canOperateActions}
                         className={cn(
                           "w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden border-2",
                           isActive 
@@ -1004,7 +1168,7 @@ export default function ControlPage() {
                           isActive ? "drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] scale-110" : "group-hover:translate-x-1"
                         )} />
                         <span className={cn(
-                          "text-[10px] lg:text-[11px] font-black truncate uppercase tracking-widest leading-none",
+                          "text-xs lg:text-[11px] font-black truncate uppercase tracking-widest leading-none",
                           isActive ? "text-slate-900" : "text-slate-400"
                         )}>
                           {isSingles ? 'SERVE' : playerName.split(' ')[0]}
@@ -1020,16 +1184,16 @@ export default function ControlPage() {
 
               {/* Award Point Button */}
               {match.status === 'finished' ? (
-                <div className="flex-shrink-0 w-24 sm:w-28 lg:w-40 flex-col items-center justify-center opacity-50 cursor-not-allowed border-2 border-white/5 rounded-xl lg:rounded-3xl bg-slate-900/50 flex py-6 lg:py-10">
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">ENDED</span>
+                <div className="flex-shrink-0 w-28 sm:w-32 lg:w-40 flex-col items-center justify-center opacity-50 cursor-not-allowed border-2 border-white/5 rounded-xl lg:rounded-3xl bg-slate-900/50 flex py-6 lg:py-9">
+                  <span className="text-xs font-black uppercase text-slate-500 tracking-widest text-center">ENDED</span>
                 </div>
               ) : (
                 <button
                   onClick={() => awardPoint(match.isFlipped ? 'home' : 'away')}
-                  className="flex-shrink-0 w-24 sm:w-28 lg:w-40 bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white rounded-2xl lg:rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(220,38,38,0.5)] active:scale-90 transition-all duration-300 flex flex-col items-center justify-center py-6 lg:py-10 border-2 border-white/20 group overflow-hidden relative"
+                  className="flex-shrink-0 w-28 sm:w-32 lg:w-40 bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white rounded-2xl lg:rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(220,38,38,0.5)] active:scale-90 transition-all duration-300 flex flex-col items-center justify-center py-6 lg:py-9 border-2 border-white/20 group overflow-hidden relative"
                 >
                   <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="text-[9px] lg:text-[10px] font-black opacity-60 mb-1 lg:mb-2 uppercase tracking-[0.2em] leading-none">AWARD POINT</span>
+                  <span className="text-xs font-black opacity-60 mb-1 lg:mb-2 uppercase tracking-[0.2em] leading-none">AWARD POINT</span>
                   <span className="text-xs lg:text-base font-black text-center leading-tight px-3 mb-2 lg:mb-4 uppercase tracking-tighter drop-shadow-md">
                     {match.isFlipped ? home.name : away.name}
                   </span>
@@ -1057,7 +1221,7 @@ export default function ControlPage() {
                       <button
                         key={pos}
                         onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
-                        disabled={!canAdminActions}
+                        disabled={!canOperateActions}
                         className={cn(
                           "flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-90 px-3 relative overflow-hidden border-2",
                           isActive 
@@ -1109,7 +1273,7 @@ export default function ControlPage() {
                       <button
                         key={pos}
                         onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
-                        disabled={!canAdminActions}
+                        disabled={!canOperateActions}
                         className={cn(
                           "flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-90 px-3 relative overflow-hidden border-2",
                           isActive 
@@ -1226,18 +1390,17 @@ export default function ControlPage() {
         <div className="flex gap-4">
           <SettingsPanel
             settings={displaySettings}
-            onSettingsChange={handleSettingsChange}
-            homeTeamName={home.name}
-            awayTeamName={away.name}
+            matchSettings={matchSettingsDraft}
+            onSave={handleSettingsSave}
             sportId={match.sport}
             trigger={
               <button className="flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors">
-                <SettingsIcon className="w-4 h-4" /> SETTINGS
+                <SettingsIcon className="w-4 h-4" /> PENGATURAN
               </button>
             }
           />
           <button className="flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors">
-            <HistoryIcon className="w-4 h-4" /> LOG
+            <HistoryIcon className="w-4 h-4" /> RIWAYAT
           </button>
           <Button
             asChild
@@ -1245,51 +1408,68 @@ export default function ControlPage() {
             className="h-auto p-0 flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors bg-transparent hover:bg-transparent"
           >
             <Link href="/guide" target="_blank">
-              <HelpIcon className="w-4 h-4" /> HELP
+              <HelpIcon className="w-4 h-4" /> BANTUAN
             </Link>
           </Button>
-          {canAdminActions ? (
-            <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors">
+          {canOperateActions ? (
+            <>
+              <button
+                onClick={handleFinishMatch}
+                disabled={match.status === 'finished'}
+                className="flex items-center gap-2 text-xs font-bold text-amber-600 hover:text-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                FINISH
+              </button>
+              <button
+                onClick={handleResetMatch}
+                className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors"
+              >
                 <div className="w-4 h-4 border-2 border-current rounded-full flex items-center justify-center font-black text-[8px]">
                   X
                 </div>{' '}
                 RESET
               </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-sans">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-slate-900 dark:text-slate-100 uppercase tracking-tighter font-black text-2xl">
-                  Reset Match?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-500 dark:text-slate-400 font-medium">
-                  This will PERMANENTLY clear all scores, sets, and match
-                  history. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="gap-3">
-                <AlertDialogCancel className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-tight">
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleResetMatch}
-                  className="bg-red-600 hover:bg-red-700 text-white font-black uppercase tracking-tight transition-transform active:scale-95 px-8"
-                >
-                  Reset Match
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-            </AlertDialog>
+            </>
           ) : null}
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[10px] font-mono">BUILD: 2.4.0-STABLE</span>
+          <span className="text-xs font-mono">BUILD: 2.4.0-STABLE</span>
           <div
             className={`w-2 h-2 rounded-full animate-pulse motion-reduce:animate-none ${isLoading ? 'bg-yellow-500' : 'bg-green-500'}`}
           ></div>
         </div>
       </footer>
+      <AlertDialog
+        open={Boolean(pendingAction)}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-sans">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-900 dark:text-slate-100 uppercase tracking-tighter font-black text-2xl">
+              {pendingAction?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 font-medium">
+              {pendingAction?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-tight">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                pendingAction?.action();
+                setPendingAction(null);
+              }}
+              className="bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-tight transition-transform active:scale-95 px-8"
+            >
+              {pendingAction?.confirmLabel || 'Konfirmasi'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

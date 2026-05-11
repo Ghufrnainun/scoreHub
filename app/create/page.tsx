@@ -2,12 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
+import { ConvexError } from 'convex/values';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +25,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import sportConfig from '@/config/sports.json';
-import { cn } from '@/lib/utils';
 import { api } from '@/convex/_generated/api';
 import { ADMIN_AUTH_STORAGE_KEY, isAdminAuthenticated } from '@/lib/auth';
 
@@ -85,24 +92,16 @@ const UserIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const ChevronDownIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 9l-7 7-7-7"
-    />
-  </svg>
-);
-
 function generateMatchId(): string {
   return `MATCH-${Date.now().toString(36).toUpperCase()}`;
+}
+
+function normalizeDisplayCodeInput(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+}
+
+function isDoubleCategory(type: MatchCategory): boolean {
+  return type === 'MD' || type === 'WD' || type === 'XD';
 }
 
 type SportType =
@@ -112,6 +111,25 @@ type SportType =
   | 'tennis'
   | 'futsal'
   | 'soccer';
+type MatchCategory = 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
+type MatchFormat = 'perorangan' | 'beregu';
+type TeamMatchRow = {
+  home: string;
+  homeSecond: string;
+  away: string;
+  awaySecond: string;
+  type: MatchCategory;
+};
+type FieldErrorKey =
+  | 'tournamentName'
+  | 'displayCode'
+  | 'createPin'
+  | 'homePlayers'
+  | 'awayPlayers'
+  | 'homeRoster'
+  | 'awayRoster'
+  | 'teamMatches'
+  | 'general';
 
 const SPORT_TOGGLES = new Map(
   (sportConfig.sports || []).map((sport) => [sport.id, sport.enabled]),
@@ -138,112 +156,6 @@ const TEMPLATE_DEFAULTS: Record<SportType, string> = {
   soccer: 'soccer-broadcast',
 };
 
-type TemplateOption = {
-  id: string;
-  name: string;
-  description: string;
-  accent: string;
-};
-
-const TEMPLATE_OPTIONS: Record<SportType, TemplateOption[]> = {
-  badminton: [
-    {
-      id: 'modern',
-      name: 'Modern',
-      description: 'Broadcast grid with set columns.',
-      accent: '#fbbf24',
-    },
-    {
-      id: 'classic',
-      name: 'Classic',
-      description: 'Straight scoreboard with set rows.',
-      accent: '#22c55e',
-    },
-    {
-      id: 'minimal',
-      name: 'Minimal',
-      description: 'Big score focus, clean typography.',
-      accent: '#60a5fa',
-    },
-    {
-      id: 'neon',
-      name: 'Neon',
-      description: 'High contrast, esports glow.',
-      accent: '#f472b6',
-    },
-  ],
-  basketball: [
-    {
-      id: 'hoops-classic',
-      name: 'Hoops Classic',
-      description: 'Score + quarter breakdown.',
-      accent: '#f97316',
-    },
-    {
-      id: 'hoops-led',
-      name: 'Hoops LED',
-      description: 'Arena style LED scoreboard.',
-      accent: '#ef4444',
-    },
-  ],
-  volleyball: [
-    {
-      id: 'volley-clean',
-      name: 'Volley Clean',
-      description: 'Set tracker with bold totals.',
-      accent: '#38bdf8',
-    },
-    {
-      id: 'volley-led',
-      name: 'Volley LED',
-      description: 'LED strips and set chips.',
-      accent: '#22d3ee',
-    },
-  ],
-  tennis: [
-    {
-      id: 'tennis-scoreline',
-      name: 'Scoreline',
-      description: 'Games + points stack.',
-      accent: '#34d399',
-    },
-    {
-      id: 'tennis-minimal',
-      name: 'Minimal',
-      description: 'Clean court-ready view.',
-      accent: '#a3e635',
-    },
-  ],
-  futsal: [
-    {
-      id: 'futsal-broadcast',
-      name: 'Broadcast',
-      description: 'Wide layout for big screens.',
-      accent: '#f59e0b',
-    },
-    {
-      id: 'futsal-minimal',
-      name: 'Minimal',
-      description: 'Compact scoreboard layout.',
-      accent: '#fb7185',
-    },
-  ],
-  soccer: [
-    {
-      id: 'soccer-broadcast',
-      name: 'Broadcast',
-      description: 'Full match HUD layout.',
-      accent: '#84cc16',
-    },
-    {
-      id: 'soccer-minimal',
-      name: 'Minimal',
-      description: 'Simple score focus.',
-      accent: '#0ea5e9',
-    },
-  ],
-};
-
 const DEFAULT_SPORT =
   (SPORTS.find((sport) => sport.available)?.id as SportType) || 'badminton';
 
@@ -251,9 +163,6 @@ export default function CreateMatchPage() {
   const router = useRouter();
   const createMatchMutation = useMutation(api.matches.createMatch);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  // Quick Access State
-  const [displayCodeInput, setDisplayCodeInput] = useState('');
 
   // Protect Route - Admin Auth Check
   useEffect(() => {
@@ -269,15 +178,26 @@ export default function CreateMatchPage() {
   );
   const [createPin, setCreatePin] = useState('');
   const [adminPin, setAdminPin] = useState('');
+  const [tournamentName, setTournamentName] = useState('');
+  const [umpireName, setUmpireName] = useState('');
+  const [manualDisplayCode, setManualDisplayCode] = useState('');
 
-  // Category logic replaces simple gameMode toggle
-  type MatchCategory = 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
+  const [matchFormat, setMatchFormat] = useState<MatchFormat>('perorangan');
   const [category, setCategory] = useState<MatchCategory>('MS');
+  const [teamMatches, setTeamMatches] = useState<TeamMatchRow[]>([
+    { home: '', homeSecond: '', away: '', awaySecond: '', type: 'MS' },
+  ]);
+  const [homeRoster, setHomeRoster] = useState(['', '', '', '']);
+  const [awayRoster, setAwayRoster] = useState(['', '', '', '']);
 
   const isBadminton = selectedSport === 'badminton';
   // Computed gameMode based on category
+  const activeCategory =
+    matchFormat === 'perorangan' ? category : (teamMatches[0]?.type ?? 'MS');
   const gameMode =
-    isBadminton && ['MD', 'WD', 'XD'].includes(category) ? 'double' : 'single';
+    isBadminton && ['MD', 'WD', 'XD'].includes(activeCategory)
+      ? 'double'
+      : 'single';
 
   const [homePlayers, setHomePlayers] = useState(['', '']);
   const [awayPlayers, setAwayPlayers] = useState(['', '']);
@@ -287,19 +207,17 @@ export default function CreateMatchPage() {
   const [awayCountry, setAwayCountry] = useState('');
   const [homeLogo, setHomeLogo] = useState('');
   const [awayLogo, setAwayLogo] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [createdMatch, setCreatedMatch] = useState<{
     matchId: string;
     displayCode: string;
     refereePin: string;
+    refereeToken: string;
     status: string;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const canJoinDisplay = displayCodeInput.trim().length === 6;
-  const canJoinReferee = displayCodeInput.trim().length === 6;
-  const templateOptions = TEMPLATE_OPTIONS[selectedSport] || [];
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldErrorKey, string>>>({});
 
   // Theme Logic
   useEffect(() => {
@@ -311,14 +229,6 @@ export default function CreateMatchPage() {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    const options = TEMPLATE_OPTIONS[selectedSport] || [];
-    const fallback = TEMPLATE_DEFAULTS[selectedSport] || 'modern';
-    if (!options.some((option) => option.id === selectedTemplate)) {
-      setSelectedTemplate(fallback);
-    }
-  }, [selectedSport, selectedTemplate]);
 
   useEffect(() => {
     const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
@@ -339,6 +249,22 @@ export default function CreateMatchPage() {
   }, []);
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
+  const clearFieldError = (key: FieldErrorKey) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+  const failValidation = (key: FieldErrorKey, message: string) => {
+    setFieldErrors((prev) => ({ ...prev, [key]: message }));
+    setError(message);
+  };
+
+  const refereeControlLink = createdMatch
+    ? `${window.location.origin}/match/${createdMatch.matchId}/control?role=referee&token=${encodeURIComponent(createdMatch.refereeToken)}`
+    : '';
 
   // Input Handlers
   const handlePlayerChange = (
@@ -350,43 +276,169 @@ export default function CreateMatchPage() {
       const newPlayers = [...homePlayers];
       newPlayers[index] = value;
       setHomePlayers(newPlayers);
+      clearFieldError('homePlayers');
     } else {
       const newPlayers = [...awayPlayers];
       newPlayers[index] = value;
       setAwayPlayers(newPlayers);
+      clearFieldError('awayPlayers');
     }
   };
 
-  const handleCreateMatch = async () => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Admin PIN required. Set admin auth first.');
+  const handleRosterChange = (
+    side: 'home' | 'away',
+    index: number,
+    value: string,
+  ) => {
+    if (side === 'home') {
+      const next = [...homeRoster];
+      next[index] = value;
+      setHomeRoster(next);
+      clearFieldError('homeRoster');
+    } else {
+      const next = [...awayRoster];
+      next[index] = value;
+      setAwayRoster(next);
+      clearFieldError('awayRoster');
+    }
+  };
+
+  const addRosterMember = (side: 'home' | 'away') => {
+    if (side === 'home') {
+      setHomeRoster([...homeRoster, '']);
+    } else {
+      setAwayRoster([...awayRoster, '']);
+    }
+  };
+
+  const removeRosterMember = (side: 'home' | 'away', index: number) => {
+    if (side === 'home') {
+      if (homeRoster.length <= 1) return;
+      setHomeRoster(homeRoster.filter((_, i) => i !== index));
+    } else {
+      if (awayRoster.length <= 1) return;
+      setAwayRoster(awayRoster.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleTeamMatchChange = (
+    index: number,
+    key: keyof TeamMatchRow,
+    value: string,
+  ) => {
+    setTeamMatches((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              [key]: value,
+            }
+          : item,
+      ),
+    );
+    clearFieldError('teamMatches');
+  };
+
+  const addTeamMatch = () => {
+    setTeamMatches((prev) => [
+      ...prev,
+      { home: '', homeSecond: '', away: '', awaySecond: '', type: 'MS' },
+    ]);
+  };
+
+  const removeTeamMatch = (index: number) => {
+    setTeamMatches((prev) =>
+      prev.length <= 1 ? prev : prev.filter((_, i) => i !== index),
+    );
+  };
+
+  const cleanHomeRosterOptions = Array.from(
+    new Set(homeRoster.map((name) => name.trim()).filter(Boolean)),
+  );
+  const cleanAwayRosterOptions = Array.from(
+    new Set(awayRoster.map((name) => name.trim()).filter(Boolean)),
+  );
+
+  const buildRosterSelectOptions = (
+    rosterOptions: string[],
+    currentValue: string,
+    excludedValue?: string,
+  ) => {
+    const withCurrent = currentValue && !rosterOptions.includes(currentValue)
+      ? [currentValue, ...rosterOptions]
+      : rosterOptions;
+    const filtered = excludedValue
+      ? withCurrent.filter(
+          (name) => name !== excludedValue || name === currentValue,
+        )
+      : withCurrent;
+    return Array.from(new Set(filtered));
+  };
+
+  const handleCreateMatch = async () => { 
+    setFieldErrors({});
+    if (!adminPin || adminPin.length < 4) { 
+      failValidation('general', 'PIN admin belum valid. Silakan login admin terlebih dahulu.'); 
+      return; 
+    } 
+
+    if (!createPin || createPin.length < 4) { 
+      failValidation('createPin', 'PIN wasit minimal 4 digit.'); 
+      return; 
+    } 
+
+    if (!tournamentName.trim()) {
+      failValidation('tournamentName', 'Nama turnamen wajib diisi.');
       return;
     }
 
-    if (!createPin || createPin.length < 4) {
-      setError('PIN must be at least 4 digits');
-      return;
+    let finalDisplayCode = undefined;
+    if (manualDisplayCode.trim()) {
+      finalDisplayCode = normalizeDisplayCodeInput(manualDisplayCode);
+      if (finalDisplayCode.length !== 6) {
+        failValidation('displayCode', 'Display code manual harus 6 karakter.');
+        return;
+      }
     }
 
     // Validation
-    if (isBadminton) {
+    if (isBadminton && matchFormat === 'perorangan') {
       const p1Home = homePlayers[0].trim();
       const p1Away = awayPlayers[0].trim();
 
-      if (!p1Home || !p1Away) {
-        setError('Player 1 name is required for both sides');
+      if (!p1Home || !p1Away) { 
+        failValidation('homePlayers', 'Nama pemain utama wajib diisi untuk kedua sisi.'); 
+        return; 
+      } 
+
+      if (gameMode === 'double') { 
+        if (!homePlayers[1].trim() || !awayPlayers[1].trim()) { 
+          failValidation('awayPlayers', 'Nama pemain kedua wajib diisi untuk mode ganda.'); 
+          return; 
+        } 
+      } 
+    } else if (!isBadminton) { 
+      if (!homeTeam.trim() || !awayTeam.trim()) { 
+        setError('Nama tim wajib diisi untuk kedua sisi.'); 
+        return; 
+      } 
+    } else {
+      const cleanHomeRoster = homeRoster.map((name) => name.trim()).filter(Boolean);
+      const cleanAwayRoster = awayRoster.map((name) => name.trim()).filter(Boolean);
+      if (cleanHomeRoster.length === 0 || cleanAwayRoster.length === 0) {
+        failValidation('homeRoster', 'Isi minimal 1 anggota tim untuk sisi tuan rumah dan sisi tamu.');
         return;
       }
 
-      if (gameMode === 'double') {
-        if (!homePlayers[1].trim() || !awayPlayers[1].trim()) {
-          setError('Player 2 name is required for doubles');
-          return;
-        }
-      }
-    } else {
-      if (!homeTeam.trim() || !awayTeam.trim()) {
-        setError('Team name is required for both sides');
+      const invalidTeamMatch = teamMatches.some(
+        (item) =>
+          !item.home.trim() ||
+          !item.away.trim() ||
+          (isDoubleCategory(item.type) &&
+            (!item.homeSecond.trim() || !item.awaySecond.trim())),
+      );
+      if (invalidTeamMatch) {
+        failValidation('teamMatches', 'Lengkapi semua pasangan partai beregu (home dan away).');
         return;
       }
     }
@@ -397,36 +449,61 @@ export default function CreateMatchPage() {
     const newMatchId = generateMatchId();
 
     try {
+      const cleanHomeRoster = homeRoster.map((name) => name.trim()).filter(Boolean);
+      const cleanAwayRoster = awayRoster.map((name) => name.trim()).filter(Boolean);
+      const normalizedTeamLineup =
+        matchFormat === 'beregu'
+          ? teamMatches.map((item) => ({
+              home: item.home.trim(),
+              homeSecond: item.homeSecond.trim() || undefined,
+              away: item.away.trim(),
+              awaySecond: item.awaySecond.trim() || undefined,
+              type: item.type,
+            }))
+          : undefined;
       const data = await createMatchMutation({
         matchId: newMatchId,
         sport: selectedSport,
         gameMode: isBadminton ? gameMode : undefined,
-        category: isBadminton ? category : undefined,
+        matchFormat: isBadminton ? matchFormat : undefined,
+        category: isBadminton ? activeCategory : undefined,
+        teamLineup: normalizedTeamLineup,
+        displayCode: finalDisplayCode,
+        tournamentName: tournamentName.trim(),
+        assignedReferee: umpireName.trim() || undefined,
         teams: {
           home: {
             name:
               homeTeam ||
-              homePlayers[0] ||
+              (matchFormat === 'beregu'
+                ? cleanHomeRoster.join(', ')
+                : homePlayers[0]) ||
               (isBadminton ? 'Home Player' : 'Home Team'),
             country: homeCountry.trim() || undefined,
             logo: homeLogo.trim() || undefined,
             players: isBadminton
-              ? gameMode === 'single'
-                ? [{ name: homePlayers[0] }]
-                : [{ name: homePlayers[0] }, { name: homePlayers[1] }]
+              ? matchFormat === 'beregu'
+                ? cleanHomeRoster.map((name) => ({ name }))
+                : gameMode === 'single'
+                  ? [{ name: homePlayers[0] }]
+                  : [{ name: homePlayers[0] }, { name: homePlayers[1] }]
               : [{ name: homeTeam || 'Home Team' }],
           },
           away: {
             name:
               awayTeam ||
-              awayPlayers[0] ||
+              (matchFormat === 'beregu'
+                ? cleanAwayRoster.join(', ')
+                : awayPlayers[0]) ||
               (isBadminton ? 'Away Player' : 'Away Team'),
             country: awayCountry.trim() || undefined,
             logo: awayLogo.trim() || undefined,
             players: isBadminton
-              ? gameMode === 'single'
-                ? [{ name: awayPlayers[0] }]
-                : [{ name: awayPlayers[0] }, { name: awayPlayers[1] }]
+              ? matchFormat === 'beregu'
+                ? cleanAwayRoster.map((name) => ({ name }))
+                : gameMode === 'single'
+                  ? [{ name: awayPlayers[0] }]
+                  : [{ name: awayPlayers[0] }, { name: awayPlayers[1] }]
               : [{ name: awayTeam || 'Away Team' }],
           },
         },
@@ -439,39 +516,40 @@ export default function CreateMatchPage() {
         ADMIN_AUTH_STORAGE_KEY,
         JSON.stringify({ pin: adminPin, ts: Date.now() }),
       );
-      setDisplayCodeInput((data?.displayCode as string) || '');
       setCreatedMatch({
         matchId: newMatchId,
         displayCode: (data?.displayCode as string) || '',
         refereePin: createPin,
+        refereeToken: (data?.refereeToken as string) || '',
         status: (data?.status as string) || 'ready_for_referee',
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create match');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    } catch (err: any) { 
+      console.error('Failed to create match:', err);
+      
+      let userFriendlyMsg = 'Gagal membuat pertandingan. Terjadi kesalahan sistem.';
+      
+      // Extract detailed message if it's a ConvexError
+      const rawMessage = err instanceof ConvexError 
+        ? (err.data as string) 
+        : err.message || '';
 
-  const handleJoinMatch = (role: 'referee' | 'display') => {
-    const code = displayCodeInput.trim().toUpperCase();
-    if (code.length !== 6) {
-      setError('Display Code harus 6 karakter alfanumerik');
-      return;
-    }
+      if (rawMessage.includes('Display code already exists')) {
+        userFriendlyMsg = 'Kode Display sudah digunakan untuk match lain. Silakan pilih kode lain.';
+      } else if (rawMessage) {
+        userFriendlyMsg = `Gagal: ${rawMessage}`;
+      }
 
-    if (role === 'referee') {
-      router.push(`/referee/join?code=${encodeURIComponent(code)}`);
-    } else {
-      router.push(`/display/${encodeURIComponent(code)}`);
-    }
-  };
+      setError(userFriendlyMsg); 
+    } finally { 
+      setIsLoading(false); 
+    } 
+  }; 
 
   return (
     <div className="min-h-screen bg-background text-foreground font-[family-name:var(--font-literata)] relative overflow-hidden transition-colors duration-300">
       <div className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.35),transparent_70%)] blur-3xl opacity-50" />
       <div className="pointer-events-none absolute bottom-[-120px] left-[-10%] h-[360px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.18),transparent_70%)] blur-3xl opacity-50" />
-      <div className="pointer-events-none absolute left-1/2 top-24 h-[380px] w-[900px] -translate-x-1/2 border border-black/10 bg-[linear-gradient(120deg,rgba(0,0,0,0.04),transparent)] opacity-70" />
+
       {/* Top Bar */}
       <header className="h-16 border-b border-black/10 bg-white/80 backdrop-blur px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -492,18 +570,18 @@ export default function CreateMatchPage() {
             <h1 className="font-[family-name:var(--font-bebas)] text-sm leading-none uppercase tracking-[0.25em] text-black">
               Scorehub
             </h1>
-            <span className="text-[10px] font-[family-name:var(--font-literata)] text-black/50 uppercase tracking-[0.2em] font-bold">
+            <span className="text-xs font-[family-name:var(--font-literata)] text-black/50 uppercase tracking-[0.2em] font-bold">
               Control Suite
             </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">
             Workspace
             <span className="h-1 w-1 rounded-full bg-muted-foreground/60" />
             Arena Ops
           </div>
-          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground/80">
+          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs font-bold uppercase tracking-widest text-foreground/80">
             Plan: Studio
           </div>
           <Button
@@ -560,7 +638,7 @@ export default function CreateMatchPage() {
               aria-hidden="true"
             />
             <div className="relative">
-              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+              <div className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
                 Ruang Kerja Arena Anda
               </div>
               <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -574,7 +652,7 @@ export default function CreateMatchPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       Aktif
                     </div>
                     <div className="mt-1 text-2xl font-black text-foreground">
@@ -582,7 +660,7 @@ export default function CreateMatchPage() {
                     </div>
                   </div>
                   <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       Layar
                     </div>
                     <div className="mt-1 text-2xl font-black text-foreground">
@@ -590,7 +668,7 @@ export default function CreateMatchPage() {
                     </div>
                   </div>
                   <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       Templat
                     </div>
                     <div className="mt-1 text-2xl font-black text-foreground">
@@ -603,11 +681,9 @@ export default function CreateMatchPage() {
           </div>
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
-          {/* Primary Column: Create Match (Embedded) */}
-          <section>
+        <section>
             <div className="mb-6">
-              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-black/50">
+              <div className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
                 Match Builder
               </div>
               <h2 className="mt-2 text-4xl font-[family-name:var(--font-bebas)] text-black tracking-wide uppercase">
@@ -619,340 +695,694 @@ export default function CreateMatchPage() {
             </div>
 
             <Card className="p-6 lg:p-8 border border-black/10 shadow-xl bg-white rounded-[32px]">
-              {/* Template Gallery */}
-              <div className="mb-10">
-                <label className="text-[10px] font-bold uppercase text-muted-foreground mb-3 block tracking-widest">
-                  Templat Tampilan
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {templateOptions.map((template) => {
-                    const isSelected = selectedTemplate === template.id;
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => setSelectedTemplate(template.id)}
-                        className={cn(
-                          'group rounded-3xl border p-4 text-left transition-[transform,border-color,box-shadow,background-color] duration-300',
-                          isSelected
-                            ? 'bg-black text-white border-black shadow-xl scale-[1.01]'
-                            : 'bg-white border-black/10 hover:border-black/30 hover:bg-black/5',
-                        )}
-                        style={
-                          isSelected
-                            ? {
-                                boxShadow: `0 16px 32px ${template.accent}33`,
-                              }
-                            : undefined
-                        }
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            Templat
-                          </div>
-                          <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground">
-                            {template.id}
-                          </span>
-                        </div>
-                        <div className="mt-3 rounded-2xl border border-black/5 bg-black/5 p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="h-2 w-12 rounded-full bg-black/40"></div>
-                            <div className="h-2 w-8 rounded-full bg-black/20"></div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="rounded-xl border border-black/10 bg-white/70 p-3">
-                              <div className="h-2 w-14 rounded-full bg-black/20 mb-3"></div>
-                              <div
-                                className="h-8 rounded-lg"
-                                style={{ backgroundColor: template.accent }}
-                              ></div>
-                            </div>
-                            <div className="rounded-xl border border-black/10 bg-white/70 p-3">
-                              <div className="h-2 w-14 rounded-full bg-black/20 mb-3"></div>
-                              <div className="h-8 rounded-lg bg-black/80"></div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4">
-                          <h3 className="text-sm font-bold uppercase tracking-wider">
-                            {template.name}
-                          </h3>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {template.description}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {isBadminton ? (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  {/* Category Toggle */}
-                  <div className="flex justify-center mb-8">
-                    <div className="bg-black/5 p-1 rounded-xl flex gap-1 w-full max-w-lg overflow-x-auto">
-                      {(['MS', 'WS', 'MD', 'WD', 'XD'] as MatchCategory[]).map(
-                        (cat) => (
-                          <button
-                            key={cat}
-                            onClick={() => setCategory(cat)}
-                            className={`flex-1 py-3 px-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors transition-shadow min-w-[50px] whitespace-nowrap ${
-                              category === cat
-                                ? 'bg-black text-white shadow-lg shadow-black/20'
-                                : 'text-black/40 hover:text-black hover:bg-black/5'
-                            }`}
-                          >
-                            {cat}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Player Inputs - Tournament Style */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
-                    {/* Home Side */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 pb-2 border-b">
-                        <div className="w-2 h-2 rounded-full bg-[var(--accent-b)]" />{' '}
-                        {/* Red marker */}
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Sisi Tuan Rumah
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <label htmlFor="home-player-1" className="sr-only">
-                            Pemain tuan rumah 1
-                          </label>
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            <UserIcon className="w-4 h-4" />
-                          </div>
-                          <Input
-                            id="home-player-1"
-                            name="homePlayer1"
-                            autoComplete="off"
-                            placeholder="Pemain 1 (misal, Andi)…"
-                            className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
-                            value={homePlayers[0]}
-                            onChange={(e) =>
-                              handlePlayerChange('home', 0, e.target.value)
-                            }
-                          />
-                        </div>
-                        {gameMode === 'double' && (
-                          <div className="relative">
-                            <label htmlFor="home-player-2" className="sr-only">
-                              Pemain tuan rumah 2
-                            </label>
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              <UserIcon className="w-4 h-4" />
-                            </div>
-                            <Input
-                              id="home-player-2"
-                              name="homePlayer2"
-                              autoComplete="off"
-                              placeholder="Pemain 2 (misal, Budi)…"
-                              className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
-                              value={homePlayers[1]}
-                              onChange={(e) =>
-                                handlePlayerChange('home', 1, e.target.value)
-                              }
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Away Side */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 pb-2 border-b">
-                        <div className="w-2 h-2 rounded-full bg-[var(--accent-a)]" />{' '}
-                        {/* Blue marker */}
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Sisi Tamu
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <label htmlFor="away-player-1" className="sr-only">
-                            Pemain tamu 1
-                          </label>
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            <UserIcon className="w-4 h-4" />
-                          </div>
-                          <Input
-                            id="away-player-1"
-                            name="awayPlayer1"
-                            autoComplete="off"
-                            placeholder="Pemain 1 (misal, Sari)…"
-                            className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
-                            value={awayPlayers[0]}
-                            onChange={(e) =>
-                              handlePlayerChange('away', 0, e.target.value)
-                            }
-                          />
-                        </div>
-                        {gameMode === 'double' && (
-                          <div className="relative">
-                            <label htmlFor="away-player-2" className="sr-only">
-                              Pemain tamu 2
-                            </label>
-                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              <UserIcon className="w-4 h-4" />
-                            </div>
-                            <Input
-                              id="away-player-2"
-                              name="awayPlayer2"
-                              autoComplete="off"
-                              placeholder="Pemain 2 (misal, Rina)…"
-                              className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
-                              value={awayPlayers[1]}
-                              onChange={(e) =>
-                                handlePlayerChange('away', 1, e.target.value)
-                              }
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Advanced Options Toggle */}
-                  <div className="mt-8">
-                    <button
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex items-center gap-2 text-xs font-bold text-black/40 hover:text-black transition-colors uppercase tracking-widest"
-                    >
-                      Opsi Lanjutan{' '}
-                      <ChevronDownIcon
-                        className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-
-                    {showAdvanced && (
-                      <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                        <label htmlFor="home-team" className="sr-only">
-                          Nama klub tuan rumah
-                        </label>
-                        <Input
-                          id="home-team"
-                          name="homeTeam"
-                          autoComplete="organization"
-                          placeholder="Nama Klub Tuan Rumah (misal, PB Jaya)..."
-                          value={homeTeam}
-                          onChange={(e) => setHomeTeam(e.target.value)}
-                          className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                        />
-                        <label htmlFor="away-team" className="sr-only">
-                          Nama klub tamu
-                        </label>
-                        <Input
-                          id="away-team"
-                          name="awayTeam"
-                          autoComplete="organization"
-                          placeholder="Nama Klub Tamu (misal, PB Maju)..."
-                          value={awayTeam}
-                          onChange={(e) => setAwayTeam(e.target.value)}
-                          className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                        />
-                        <label htmlFor="home-country" className="sr-only">
-                          Kode negara tuan rumah
-                        </label>
-                        <Input
-                          id="home-country"
-                          name="homeCountry"
-                          autoComplete="off"
-                          placeholder="Negara (misal, ID)..."
-                          value={homeCountry}
-                          onChange={(e) => setHomeCountry(e.target.value)}
-                          className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                        />
-                        <label htmlFor="away-country" className="sr-only">
-                          Kode negara tamu
-                        </label>
-                        <Input
-                          id="away-country"
-                          name="awayCountry"
-                          autoComplete="off"
-                          placeholder="Negara (misal, TH)..."
-                          value={awayCountry}
-                          onChange={(e) => setAwayCountry(e.target.value)}
-                          className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                        />
-                        <label htmlFor="home-logo" className="sr-only">
-                          URL logo tuan rumah
-                        </label>
-                        <Input
-                          id="home-logo"
-                          name="homeLogo"
-                          autoComplete="off"
-                          placeholder="URL Logo Tuan Rumah (opsional)..."
-                          value={homeLogo}
-                          onChange={(e) => setHomeLogo(e.target.value)}
-                          className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                        />
-                        <label htmlFor="away-logo" className="sr-only">
-                          URL logo tamu
-                        </label>
-                        <Input
-                          id="away-logo"
-                          name="awayLogo"
-                          autoComplete="off"
-                          placeholder="URL Logo Tamu (opsional)..."
-                          value={awayLogo}
-                          onChange={(e) => setAwayLogo(e.target.value)}
-                          className="h-9 text-xs bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* PIN & Submit */}
-                  <div className="mt-8 pt-8 border-t grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-end">
-                    <div>
+                  <div className="mb-6 rounded-2xl border border-black/10 bg-gradient-to-r from-amber-50 to-white p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <label
-                        htmlFor="create-pin-team"
-                        className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
+                        htmlFor="tournament-name"
+                        className="text-xs font-bold uppercase tracking-[0.2em] text-black/60"
                       >
-                        Tentukan PIN Wasit
+                        Nama Turnamen <span className="text-red-500">*</span>
                       </label>
-                      <Input
-                        id="create-pin-team"
-                        name="createPin"
-                        autoComplete="new-password"
-                        placeholder="PIN (misal, 1234)..."
-                        type="number"
-                        pattern="[0-9]*"
-                        inputMode="numeric"
-                        maxLength={6}
-                        className="text-center font-mono tracking-[0.5em] h-12 text-lg bg-black/5 focus:bg-white focus:border-black/20 transition-colors rounded-xl border-transparent"
-                        value={createPin}
-                        onChange={(e) =>
-                          setCreatePin(
-                            e.target.value.replace(/\D/g, '').slice(0, 6),
-                          )
-                        }
-                      />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-black/40">
+                        Wajib diisi
+                      </span>
                     </div>
-                    <Button
-                      onClick={handleCreateMatch}
-                      disabled={isLoading}
-                      className="w-full h-12 text-base font-bold bg-[#111827] hover:bg-black text-white shadow-xl shadow-black/20 transition-[box-shadow,background-color,color] rounded-full uppercase tracking-widest"
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Membuat Pertandingan...
-                        </span>
-                      ) : (
-                        'Mulai Pertandingan'
-                      )}
-                    </Button>
+                    <Input
+                      id="tournament-name"
+                      name="tournamentName"
+                      autoComplete="off"
+                      placeholder="Contoh: Kejuaraan Kota Jakarta 2026"
+                      value={tournamentName}
+                      onChange={(event) => {
+                        setTournamentName(event.target.value);
+                        clearFieldError('tournamentName');
+                      }}
+                      className="mt-2 h-11 rounded-xl border-black/10 bg-white/90 focus:border-black/30"
+                    />
+                    <p className={`mt-2 text-xs ${fieldErrors.tournamentName ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
+                      {fieldErrors.tournamentName || 'Contoh: Kejurkot / Open Tournament / Internal Club League.'}
+                    </p>
+                  </div>
+                  <div className="mb-6">
+                    <div className="bg-black/5 p-1 rounded-xl inline-flex gap-1">
+                      {(['perorangan', 'beregu'] as MatchFormat[]).map((format) => (
+                        <button
+                          key={format}
+                          type="button"
+                          onClick={() => setMatchFormat(format)}
+                          className={`py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
+                            matchFormat === format
+                              ? 'bg-black text-white shadow-lg shadow-black/20'
+                              : 'text-black/50 hover:text-black hover:bg-black/5'
+                          }`}
+                        >
+                          {format}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-2xl border border-black/10 bg-black/[0.02] p-4">
+                    <div className="md:col-span-2 text-xs font-bold uppercase tracking-[0.2em] text-black/50">
+                      Informasi Tim (Ditampilkan di skor)
+                    </div>
+                    <Input
+                      id="home-team"
+                      name="homeTeam"
+                      autoComplete="organization"
+                      placeholder="Nama Klub Tuan Rumah (misal, PB Jaya)"
+                      value={homeTeam}
+                      onChange={(e) => setHomeTeam(e.target.value)}
+                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
+                    />
+                    <Input
+                      id="away-team"
+                      name="awayTeam"
+                      autoComplete="organization"
+                      placeholder="Nama Klub Tamu (misal, PB Maju)"
+                      value={awayTeam}
+                      onChange={(e) => setAwayTeam(e.target.value)}
+                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
+                    />
+                    <Input
+                      id="home-country"
+                      name="homeCountry"
+                      autoComplete="off"
+                      placeholder="Negara Home (misal, ID)"
+                      value={homeCountry}
+                      onChange={(e) => setHomeCountry(e.target.value)}
+                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
+                    />
+                    <Input
+                      id="away-country"
+                      name="awayCountry"
+                      autoComplete="off"
+                      placeholder="Negara Away (misal, TH)"
+                      value={awayCountry}
+                      onChange={(e) => setAwayCountry(e.target.value)}
+                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
+                    />
+                    <Input
+                      id="home-logo"
+                      name="homeLogo"
+                      autoComplete="off"
+                      placeholder="URL Logo Home (opsional)"
+                      value={homeLogo}
+                      onChange={(e) => setHomeLogo(e.target.value)}
+                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
+                    />
+                    <Input
+                      id="away-logo"
+                      name="awayLogo"
+                      autoComplete="off"
+                      placeholder="URL Logo Away (opsional)"
+                      value={awayLogo}
+                      onChange={(e) => setAwayLogo(e.target.value)}
+                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
+                    />
+                  </div>
+
+                  {matchFormat === 'perorangan' ? (
+                    <>
+                      <div className="flex justify-center mb-8">
+                        <div className="bg-black/5 p-1 rounded-xl flex gap-1 w-full max-w-lg overflow-x-auto">
+                          {(['MS', 'WS', 'MD', 'WD', 'XD'] as MatchCategory[]).map(
+                            (cat) => (
+                              <button
+                                key={cat}
+                                onClick={() => setCategory(cat)}
+                                className={`flex-1 py-3 px-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors transition-shadow min-w-[50px] whitespace-nowrap ${
+                                  category === cat
+                                    ? 'bg-black text-white shadow-lg shadow-black/20'
+                                    : 'text-black/40 hover:text-black hover:bg-black/5'
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+
+                      {gameMode === 'double' ? (
+                        <div className="mb-6 rounded-2xl border border-dashed border-black/15 bg-black/[0.02] px-4 py-3 text-xs text-black/60">
+                          Mode ganda aktif: isi dua pemain untuk masing-masing sisi.
+                        </div>
+                      ) : null}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 pb-2 border-b">
+                            <div className="w-2 h-2 rounded-full bg-[var(--accent-b)]" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                              Sisi Tuan Rumah
+                            </span>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <label htmlFor="home-player-1" className="sr-only">
+                                Pemain tuan rumah 1
+                              </label>
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                <UserIcon className="w-4 h-4" />
+                              </div>
+                              <Input
+                                id="home-player-1"
+                                name="homePlayer1"
+                                autoComplete="off"
+                                placeholder="Pemain 1 (misal, Andi)..."
+                                className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
+                                value={homePlayers[0]}
+                                onChange={(e) =>
+                                  handlePlayerChange('home', 0, e.target.value)
+                                }
+                              />
+                            </div>
+                            {gameMode === 'double' && (
+                              <div className="relative">
+                                <label htmlFor="home-player-2" className="sr-only">
+                                  Pemain tuan rumah 2
+                                </label>
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                  <UserIcon className="w-4 h-4" />
+                                </div>
+                                <Input
+                                  id="home-player-2"
+                                  name="homePlayer2"
+                                  autoComplete="off"
+                                  placeholder="Pemain 2 (misal, Budi)..."
+                                  className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
+                                  value={homePlayers[1]}
+                                  onChange={(e) =>
+                                    handlePlayerChange('home', 1, e.target.value)
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+                          {fieldErrors.homePlayers ? (
+                            <p className="text-xs text-red-600 font-semibold">
+                              {fieldErrors.homePlayers}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 pb-2 border-b">
+                            <div className="w-2 h-2 rounded-full bg-[var(--accent-a)]" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                              Sisi Tamu
+                            </span>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <label htmlFor="away-player-1" className="sr-only">
+                                Pemain tamu 1
+                              </label>
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                <UserIcon className="w-4 h-4" />
+                              </div>
+                              <Input
+                                id="away-player-1"
+                                name="awayPlayer1"
+                                autoComplete="off"
+                                placeholder="Pemain 1 (misal, Sari)..."
+                                className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
+                                value={awayPlayers[0]}
+                                onChange={(e) =>
+                                  handlePlayerChange('away', 0, e.target.value)
+                                }
+                              />
+                            </div>
+                            {gameMode === 'double' && (
+                              <div className="relative">
+                                <label htmlFor="away-player-2" className="sr-only">
+                                  Pemain tamu 2
+                                </label>
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                  <UserIcon className="w-4 h-4" />
+                                </div>
+                                <Input
+                                  id="away-player-2"
+                                  name="awayPlayer2"
+                                  autoComplete="off"
+                                  placeholder="Pemain 2 (misal, Rina)..."
+                                  className="pl-9 h-11 bg-black/5 border-transparent focus:bg-white focus:border-black/20 focus:ring-black/10 transition-[background-color,border-color,box-shadow] rounded-xl"
+                                  value={awayPlayers[1]}
+                                  onChange={(e) =>
+                                    handlePlayerChange('away', 1, e.target.value)
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+                          {fieldErrors.awayPlayers ? (
+                            <p className="text-xs text-red-600 font-semibold">
+                              {fieldErrors.awayPlayers}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between pb-1">
+                            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                              Roster Sisi Tuan Rumah
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => addRosterMember('home')}
+                              className="text-[10px] font-bold uppercase tracking-wider bg-black/5 hover:bg-black/10 text-black/60 px-2 py-1 rounded-md transition-colors"
+                            >
+                              + Tambah
+                            </button>
+                          </div>
+                          {fieldErrors.homeRoster ? (
+                            <p className="text-xs text-red-600 font-semibold">
+                              {fieldErrors.homeRoster}
+                            </p>
+                          ) : null}
+                          <div className="space-y-2">
+                            {homeRoster.map((member, index) => (
+                              <div key={`home-roster-${index}`} className="flex items-center gap-2">
+                                <Input
+                                  value={member}
+                                  onChange={(event) =>
+                                    handleRosterChange('home', index, event.target.value)
+                                  }
+                                  placeholder={`Anggota ${index + 1} (home)`}
+                                  className="h-10 bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-xl"
+                                />
+                                {homeRoster.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeRosterMember('home', index)}
+                                    className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-black/40 hover:text-red-500 transition-colors"
+                                    title="Hapus"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between pb-1">
+                            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                              Roster Sisi Tamu
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => addRosterMember('away')}
+                              className="text-[10px] font-bold uppercase tracking-wider bg-black/5 hover:bg-black/10 text-black/60 px-2 py-1 rounded-md transition-colors"
+                            >
+                              + Tambah
+                            </button>
+                          </div>
+                          {fieldErrors.awayRoster ? (
+                            <p className="text-xs text-red-600 font-semibold">
+                              {fieldErrors.awayRoster}
+                            </p>
+                          ) : null}
+                          <div className="space-y-2">
+                            {awayRoster.map((member, index) => (
+                              <div key={`away-roster-${index}`} className="flex items-center gap-2">
+                                <Input
+                                  key={`away-roster-${index}`}
+                                  value={member}
+                                  onChange={(event) =>
+                                    handleRosterChange('away', index, event.target.value)
+                                  }
+                                  placeholder={`Anggota ${index + 1} (away)`}
+                                  className="h-10 bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-xl"
+                                />
+                                {awayRoster.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeRosterMember('away', index)}
+                                    className="h-10 w-10 flex-shrink-0 flex items-center justify-center text-black/40 hover:text-red-500 transition-colors"
+                                    title="Hapus"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-black/10 pt-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                            Susunan Partai Beregu
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={addTeamMatch}
+                            className="h-9 rounded-full text-xs uppercase tracking-widest font-bold"
+                          >
+                            Tambah Partai
+                          </Button>
+                        </div>
+                        {fieldErrors.teamMatches ? (
+                          <p className="text-xs text-red-600 font-semibold">
+                            {fieldErrors.teamMatches}
+                          </p>
+                        ) : null}
+
+                        {teamMatches.map((item, index) => (
+                          <div
+                            key={`team-match-${index}`}
+                            className="rounded-2xl border border-black/10 p-4 space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs font-bold uppercase tracking-widest text-black/50">
+                                Partai {index + 1}
+                              </div>
+                              {teamMatches.length > 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => removeTeamMatch(index)}
+                                  className="text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700"
+                                >
+                                  Hapus
+                                </button>
+                              ) : null}
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-3 items-start">
+                              <div className="space-y-2">
+                                <Select
+                                  value={item.home || undefined}
+                                  onValueChange={(value) =>
+                                    handleTeamMatchChange(index, 'home', value)
+                                  }
+                                >
+                                  <SelectTrigger className="h-10 w-full bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-xl">
+                                    <SelectValue
+                                      placeholder={
+                                        isDoubleCategory(item.type)
+                                          ? 'Pilih pemain home 1'
+                                          : 'Pilih pemain home'
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {buildRosterSelectOptions(
+                                      cleanHomeRosterOptions,
+                                      item.home,
+                                    ).map((playerName) => (
+                                      <SelectItem
+                                        key={`home-${index}-${playerName}`}
+                                        value={playerName}
+                                      >
+                                        {playerName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {isDoubleCategory(item.type) ? (
+                                  <Select
+                                    value={item.homeSecond || undefined}
+                                    onValueChange={(value) =>
+                                      handleTeamMatchChange(
+                                        index,
+                                        'homeSecond',
+                                        value,
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger className="h-10 w-full bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-xl">
+                                      <SelectValue placeholder="Pilih pemain home 2" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {buildRosterSelectOptions(
+                                        cleanHomeRosterOptions,
+                                        item.homeSecond,
+                                        item.home,
+                                      ).map((playerName) => (
+                                        <SelectItem
+                                          key={`home-second-${index}-${playerName}`}
+                                          value={playerName}
+                                        >
+                                          {playerName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : null}
+                              </div>
+                              <div className="space-y-2">
+                                <Select
+                                  value={item.away || undefined}
+                                  onValueChange={(value) =>
+                                    handleTeamMatchChange(index, 'away', value)
+                                  }
+                                >
+                                  <SelectTrigger className="h-10 w-full bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-xl">
+                                    <SelectValue
+                                      placeholder={
+                                        isDoubleCategory(item.type)
+                                          ? 'Pilih pemain away 1'
+                                          : 'Pilih pemain away'
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {buildRosterSelectOptions(
+                                      cleanAwayRosterOptions,
+                                      item.away,
+                                    ).map((playerName) => (
+                                      <SelectItem
+                                        key={`away-${index}-${playerName}`}
+                                        value={playerName}
+                                      >
+                                        {playerName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {isDoubleCategory(item.type) ? (
+                                  <Select
+                                    value={item.awaySecond || undefined}
+                                    onValueChange={(value) =>
+                                      handleTeamMatchChange(
+                                        index,
+                                        'awaySecond',
+                                        value,
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger className="h-10 w-full bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-xl">
+                                      <SelectValue placeholder="Pilih pemain away 2" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {buildRosterSelectOptions(
+                                        cleanAwayRosterOptions,
+                                        item.awaySecond,
+                                        item.away,
+                                      ).map((playerName) => (
+                                        <SelectItem
+                                          key={`away-second-${index}-${playerName}`}
+                                          value={playerName}
+                                        >
+                                          {playerName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : null}
+                              </div>
+                              <div className="bg-black/5 p-1 rounded-xl flex gap-1 flex-wrap">
+                                {(
+                                  ['MS', 'WS', 'MD', 'WD', 'XD'] as MatchCategory[]
+                                ).map((cat) => (
+                                  <button
+                                    key={`${index}-${cat}`}
+                                    type="button"
+                                    onClick={() =>
+                                      handleTeamMatchChange(index, 'type', cat)
+                                    }
+                                    className={`h-8 px-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
+                                      item.type === cat
+                                        ? 'bg-black text-white'
+                                        : 'text-black/50 hover:bg-black/10'
+                                    }`}
+                                  >
+                                    {cat}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                  )}
+
+                  <div className="mt-8 rounded-3xl border border-black/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.03),rgba(255,255,255,0.9))] p-5 lg:p-6">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
+                          Akses Wasit & Umpire
+                        </div>
+                        <p className="mt-1 text-sm text-black/60">
+                          Link kontrol akan mengarah langsung ke control panel wasit.
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-black/50">
+                        Direct control
+                      </span>
+                    </div>
+
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 xl:gap-8">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label
+                            htmlFor="umpire-name"
+                            className="text-xs font-bold uppercase tracking-widest text-black/50"
+                          >
+                            Nama Umpire
+                          </label>
+                          <span className="text-xs font-semibold uppercase tracking-widest text-black/35">
+                            Opsional
+                          </span>
+                        </div>
+                        <Input
+                          id="umpire-name"
+                          name="umpireName"
+                          autoComplete="name"
+                          placeholder="Nama umpire / wasit"
+                          value={umpireName}
+                          onChange={(e) => setUmpireName(e.target.value)}
+                          className="h-11 rounded-xl bg-white border-black/10 focus:border-black/30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label 
+                            htmlFor="display-code" 
+                            className="text-xs font-bold uppercase tracking-widest text-black/50" 
+                          > 
+                            Kode Tampilan 
+                          </label> 
+                          <span className="text-xs font-semibold uppercase tracking-widest text-black/35">
+                            Opsional
+                          </span>
+                        </div>
+                        <Input
+                          id="display-code"
+                          name="displayCode"
+                          autoComplete="off"
+                          placeholder="A1B2C3"
+                          value={manualDisplayCode}
+                          onChange={(e) => {
+                            setManualDisplayCode(
+                              normalizeDisplayCodeInput(e.target.value),
+                            );
+                            clearFieldError('displayCode');
+                          }}
+                          className={`h-11 rounded-xl font-mono tracking-[0.45em] text-center uppercase bg-white focus:border-black/30 ${
+                            fieldErrors.displayCode ? 'border-red-500 focus:border-red-500' : 'border-black/10'
+                          }`}
+                        />
+                        <p className={`text-xs ${fieldErrors.displayCode ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
+                          {fieldErrors.displayCode || `Kosongkan untuk generate otomatis. Saat ini: ${manualDisplayCode.length}/6`}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label
+                            htmlFor="create-pin-team"
+                            className="text-xs font-bold uppercase tracking-widest text-black/50"
+                          >
+                            PIN Wasit
+                            <span className="text-red-500"> *</span>
+                          </label>
+                          <span className="text-xs font-semibold uppercase tracking-widest text-black/35">
+                            Wajib
+                          </span>
+                        </div>
+                        <Input
+                          id="create-pin-team"
+                          name="createPin"
+                          autoComplete="new-password"
+                          placeholder="1234"
+                          type="number"
+                          pattern="[0-9]*"
+                          inputMode="numeric"
+                          maxLength={6}
+                          className="h-11 rounded-xl text-center font-mono tracking-[0.5em] bg-white border-black/10 focus:border-black/30"
+                          value={createPin}
+                          onChange={(e) => {
+                            setCreatePin(
+                              e.target.value.replace(/\D/g, '').slice(0, 6),
+                            );
+                            clearFieldError('createPin');
+                          }}
+                        />
+                        <p className={`text-xs ${fieldErrors.createPin ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
+                          {fieldErrors.createPin || `PIN 4-6 digit. Saat ini: ${createPin.length} digit`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-black/10 bg-white/90 p-4 text-xs text-black/60">
+                        <div className="font-bold uppercase tracking-widest text-black/50">
+                          Yang wajib diisi
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-black px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-white">
+                            Turnamen
+                          </span>
+                          <span className="rounded-full border border-black/20 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-black/60"> 
+                            Kode Tampilan (Opsional) 
+                          </span> 
+                          <span className="rounded-full bg-black px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-white">
+                            PIN Wasit
+                          </span>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-dashed border-black/15 bg-black/[0.02] p-4 text-xs text-black/55">
+                        Setelah dibuat, klik link kontrol wasit untuk masuk tanpa input ulang.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <div className="w-full sm:w-auto">
+                      <Button
+                        onClick={handleCreateMatch}
+                        disabled={isLoading}
+                        className="w-full sm:w-auto h-12 px-8 text-base font-bold bg-[#111827] hover:bg-black text-white shadow-xl shadow-black/20 transition-[box-shadow,background-color,color] rounded-full uppercase tracking-widest"
+                      >
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Membuat Pertandingan...
+                          </span>
+                        ) : (
+                          'Mulai Pertandingan'
+                        )}
+                      </Button>
+                      {fieldErrors.general ? (
+                        <p className="mt-2 text-xs text-red-600 font-semibold text-right">
+                          {fieldErrors.general}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1053,7 +1483,7 @@ export default function CreateMatchPage() {
                     <div>
                       <label
                         htmlFor="create-pin"
-                        className="text-[10px] font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
+                        className="text-xs font-bold uppercase text-muted-foreground mb-2 block tracking-widest"
                       >
                         Tentukan PIN Wasit
                       </label>
@@ -1093,119 +1523,7 @@ export default function CreateMatchPage() {
                 </div>
               )}
             </Card>
-          </section>
-
-          {/* Secondary Column: Join & Shortcuts */}
-          <aside className="flex flex-col gap-6">
-            <div className="mb-2">
-              <h2 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">
-                Masuk yang Sudah Ada
-              </h2>
-            </div>
-
-            {/* Join as Referee */}
-            <Card className="p-5 border border-black/10 shadow-sm bg-white hover:border-black/20 transition-colors group rounded-3xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Masuk sebagai Wasit</h3>
-                <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-[var(--accent-b)] transition-colors">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label htmlFor="display-code-referee" className="sr-only">
-                  Kode Tampilan
-                </label>
-                <Input
-                  id="display-code-referee"
-                  name="displayCode"
-                  autoComplete="off"
-                  placeholder="Kode Tampilan (misal, A1B2C3)..."
-                  className="h-9 font-mono text-xs uppercase bg-black/5 border-transparent focus:bg-white focus:border-black/20 rounded-lg"
-                  value={displayCodeInput}
-                  onChange={(e) =>
-                    setDisplayCodeInput(
-                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6),
-                    )
-                  }
-                />
-                <Button
-                  onClick={() => handleJoinMatch('referee')}
-                  disabled={!canJoinReferee}
-                  variant="secondary"
-                  className="w-full text-xs font-bold uppercase tracking-widest h-10 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none border border-transparent"
-                >
-                  Buka Halaman Wasit
-                </Button>
-                <p className="text-[11px] text-black/50">
-                  Wasit tetap login pakai Kode Tampilan + PIN di halaman join.
-                </p>
-              </div>
-            </Card>
-
-            {/* Join as Display */}
-            <Card className="p-5 border border-black/10 shadow-sm bg-white hover:border-black/20 transition-colors group rounded-3xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-foreground">Buka Tampilan Layar</h3>
-                <div className="w-6 h-6 rounded bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-[var(--accent-a)] transition-colors">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Buka tampilan papan skor publik untuk TV atau proyektor.
-              </p>
-              <div className="space-y-3">
-                <label htmlFor="display-code-open" className="sr-only">
-                  Kode Tampilan
-                </label>
-                <Input
-                  id="display-code-open"
-                  name="displayCodeOpen"
-                  autoComplete="off"
-                  placeholder="Kode Tampilan (misal, A1B2C3)..."
-                  className="h-9 font-mono text-xs uppercase"
-                  value={displayCodeInput}
-                  onChange={(e) =>
-                    setDisplayCodeInput(
-                      e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6),
-                    )
-                  }
-                />
-                <Button
-                  onClick={() => handleJoinMatch('display')}
-                  disabled={!canJoinDisplay}
-                  variant="outline"
-                  className="w-full text-xs font-bold uppercase tracking-widest h-10"
-                >
-                  Buka Layar
-                </Button>
-              </div>
-            </Card>
-          </aside>
-        </div>
+        </section>
       </main>
 
       <Dialog
@@ -1220,30 +1538,30 @@ export default function CreateMatchPage() {
               Pertandingan Berhasil Dibuat
             </DialogTitle>
             <DialogDescription className="text-black/60">
-              Bagikan akses wasit dari popup ini. Admin berikutnya lanjut dari dashboard.
+              Bagikan link kontrol wasit langsung. Umpire bisa masuk tanpa isi form lagi.
             </DialogDescription>
           </DialogHeader>
 
           {createdMatch ? (
             <div className="grid gap-4 sm:grid-cols-3 text-sm">
               <div className="rounded-xl border border-black/10 bg-black/5 p-3">
-                <div className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
+                <div className="text-xs uppercase tracking-widest text-black/50 font-bold">
                   Match ID
                 </div>
                 <div className="mt-1 font-mono font-bold">{createdMatch.matchId}</div>
               </div>
-              <div className="rounded-xl border border-black/10 bg-black/5 p-3">
-                <div className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
-                  Display Code
-                </div>
-                <div className="mt-1 font-mono font-bold">{createdMatch.displayCode}</div>
-              </div>
-              <div className="rounded-xl border border-black/10 bg-black/5 p-3">
-                <div className="text-[10px] uppercase tracking-widest text-black/50 font-bold">
-                  Referee PIN
-                </div>
-                <div className="mt-1 font-mono font-bold">{createdMatch.refereePin}</div>
-              </div>
+              <div className="rounded-xl border border-black/10 bg-black/5 p-3"> 
+                <div className="text-xs uppercase tracking-widest text-black/50 font-bold"> 
+                  Kode Tampilan 
+                </div> 
+                <div className="mt-1 font-mono font-bold">{createdMatch.displayCode}</div> 
+              </div> 
+              <div className="rounded-xl border border-black/10 bg-black/5 p-3"> 
+                <div className="text-xs uppercase tracking-widest text-black/50 font-bold"> 
+                  PIN Wasit 
+                </div> 
+                <div className="mt-1 font-mono font-bold">{createdMatch.refereePin}</div> 
+              </div> 
             </div>
           ) : null}
 
@@ -1251,34 +1569,35 @@ export default function CreateMatchPage() {
             <Button
               type="button"
               variant="outline"
-              className="rounded-full text-[10px] uppercase tracking-widest font-bold px-1"
+              className="rounded-full text-xs uppercase tracking-widest font-bold px-1"
               onClick={() => {
                 if (!createdMatch) return;
-                const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}`;
-                navigator.clipboard.writeText(link);
+                const directAutoJoinLink = `${window.location.origin}/referee/join?code=${createdMatch.displayCode}&pin=${createdMatch.refereePin}`;
+                navigator.clipboard.writeText(directAutoJoinLink);
               }}
             >
-              Link Wasit
+              Salin Link Kontrol
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="rounded-full text-[10px] uppercase tracking-widest font-bold px-1"
+              className="rounded-full text-xs uppercase tracking-widest font-bold px-1"
               onClick={() => {
                 if (!createdMatch) return;
                 const link = `${window.location.origin}/display/${createdMatch.displayCode}`;
                 navigator.clipboard.writeText(link);
               }}
             >
-              Link Layar
+              Salin Link Layar
             </Button>
             <Button
               type="button"
               variant="outline"
-              className="rounded-full text-[10px] uppercase tracking-widest font-bold px-1"
+              className="rounded-full text-xs uppercase tracking-widest font-bold px-1"
               onClick={() => {
-                if (!createdMatch) return;
-                const message = `Akses Wasit\n\nKode Tampilan: ${createdMatch.displayCode}\nPIN: ${createdMatch.refereePin}\n\nLink Wasit:\n${window.location.origin}/referee/join?code=${encodeURIComponent(createdMatch.displayCode)}\n\nLink Display:\n${window.location.origin}/display/${createdMatch.displayCode}`;
+                if (!createdMatch || !refereeControlLink) return;
+                const directAutoJoinLink = `${window.location.origin}/referee/join?code=${createdMatch.displayCode}&pin=${createdMatch.refereePin}`;
+                const message = `Akses Wasit\n\nNama Turnamen: ${tournamentName.trim()}\nKode Tampilan: ${createdMatch.displayCode}\nPIN: ${createdMatch.refereePin}\n\nLink Kontrol Wasit (Auto-Login):\n${directAutoJoinLink}\n\nLink Display:\n${window.location.origin}/display/${createdMatch.displayCode}`;
                 const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(waUrl, '_blank', 'noopener,noreferrer');
               }}
@@ -1316,3 +1635,6 @@ export default function CreateMatchPage() {
     </div>
   );
 }
+
+
+

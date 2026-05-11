@@ -1,10 +1,20 @@
 export type MatchRole = 'admin' | 'referee' | 'display';
 export type TeamSide = 'home' | 'away';
 export type GameMode = 'single' | 'double';
+export type MatchFormat = 'perorangan' | 'beregu';
+export type TeamMatchCategory = 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
 
 export interface PlayerInfo {
   name: string;
   country?: string;
+}
+
+export interface TeamLineupRow {
+  home: string;
+  homeSecond?: string;
+  away: string;
+  awaySecond?: string;
+  type: TeamMatchCategory;
 }
 
 export interface TeamState {
@@ -36,7 +46,10 @@ export interface MatchState {
   displayCode: string;
   sport: string;
   gameMode?: GameMode;
+  matchFormat?: MatchFormat;
   category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
+  teamLineup?: TeamLineupRow[];
+  tournamentName?: string;
   status:
     | 'created'
     | 'ready_for_referee'

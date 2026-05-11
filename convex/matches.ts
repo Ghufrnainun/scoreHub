@@ -16,6 +16,7 @@ const matchRole = v.union(
   v.literal('display'),
 );
 const gameMode = v.union(v.literal('single'), v.literal('double'));
+const matchFormat = v.union(v.literal('perorangan'), v.literal('beregu'));
 const matchCategory = v.union(
   v.literal('MS'),
   v.literal('WS'),
@@ -23,6 +24,13 @@ const matchCategory = v.union(
   v.literal('WD'),
   v.literal('XD'),
 );
+const teamLineupRowInput = v.object({
+  home: v.string(),
+  homeSecond: v.optional(v.string()),
+  away: v.string(),
+  awaySecond: v.optional(v.string()),
+  type: matchCategory,
+});
 
 const playerInput = v.object({
   name: v.string(),
@@ -52,6 +60,44 @@ const activateMatchStatus = (status: string) =>
   status === 'created' || status === 'ready_for_referee' || status === 'active'
     ? 'live'
     : status;
+
+const isDoublesCategory = (type: string) => type === 'MD' || type === 'WD' || type === 'XD';
+
+const normalizeTeamLineup = (
+  rows?: {
+    home: string;
+    homeSecond?: string;
+    away: string;
+    awaySecond?: string;
+    type: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
+  }[],
+) => {
+  if (!rows) return undefined;
+  const normalized = rows
+    .map((row) => ({
+      home: row.home.trim(),
+      homeSecond: row.homeSecond?.trim() || undefined,
+      away: row.away.trim(),
+      awaySecond: row.awaySecond?.trim() || undefined,
+      type: row.type,
+    }))
+    .filter((row) => row.home && row.away);
+
+  return normalized.length > 0 ? normalized : undefined;
+};
+
+const normalizePlayers = (
+  players: { name: string; country?: string }[] | undefined,
+) => {
+  if (!players) return undefined;
+  const sanitized = players
+    .map((player) => ({
+      name: player.name.trim(),
+      country: player.country?.trim() || undefined,
+    }))
+    .filter((player) => player.name.length > 0);
+  return sanitized.length > 0 ? sanitized : [];
+};
 
 const ensureMatch = async (ctx: any, matchId: string) => {
   const match = await ctx.db
@@ -155,13 +201,6 @@ const recordEvent = async (
   });
 };
 
-const assertAdminAction = async (match: any, role: MatchRole, pin?: string) => {
-  if (role !== 'admin') {
-    throw new ConvexError('Only admin can perform this action');
-  }
-  await assertAdminAccess(match, pin);
-};
-
 const getRefereeAuthState = (match: any) => ({
   failedAttempts: match.refereeAuth?.failedAttempts ?? 0,
   lockUntil: match.refereeAuth?.lockUntil ?? null,
@@ -202,6 +241,7 @@ export const getByDisplayCode = query({
       displayCode: match.displayCode,
       sport: match.sport,
       category: match.category,
+      tournamentName: match.tournamentName,
       status: normalizePublicStatus(match.status),
       teams: {
         home: match.teams.home.name,
@@ -229,6 +269,7 @@ export const listAdmin = query({
         displayCode: match.displayCode,
         sport: match.sport,
         category: match.category,
+        tournamentName: match.tournamentName,
         status: normalizePublicStatus(match.status),
         assignedReferee: match.assignedReferee,
         teams: {
@@ -250,7 +291,12 @@ export const createMatch = mutation({
     matchId: v.string(),
     sport: v.string(),
     gameMode: v.optional(gameMode),
+    matchFormat: v.optional(matchFormat),
     category: v.optional(matchCategory),
+    teamLineup: v.optional(v.array(teamLineupRowInput)),
+    displayCode: v.optional(v.string()),
+    tournamentName: v.optional(v.string()),
+    assignedReferee: v.optional(v.string()),
     teams: v.object({
       home: teamInput,
       away: teamInput,
@@ -280,9 +326,29 @@ export const createMatch = mutation({
     const resolvedSport = resolveSportId(args.sport);
     const rules = getRulesForSport(resolvedSport);
     const initialState = rules.initMatch(args);
+    const normalizedDisplayCode = args.displayCode
+      ? normalizeDisplayCode(args.displayCode)
+      : '';
+
+    if (normalizedDisplayCode && normalizedDisplayCode.length !== 6) {
+      throw new ConvexError('Display code must be 6 characters');
+    }
+
+    const displayCode = normalizedDisplayCode || (await generateUniqueDisplayCode(ctx));
+
+    if (normalizedDisplayCode) {
+      const existingDisplayCode = await ctx.db
+        .query('matches')
+        .withIndex('by_displayCode', (q) =>
+          q.eq('displayCode', normalizedDisplayCode),
+        )
+        .unique();
+      if (existingDisplayCode) {
+        throw new ConvexError('Display code already exists');
+      }
+    }
 
     const now = Date.now();
-    const displayCode = await generateUniqueDisplayCode(ctx);
     const refereeToken = generateToken(8);
     const adminPinHash = await hashSecret(args.adminPin);
     const refereePinHash = await hashSecret(args.pin);
@@ -293,13 +359,17 @@ export const createMatch = mutation({
       displayCode,
       sport: resolvedSport,
       gameMode: args.gameMode,
+      matchFormat: args.matchFormat,
       category: args.category,
+      teamLineup: normalizeTeamLineup(args.teamLineup),
+      tournamentName: args.tournamentName?.trim() || undefined,
       status: 'ready_for_referee',
       createdBy: args.createdBy,
+      assignedReferee: args.assignedReferee?.trim() || undefined,
       teams: {
         home: {
           name: args.teams.home.name,
-          players: args.teams.home.players,
+          players: normalizePlayers(args.teams.home.players) || [],
           score: 0,
           setsWon: 0,
           challenges: 2,
@@ -309,7 +379,7 @@ export const createMatch = mutation({
         },
         away: {
           name: args.teams.away.name,
-          players: args.teams.away.players,
+          players: normalizePlayers(args.teams.away.players) || [],
           score: 0,
           setsWon: 0,
           challenges: 2,
@@ -478,6 +548,52 @@ export const joinAsReferee = mutation({
   },
 });
 
+export const issueRefereeAccessToken = mutation({
+  args: {
+    matchId: v.string(),
+    role: matchRole,
+    pin: v.optional(v.string()),
+    token: v.optional(v.string()),
+    refereeName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const match = await ensureMatch(ctx, args.matchId);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
+
+    if (match.status === 'finished') {
+      throw new ConvexError('Match already finished');
+    }
+
+    const now = Date.now();
+    const token = generateToken(12);
+    const tokenHash = await hashSecret(token);
+
+    await ctx.db.patch(match._id, {
+      refereeTokenHash: tokenHash,
+      assignedReferee: args.refereeName?.trim() || match.assignedReferee || undefined,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert('referee_tokens', {
+      matchId: args.matchId,
+      tokenHash,
+      expiresAt: now + 1000 * 60 * 60 * 12,
+      createdAt: now,
+    });
+
+    return {
+      matchId: match.matchId,
+      displayCode: match.displayCode,
+      token,
+    };
+  },
+});
+
 export const updateScore = mutation({
   args: {
     matchId: v.string(),
@@ -633,6 +749,9 @@ export const undo = mutation({
     );
 
     const history = Array.isArray(match.history) ? match.history : [];
+    if (match.status === 'finished') {
+      throw new ConvexError('Undo is not allowed after match is finished');
+    }
     if (history.length === 0) {
       throw new ConvexError('Nothing to undo');
     }
@@ -689,7 +808,12 @@ export const resetMatch = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const matchState = stripSystemFields(match) as MatchState;
     const rules = getRulesForSport(matchState.sport);
@@ -771,7 +895,12 @@ export const toggleSides = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const now = Date.now();
     const updated = {
@@ -809,7 +938,12 @@ export const changeServe = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const now = Date.now();
     const updated: Partial<MatchState> = {
@@ -846,7 +980,12 @@ export const useChallenge = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const team = match.teams[args.team as TeamSide];
     if (team.challenges <= 0) {
@@ -897,7 +1036,12 @@ export const updateDisplayConfig = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const current = match.displayConfig || { templateId: 'modern' };
     const updatedConfig = { ...current, ...args.config };
@@ -928,6 +1072,186 @@ export const updateDisplayConfig = mutation({
   },
 });
 
+export const updateMatchMetadata = mutation({
+  args: {
+    matchId: v.string(),
+    role: matchRole,
+    pin: v.optional(v.string()),
+    token: v.optional(v.string()),
+    tournamentName: v.optional(v.string()),
+    assignedReferee: v.optional(v.string()),
+    matchFormat: v.optional(matchFormat),
+    homeTeamName: v.optional(v.string()),
+    awayTeamName: v.optional(v.string()),
+    homeCountry: v.optional(v.string()),
+    awayCountry: v.optional(v.string()),
+    homeLogo: v.optional(v.string()),
+    awayLogo: v.optional(v.string()),
+    homePlayers: v.optional(v.array(playerInput)),
+    awayPlayers: v.optional(v.array(playerInput)),
+    teamLineup: v.optional(v.array(teamLineupRowInput)),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const match = await ensureMatch(ctx, args.matchId);
+      await assertRefereeOrAdminAccess(
+        match,
+        args.role as MatchRole,
+        args.pin,
+        args.token,
+      );
+
+      const nextHomePlayers =
+        normalizePlayers(args.homePlayers) ?? match.teams.home.players;
+      const nextAwayPlayers =
+        normalizePlayers(args.awayPlayers) ?? match.teams.away.players;
+
+      const requiredPlayers = match.gameMode === 'double' ? 2 : 1;
+      if (
+        nextHomePlayers.length < requiredPlayers ||
+        nextAwayPlayers.length < requiredPlayers
+      ) {
+        throw new ConvexError(
+          `Each side must have at least ${requiredPlayers} player(s) for this game mode.`,
+        );
+      }
+
+      const normalizePositions = (
+        current: number[] | undefined,
+        playerCount: number,
+        mode: 'single' | 'double' | undefined,
+      ) => {
+        if (mode === 'double') {
+          const base =
+            current && current.length >= 2 ? current.slice(0, 2) : [0, 1];
+          return base.map((idx, position) =>
+            idx >= 0 && idx < playerCount ? idx : position,
+          );
+        }
+        return [0];
+      };
+
+      const homeName = args.homeTeamName?.trim();
+      const awayName = args.awayTeamName?.trim();
+      const now = Date.now();
+      const nextTeamLineup = normalizeTeamLineup(args.teamLineup);
+
+      const nextState: MatchState = {
+        ...(stripSystemFields(match) as MatchState),
+        tournamentName:
+          args.tournamentName !== undefined
+            ? args.tournamentName.trim()
+            : match.tournamentName,
+        assignedReferee:
+          args.assignedReferee !== undefined
+            ? args.assignedReferee.trim()
+            : match.assignedReferee,
+        matchFormat:
+          args.matchFormat !== undefined ? args.matchFormat : match.matchFormat,
+        teamLineup:
+          args.teamLineup !== undefined ? nextTeamLineup || [] : match.teamLineup,
+        teams: {
+          home: {
+            ...match.teams.home,
+            name: homeName || match.teams.home.name,
+            country:
+              args.homeCountry !== undefined
+                ? args.homeCountry.trim() || undefined
+                : match.teams.home.country,
+            logo:
+              args.homeLogo !== undefined
+                ? args.homeLogo.trim() || undefined
+                : match.teams.home.logo,
+            players: nextHomePlayers,
+            playerPositions: normalizePositions(
+              match.teams.home.playerPositions,
+              nextHomePlayers.length,
+              match.gameMode,
+            ),
+          },
+          away: {
+            ...match.teams.away,
+            name: awayName || match.teams.away.name,
+            country:
+              args.awayCountry !== undefined
+                ? args.awayCountry.trim() || undefined
+                : match.teams.away.country,
+            logo:
+              args.awayLogo !== undefined
+                ? args.awayLogo.trim() || undefined
+                : match.teams.away.logo,
+            players: nextAwayPlayers,
+            playerPositions: normalizePositions(
+              match.teams.away.playerPositions,
+              nextAwayPlayers.length,
+              match.gameMode,
+            ),
+          },
+        },
+        updatedAt: now,
+      };
+
+      if (
+        args.teamLineup !== undefined &&
+        nextTeamLineup?.some(
+          (row) =>
+            isDoublesCategory(row.type) &&
+            (!row.homeSecond || !row.awaySecond),
+        )
+      ) {
+        throw new ConvexError(
+          'Doubles lineup rows must include second players for both sides.',
+        );
+      }
+
+      const patchPayload: Record<string, unknown> = {
+        teams: nextState.teams,
+        updatedAt: now,
+      };
+      if (args.tournamentName !== undefined) {
+        patchPayload.tournamentName = nextState.tournamentName;
+      }
+      if (args.assignedReferee !== undefined) {
+        patchPayload.assignedReferee = nextState.assignedReferee;
+      }
+      if (args.matchFormat !== undefined) {
+        patchPayload.matchFormat = nextState.matchFormat;
+      }
+      if (args.teamLineup !== undefined) {
+        patchPayload.teamLineup = nextState.teamLineup;
+      }
+
+      await ctx.db.patch(match._id, patchPayload);
+
+      await recordEvent(ctx, {
+        matchId: args.matchId,
+        action: 'match:metadata:update',
+        before: stripSystemFields(match) as MatchState,
+        after: nextState,
+        role: args.role as MatchRole,
+        token: args.token,
+      });
+
+      return sanitizeMatch({
+        ...match,
+        tournamentName: nextState.tournamentName,
+        assignedReferee: nextState.assignedReferee,
+        matchFormat: nextState.matchFormat,
+        teamLineup: nextState.teamLineup,
+        teams: nextState.teams,
+        updatedAt: now,
+      });
+    } catch (error) {
+      if (error instanceof ConvexError) throw error;
+      throw new ConvexError(
+        `Failed to update match metadata: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+    }
+  },
+});
+
 export const changeTemplate = mutation({
   args: {
     matchId: v.string(),
@@ -938,7 +1262,12 @@ export const changeTemplate = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const displayConfig = match.displayConfig || {
       templateId: args.templateId,
@@ -981,7 +1310,12 @@ export const timerStart = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const timer = match.timer || {
       mode: 'stopped' as const,
@@ -1032,7 +1366,12 @@ export const timerPause = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const timer = match.timer;
     if (!timer || !timer.startedAt) {
@@ -1079,7 +1418,12 @@ export const timerReset = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const updatedTimer = {
       mode: 'stopped' as const,
@@ -1123,7 +1467,12 @@ export const updateAds = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const ads = {
       active: args.active,
@@ -1162,7 +1511,12 @@ export const finishMatch = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     // Only allow if not already finished? Or just idempotent.
     // If we want to toggle, we'd need a different mutation or arg.
@@ -1211,7 +1565,12 @@ export const updateTimer = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAction(match, args.role as MatchRole, args.pin);
+    await assertRefereeOrAdminAccess(
+      match,
+      args.role as MatchRole,
+      args.pin,
+      args.token,
+    );
 
     const timer = match.timer || {
       mode: 'stopped',
@@ -1305,5 +1664,3 @@ export const verifyAdminPin = mutation({
     return args.pin === globalAdminPin;
   },
 });
-
-

@@ -1,21 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Sheet,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetFooter,
-  SheetClose,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import type { MatchFormat, TeamLineupRow } from '@/lib/match-types';
+
 export interface DisplaySettings {
   template:
     | 'modern'
@@ -59,6 +67,24 @@ export interface DisplaySettings {
   };
 }
 
+export interface MatchSettingsDraft {
+  tournamentName: string;
+  assignedReferee: string;
+  matchFormat: MatchFormat;
+  homeTeamName: string;
+  awayTeamName: string;
+  homePlayers: string[];
+  awayPlayers: string[];
+  teamLineup: TeamLineupRow[];
+  category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
+  gameMode?: 'single' | 'double';
+}
+
+export interface SettingsSavePayload {
+  displaySettings: DisplaySettings;
+  matchSettings: MatchSettingsDraft;
+}
+
 export const defaultSettings: DisplaySettings = {
   template: 'modern',
   fontSizes: {
@@ -90,17 +116,13 @@ export const defaultSettings: DisplaySettings = {
 
 interface SettingsPanelProps {
   settings: DisplaySettings;
-  onSettingsChange: (settings: DisplaySettings) => void;
-  homeTeamName: string;
-  awayTeamName: string;
+  matchSettings: MatchSettingsDraft;
+  onSave: (payload: SettingsSavePayload) => void;
   sportId?: string;
   trigger: React.ReactNode;
 }
 
-const TEMPLATE_OPTIONS: Record<
-  string,
-  { id: DisplaySettings['template']; label: string }[]
-> = {
+const TEMPLATE_OPTIONS: Record<string, { id: DisplaySettings['template']; label: string }[]> = {
   badminton: [
     { id: 'modern', label: 'Modern BWF' },
     { id: 'classic', label: 'Classic Strip' },
@@ -129,43 +151,169 @@ const TEMPLATE_OPTIONS: Record<
   ],
 };
 
+const DEFAULT_LINEUP: TeamLineupRow = {
+  home: '',
+  homeSecond: '',
+  away: '',
+  awaySecond: '',
+  type: 'MS',
+};
+
+const isDoublesCategory = (type: TeamLineupRow['type']) =>
+  type === 'MD' || type === 'WD' || type === 'XD';
+
+const dedupe = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+
+const sanitizeRoster = (values: string[]) =>
+  values.map((name) => name.trim()).filter(Boolean);
+
+const buildPlayerOptions = (
+  roster: string[],
+  currentValue: string,
+  excludedValue?: string,
+) => {
+  const withCurrent =
+    currentValue && !roster.includes(currentValue)
+      ? [currentValue, ...roster]
+      : roster;
+
+  if (!excludedValue) return dedupe(withCurrent);
+
+  return dedupe(
+    withCurrent.filter(
+      (name) => name !== excludedValue || name === currentValue,
+    ),
+  );
+};
+
 export function SettingsPanel({
   settings,
-  onSettingsChange,
-  homeTeamName,
-  awayTeamName,
+  matchSettings,
+  onSave,
   sportId,
   trigger,
 }: SettingsPanelProps) {
-  // Local draft state for editing
-  const [draft, setDraft] = useState<DisplaySettings>(settings);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<'data' | 'display'>('data');
+  const [displayDraft, setDisplayDraft] = useState<DisplaySettings>(settings);
+  const [matchDraft, setMatchDraft] = useState<MatchSettingsDraft>(matchSettings);
 
-  // Reset draft when opening
+  const templateOptions =
+    TEMPLATE_OPTIONS[sportId || 'badminton'] || TEMPLATE_OPTIONS.badminton;
+
   const handleOpenChange = (open: boolean) => {
     if (open) {
-      const options =
-        TEMPLATE_OPTIONS[sportId || 'badminton'] || TEMPLATE_OPTIONS.badminton;
-      const hasTemplate = options.some((tpl) => tpl.id === settings.template);
-      setDraft({
+      const hasTemplate = templateOptions.some(
+        (template) => template.id === settings.template,
+      );
+      setDisplayDraft({
         ...settings,
-        template: hasTemplate ? settings.template : options[0].id,
+        template: hasTemplate ? settings.template : templateOptions[0].id,
       });
+      setMatchDraft(matchSettings);
     }
     setIsOpen(open);
   };
 
-  const updateDraft = (partial: Partial<DisplaySettings>) => {
-    setDraft((prev) => ({ ...prev, ...partial }));
+  const homeRosterOptions = useMemo(
+    () => sanitizeRoster(matchDraft.homePlayers),
+    [matchDraft.homePlayers],
+  );
+  const awayRosterOptions = useMemo(
+    () => sanitizeRoster(matchDraft.awayPlayers),
+    [matchDraft.awayPlayers],
+  );
+
+  const updateDisplay = (partial: Partial<DisplaySettings>) => {
+    setDisplayDraft((prev) => ({ ...prev, ...partial }));
+  };
+
+  const updateMatch = (partial: Partial<MatchSettingsDraft>) => {
+    setMatchDraft((prev) => ({ ...prev, ...partial }));
+  };
+
+  const updatePlayer = (
+    side: 'homePlayers' | 'awayPlayers',
+    index: number,
+    value: string,
+  ) => {
+    setMatchDraft((prev) => {
+      const next = [...prev[side]];
+      next[index] = value;
+      return { ...prev, [side]: next };
+    });
+  };
+
+  const addPlayer = (side: 'homePlayers' | 'awayPlayers') => {
+    setMatchDraft((prev) => ({ ...prev, [side]: [...prev[side], ''] }));
+  };
+
+  const removePlayer = (side: 'homePlayers' | 'awayPlayers', index: number) => {
+    setMatchDraft((prev) => {
+      if (prev[side].length <= 1) return prev;
+      return { ...prev, [side]: prev[side].filter((_, i) => i !== index) };
+    });
+  };
+
+  const updateLineup = (
+    index: number,
+    key: keyof TeamLineupRow,
+    value: string,
+  ) => {
+    setMatchDraft((prev) => ({
+      ...prev,
+      teamLineup: prev.teamLineup.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [key]: value } : row,
+      ),
+    }));
+  };
+
+  const addLineupRow = () => {
+    setMatchDraft((prev) => ({
+      ...prev,
+      teamLineup: [...prev.teamLineup, { ...DEFAULT_LINEUP }],
+    }));
+  };
+
+  const removeLineupRow = (index: number) => {
+    setMatchDraft((prev) => ({
+      ...prev,
+      teamLineup:
+        prev.teamLineup.length <= 1
+          ? prev.teamLineup
+          : prev.teamLineup.filter((_, rowIndex) => rowIndex !== index),
+    }));
   };
 
   const handleSave = () => {
-    onSettingsChange(draft);
+    onSave({
+      displaySettings: displayDraft,
+      matchSettings: {
+        ...matchDraft,
+        tournamentName: matchDraft.tournamentName.trim(),
+        assignedReferee: matchDraft.assignedReferee.trim(),
+        homeTeamName: matchDraft.homeTeamName.trim(),
+        awayTeamName: matchDraft.awayTeamName.trim(),
+        homePlayers: sanitizeRoster(matchDraft.homePlayers),
+        awayPlayers: sanitizeRoster(matchDraft.awayPlayers),
+        teamLineup: matchDraft.teamLineup.map((row) => ({
+          ...row,
+          home: row.home.trim(),
+          homeSecond: row.homeSecond?.trim() || undefined,
+          away: row.away.trim(),
+          awaySecond: row.awaySecond?.trim() || undefined,
+        })),
+      },
+    });
     setIsOpen(false);
   };
 
-  const handleReset = () => {
-    setDraft(defaultSettings);
+  const handleResetDisplay = () => {
+    setDisplayDraft(defaultSettings);
+  };
+
+  const handleReloadMatchData = () => {
+    setMatchDraft(matchSettings);
   };
 
   return (
@@ -173,489 +321,532 @@ export function SettingsPanel({
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="right"
-        className="w-[340px] sm:w-[420px] flex flex-col overflow-hidden overscroll-contain"
+        className="w-[390px] sm:w-[560px] p-0 flex flex-col overflow-hidden"
       >
-        <SheetHeader className="pb-4 border-b border-slate-200 dark:border-slate-700">
-          <SheetTitle className="flex items-center gap-2">
-            <svg
-              className="w-5 h-5 text-blue-500"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.08-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-            </svg>
-            Display Settings
+        <SheetHeader className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+          <SheetTitle className="text-lg font-black tracking-tight">
+            Pengaturan Match
           </SheetTitle>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveSection('data')}
+              className={cn(
+                'h-9 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors',
+                activeSection === 'data'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+              )}
+            >
+              Data Match
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSection('display')}
+              className={cn(
+                'h-9 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors',
+                activeSection === 'display'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+              )}
+            >
+              Display
+            </button>
+          </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto py-4 space-y-5">
-          {/* Template Selection */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-4 border border-slate-100 dark:border-white/5">
-            <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-              Display Template
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {(TEMPLATE_OPTIONS[sportId || 'badminton'] ||
-                TEMPLATE_OPTIONS.badminton
-              ).map((tpl) => (
-                <button
-                  key={tpl.id}
-                  onClick={() => updateDraft({ template: tpl.id as any })}
-                  className={cn(
-                    'px-3 py-2 rounded-md text-xs font-bold uppercase transition-[background-color,border-color,color,box-shadow] border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
-                    draft.template === tpl.id
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400',
-                  )}
-                >
-                  {tpl.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Font Sizes Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-4 border border-slate-100 dark:border-white/5">
-            <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-              Font Sizes
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <Label className="text-sm font-medium">Team Name</Label>
-                  <span className="text-xs font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">
-                    {draft.fontSizes.teamName}px
-                  </span>
-                </div>
-                <Slider
-                  value={[draft.fontSizes.teamName]}
-                  onValueChange={([v]) =>
-                    updateDraft({
-                      fontSizes: { ...draft.fontSizes, teamName: v },
-                    })
-                  }
-                  min={14}
-                  max={48}
-                  step={2}
-                />
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <Label className="text-sm font-medium">Score</Label>
-                  <span className="text-xs font-mono bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded">
-                    {draft.fontSizes.score}px
-                  </span>
-                </div>
-                <Slider
-                  value={[draft.fontSizes.score]}
-                  onValueChange={([v]) =>
-                    updateDraft({ fontSizes: { ...draft.fontSizes, score: v } })
-                  }
-                  min={48}
-                  max={120}
-                  step={4}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Team Codes Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-4 border border-slate-100 dark:border-white/5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                Team Codes
-              </h3>
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-slate-500" htmlFor="team-codes-show">
-                  Show
-                </Label>
-                <Switch
-                  id="team-codes-show"
-                  checked={draft.teamCodes.show}
-                  onCheckedChange={(show) =>
-                    updateDraft({ teamCodes: { ...draft.teamCodes, show } })
-                  }
-                />
-              </div>
-            </div>
-            {draft.teamCodes.show && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label
-                    className="text-xs font-medium flex items-center gap-1.5 mb-1"
-                    htmlFor="team-code-home"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-sm"
-                      style={{ backgroundColor: draft.teamColors.home }}
-                    ></span>
-                    {homeTeamName}
-                  </Label>
-                  <Input
-                    id="team-code-home"
-                    name="teamCodeHome"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={draft.teamCodes.home}
-                    onChange={(e) =>
-                      updateDraft({
-                        teamCodes: {
-                          ...draft.teamCodes,
-                          home: e.target.value.toUpperCase(),
-                        },
-                      })
-                    }
-                    placeholder="PAB…"
-                    className="uppercase font-bold text-center"
-                    maxLength={5}
-                  />
-                </div>
-                <div>
-                  <Label
-                    className="text-xs font-medium flex items-center gap-1.5 mb-1"
-                    htmlFor="team-code-away"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-sm"
-                      style={{ backgroundColor: draft.teamColors.away }}
-                    ></span>
-                    {awayTeamName}
-                  </Label>
-                  <Input
-                    id="team-code-away"
-                    name="teamCodeAway"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={draft.teamCodes.away}
-                    onChange={(e) =>
-                      updateDraft({
-                        teamCodes: {
-                          ...draft.teamCodes,
-                          away: e.target.value.toUpperCase(),
-                        },
-                      })
-                    }
-                    placeholder="KUR…"
-                    className="uppercase font-bold text-center"
-                    maxLength={5}
-                  />
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Team Labels Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-4 border border-slate-100 dark:border-white/5">
-            <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
-              Display Labels
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label
-                  className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block"
-                  htmlFor="team-label-home"
-                >
-                  Home Side
-                </Label>
-                <Input
-                  id="team-label-home"
-                  name="teamLabelHome"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={draft.teamLabels?.home || 'HOST'}
-                  onChange={(e) =>
-                    updateDraft({
-                      teamLabels: {
-                        ...(draft.teamLabels || {
-                          home: 'HOST',
-                          away: 'GUEST',
-                        }),
-                        home: e.target.value.toUpperCase(),
-                      },
-                    })
-                  }
-                  placeholder="HOST…"
-                  className="uppercase font-mono text-xs font-black tracking-widest text-center h-9 border-2"
-                />
-              </div>
-              <div>
-                <Label
-                  className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block"
-                  htmlFor="team-label-away"
-                >
-                  Guest Side
-                </Label>
-                <Input
-                  id="team-label-away"
-                  name="teamLabelAway"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={draft.teamLabels?.away || 'GUEST'}
-                  onChange={(e) =>
-                    updateDraft({
-                      teamLabels: {
-                        ...(draft.teamLabels || {
-                          home: 'HOST',
-                          away: 'GUEST',
-                        }),
-                        away: e.target.value.toUpperCase(),
-                      },
-                    })
-                  }
-                  placeholder="GUEST…"
-                  className="uppercase font-mono text-xs font-black tracking-widest text-center h-9 border-2"
-                />
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-500 italic mt-1 px-1">
-              * Used as sub-headers in some display templates (e.g. Neon)
-            </p>
-          </section>
-
-          {/* Team Colors Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-4 border border-slate-100 dark:border-white/5">
-            <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-              Team Colors
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium" htmlFor="team-color-home">
-                  {homeTeamName}
-                </Label>
-                <div className="flex items-center gap-2 bg-white dark:bg-card border-slate-200 dark:border-white/5">
-                  <input
-                    type="color"
-                    name="teamColorHomePicker"
-                    aria-label={`${homeTeamName} color`}
-                    value={draft.teamColors.home}
-                    onChange={(e) =>
-                      updateDraft({
-                        teamColors: {
-                          ...draft.teamColors,
-                          home: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                  <Input
-                    id="team-color-home"
-                    name="teamColorHome"
-                    autoComplete="off"
-                    value={draft.teamColors.home}
-                    onChange={(e) =>
-                      updateDraft({
-                        teamColors: {
-                          ...draft.teamColors,
-                          home: e.target.value,
-                        },
-                      })
-                    }
-                    className="flex-1 font-mono text-xs border-0 bg-transparent p-0 h-auto"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium" htmlFor="team-color-away">
-                  {awayTeamName}
-                </Label>
-                <div className="flex items-center gap-2 bg-white dark:bg-card border-slate-200 dark:border-white/5">
-                  <input
-                    type="color"
-                    name="teamColorAwayPicker"
-                    aria-label={`${awayTeamName} color`}
-                    value={draft.teamColors.away}
-                    onChange={(e) =>
-                      updateDraft({
-                        teamColors: {
-                          ...draft.teamColors,
-                          away: e.target.value,
-                        },
-                      })
-                    }
-                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                  <Input
-                    id="team-color-away"
-                    name="teamColorAway"
-                    autoComplete="off"
-                    value={draft.teamColors.away}
-                    onChange={(e) =>
-                      updateDraft({
-                        teamColors: {
-                          ...draft.teamColors,
-                          away: e.target.value,
-                        },
-                      })
-                    }
-                    className="flex-1 font-mono text-xs border-0 bg-transparent p-0 h-auto"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Court Name Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-3 border border-slate-100 dark:border-white/5">
-            <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
-              Court
-            </h3>
-            <div>
-              <Label className="text-xs font-medium mb-1.5 block" htmlFor="court-name">
-                Court Name
-              </Label>
-              <Input
-                id="court-name"
-                name="courtName"
-                autoComplete="off"
-                spellCheck={false}
-                value={draft.courtName}
-                onChange={(e) => updateDraft({ courtName: e.target.value })}
-                placeholder="COURT 1…"
-                className="font-bold"
-              />
-            </div>
-          </section>
-
-          {/* Server Icon Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 border border-slate-100 dark:border-white/5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                  Server Indicator
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {activeSection === 'data' ? (
+            <>
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Informasi Inti
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Show shuttlecock icon for serving player
-                </p>
-              </div>
-              <Switch
-                checked={draft.showServerIcon}
-                onCheckedChange={(showServerIcon) =>
-                  updateDraft({ showServerIcon })
-                }
-              />
-            </div>
-          </section>
-          {/* OBS Overlay Section */}
-          <section className="bg-slate-50 dark:bg-card/50 rounded-lg p-4 space-y-4 border border-slate-100 dark:border-white/5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z" />
-                </svg>
-                OBS Overlay Mode
-              </h3>
-              <Switch
-                checked={draft.overlay?.enabled}
-                onCheckedChange={(enabled) =>
-                  updateDraft({
-                    overlay: {
-                      ...(draft.overlay || defaultSettings.overlay),
-                      enabled,
-                    },
-                  })
-                }
-              />
-            </div>
-
-            {draft.overlay?.enabled && (
-              <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-white/5">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-slate-500">
-                    Background Type
-                  </Label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[
-                      { id: 'transparent', label: 'Alpha' },
-                      { id: 'chroma-green', label: 'Green' },
-                      { id: 'chroma-blue', label: 'Blue' },
-                    ].map((bg) => (
+                  <Label htmlFor="settings-tournament">Nama Turnamen</Label>
+                  <Input
+                    id="settings-tournament"
+                    value={matchDraft.tournamentName}
+                    onChange={(event) =>
+                      updateMatch({ tournamentName: event.target.value })
+                    }
+                    placeholder="Nama turnamen"
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="settings-referee">Nama Umpire / Referee</Label>
+                  <Input
+                    id="settings-referee"
+                    value={matchDraft.assignedReferee}
+                    onChange={(event) =>
+                      updateMatch({ assignedReferee: event.target.value })
+                    }
+                    placeholder="Nama umpire"
+                    className="h-10"
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Nama Tim
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="settings-home-team">Tim Home</Label>
+                    <Input
+                      id="settings-home-team"
+                      value={matchDraft.homeTeamName}
+                      onChange={(event) =>
+                        updateMatch({ homeTeamName: event.target.value })
+                      }
+                      placeholder="Nama tim home"
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="settings-away-team">Tim Away</Label>
+                    <Input
+                      id="settings-away-team"
+                      value={matchDraft.awayTeamName}
+                      onChange={(event) =>
+                        updateMatch({ awayTeamName: event.target.value })
+                      }
+                      placeholder="Nama tim away"
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Format Match
+                  </h3>
+                  <div className="inline-flex rounded-full bg-slate-200 dark:bg-slate-800 p-1">
+                    {(['perorangan', 'beregu'] as MatchFormat[]).map((format) => (
                       <button
-                        key={bg.id}
-                        onClick={() =>
-                          updateDraft({
-                            overlay: {
-                              ...draft.overlay,
-                              background: bg.id as any,
-                            },
-                          })
-                        }
+                        key={format}
+                        type="button"
+                        onClick={() => updateMatch({ matchFormat: format })}
                         className={cn(
-                          'py-1.5 rounded text-[10px] font-bold uppercase transition-all border',
-                          draft.overlay.background === bg.id
-                            ? 'bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100 text-white dark:text-slate-900'
-                            : 'bg-white dark:bg-card border-slate-200 dark:border-white/5 text-slate-500 hover:border-slate-300',
+                          'h-7 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors',
+                          matchDraft.matchFormat === format
+                            ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm'
+                            : 'text-slate-500 dark:text-slate-300',
                         )}
                       >
-                        {bg.label}
+                        {format}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                    Hide Header
-                  </Label>
-                  <Switch
-                    className="scale-75"
-                    checked={draft.overlay.hideHeader}
-                    onCheckedChange={(hideHeader) =>
-                      updateDraft({ overlay: { ...draft.overlay, hideHeader } })
-                    }
-                  />
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                        Roster Home
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => addPlayer('homePlayers')}
+                        className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700"
+                      >
+                        + tambah
+                      </button>
+                    </div>
+                    {matchDraft.homePlayers.map((name, index) => (
+                      <div key={`settings-home-player-${index}`} className="flex items-center gap-2">
+                        <Input
+                          value={name}
+                          onChange={(event) =>
+                            updatePlayer('homePlayers', index, event.target.value)
+                          }
+                          placeholder={`Pemain home ${index + 1}`}
+                          className="h-9"
+                        />
+                        {matchDraft.homePlayers.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removePlayer('homePlayers', index)}
+                            className="h-9 w-9 rounded-lg text-black/40 hover:text-red-600"
+                            title="Hapus pemain"
+                          >
+                            x
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
 
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                        Roster Away
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => addPlayer('awayPlayers')}
+                        className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700"
+                      >
+                        + tambah
+                      </button>
+                    </div>
+                    {matchDraft.awayPlayers.map((name, index) => (
+                      <div key={`settings-away-player-${index}`} className="flex items-center gap-2">
+                        <Input
+                          value={name}
+                          onChange={(event) =>
+                            updatePlayer('awayPlayers', index, event.target.value)
+                          }
+                          placeholder={`Pemain away ${index + 1}`}
+                          className="h-9"
+                        />
+                        {matchDraft.awayPlayers.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removePlayer('awayPlayers', index)}
+                            className="h-9 w-9 rounded-lg text-black/40 hover:text-red-600"
+                            title="Hapus pemain"
+                          >
+                            x
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {matchDraft.matchFormat === 'beregu' ? (
+                <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                      Susunan Partai
+                    </h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-8 px-3 text-[11px] font-bold uppercase tracking-wider"
+                      onClick={addLineupRow}
+                    >
+                      Tambah Partai
+                    </Button>
+                  </div>
+
+                  {matchDraft.teamLineup.map((row, rowIndex) => (
+                    <div
+                      key={`settings-lineup-${rowIndex}`}
+                      className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 p-3 space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          Partai {rowIndex + 1}
+                        </span>
+                        {matchDraft.teamLineup.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removeLineupRow(rowIndex)}
+                            className="text-[11px] font-bold uppercase tracking-wider text-red-600 hover:text-red-700"
+                          >
+                            Hapus
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-start">
+                        <div className="space-y-2">
+                          <Select
+                            value={row.home || undefined}
+                            onValueChange={(value) =>
+                              updateLineup(rowIndex, 'home', value)
+                            }
+                          >
+                            <SelectTrigger className="h-9 w-full">
+                              <SelectValue placeholder="Pilih pemain home 1" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {buildPlayerOptions(
+                                homeRosterOptions,
+                                row.home,
+                              ).map((player) => (
+                                <SelectItem
+                                  key={`lineup-home-${rowIndex}-${player}`}
+                                  value={player}
+                                >
+                                  {player}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {isDoublesCategory(row.type) ? (
+                            <Select
+                              value={row.homeSecond || undefined}
+                              onValueChange={(value) =>
+                                updateLineup(rowIndex, 'homeSecond', value)
+                              }
+                            >
+                              <SelectTrigger className="h-9 w-full">
+                                <SelectValue placeholder="Pilih pemain home 2" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {buildPlayerOptions(
+                                  homeRosterOptions,
+                                  row.homeSecond || '',
+                                  row.home,
+                                ).map((player) => (
+                                  <SelectItem
+                                    key={`lineup-home-2-${rowIndex}-${player}`}
+                                    value={player}
+                                  >
+                                    {player}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Select
+                            value={row.away || undefined}
+                            onValueChange={(value) =>
+                              updateLineup(rowIndex, 'away', value)
+                            }
+                          >
+                            <SelectTrigger className="h-9 w-full">
+                              <SelectValue placeholder="Pilih pemain away 1" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {buildPlayerOptions(
+                                awayRosterOptions,
+                                row.away,
+                              ).map((player) => (
+                                <SelectItem
+                                  key={`lineup-away-${rowIndex}-${player}`}
+                                  value={player}
+                                >
+                                  {player}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {isDoublesCategory(row.type) ? (
+                            <Select
+                              value={row.awaySecond || undefined}
+                              onValueChange={(value) =>
+                                updateLineup(rowIndex, 'awaySecond', value)
+                              }
+                            >
+                              <SelectTrigger className="h-9 w-full">
+                                <SelectValue placeholder="Pilih pemain away 2" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {buildPlayerOptions(
+                                  awayRosterOptions,
+                                  row.awaySecond || '',
+                                  row.away,
+                                ).map((player) => (
+                                  <SelectItem
+                                    key={`lineup-away-2-${rowIndex}-${player}`}
+                                    value={player}
+                                  >
+                                    {player}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : null}
+                        </div>
+
+                        <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex gap-1 flex-wrap h-fit">
+                          {(['MS', 'WS', 'MD', 'WD', 'XD'] as TeamLineupRow['type'][]).map(
+                            (type) => (
+                              <button
+                                key={`lineup-${rowIndex}-${type}`}
+                                type="button"
+                                onClick={() => updateLineup(rowIndex, 'type', type)}
+                                className={cn(
+                                  'h-7 px-2 rounded-md text-[11px] font-bold uppercase tracking-wider transition-colors',
+                                  row.type === type
+                                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                                    : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700',
+                                )}
+                              >
+                                {type}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Template Display
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {templateOptions.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => updateDisplay({ template: template.id as any })}
+                      className={cn(
+                        'h-9 rounded-lg text-xs font-bold uppercase tracking-wider border transition-colors',
+                        displayDraft.template === template.id
+                          ? 'bg-blue-600 border-blue-600 text-white'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300',
+                      )}
+                    >
+                      {template.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Ukuran Font
+                </h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Nama Tim</Label>
+                      <span className="text-xs font-mono text-slate-500">
+                        {displayDraft.fontSizes.teamName}px
+                      </span>
+                    </div>
+                    <Slider
+                      value={[displayDraft.fontSizes.teamName]}
+                      onValueChange={([value]) =>
+                        updateDisplay({
+                          fontSizes: { ...displayDraft.fontSizes, teamName: value },
+                        })
+                      }
+                      min={14}
+                      max={48}
+                      step={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Skor</Label>
+                      <span className="text-xs font-mono text-slate-500">
+                        {displayDraft.fontSizes.score}px
+                      </span>
+                    </div>
+                    <Slider
+                      value={[displayDraft.fontSizes.score]}
+                      onValueChange={([value]) =>
+                        updateDisplay({
+                          fontSizes: { ...displayDraft.fontSizes, score: value },
+                        })
+                      }
+                      min={48}
+                      max={120}
+                      step={4}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                    Hide Footer
-                  </Label>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Kode Tim
+                  </h3>
                   <Switch
-                    className="scale-75"
-                    checked={draft.overlay.hideFooter}
-                    onCheckedChange={(hideFooter) =>
-                      updateDraft({ overlay: { ...draft.overlay, hideFooter } })
+                    checked={displayDraft.teamCodes.show}
+                    onCheckedChange={(show) =>
+                      updateDisplay({
+                        teamCodes: { ...displayDraft.teamCodes, show },
+                      })
                     }
                   />
                 </div>
-              </div>
-            )}
-          </section>
+                {displayDraft.teamCodes.show ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      value={displayDraft.teamCodes.home}
+                      onChange={(event) =>
+                        updateDisplay({
+                          teamCodes: {
+                            ...displayDraft.teamCodes,
+                            home: event.target.value.toUpperCase(),
+                          },
+                        })
+                      }
+                      placeholder="Kode home"
+                    />
+                    <Input
+                      value={displayDraft.teamCodes.away}
+                      onChange={(event) =>
+                        updateDisplay({
+                          teamCodes: {
+                            ...displayDraft.teamCodes,
+                            away: event.target.value.toUpperCase(),
+                          },
+                        })
+                      }
+                      placeholder="Kode away"
+                    />
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Label Display
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    value={displayDraft.teamLabels.home}
+                    onChange={(event) =>
+                      updateDisplay({
+                        teamLabels: {
+                          ...displayDraft.teamLabels,
+                          home: event.target.value.toUpperCase(),
+                        },
+                      })
+                    }
+                    placeholder="HOST"
+                  />
+                  <Input
+                    value={displayDraft.teamLabels.away}
+                    onChange={(event) =>
+                      updateDisplay({
+                        teamLabels: {
+                          ...displayDraft.teamLabels,
+                          away: event.target.value.toUpperCase(),
+                        },
+                      })
+                    }
+                    placeholder="GUEST"
+                  />
+                </div>
+              </section>
+            </>
+          )}
         </div>
 
-        {/* Footer with Save/Reset buttons */}
-        <SheetFooter className="pt-4 border-t border-slate-200 dark:border-slate-700 gap-2">
-          <Button variant="outline" onClick={handleReset} className="flex-1">
-            Reset
+        <SheetFooter className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <Button variant="outline" onClick={handleReloadMatchData}>
+            Muat Ulang Data
           </Button>
-          <SheetClose asChild>
-            <Button
-              onClick={handleSave}
-              className="flex-1 bg-blue-600 hover:bg-blue-500"
-            >
-              <svg
-                className="w-4 h-4 mr-1.5"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
-              </svg>
-              Save Changes
-            </Button>
-          </SheetClose>
+          <Button variant="outline" onClick={handleResetDisplay}>
+            Reset Display
+          </Button>
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500">
+            Simpan
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

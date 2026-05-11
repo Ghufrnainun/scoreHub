@@ -1,67 +1,70 @@
-'use client';
-
-import { useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from 'convex/react';
+import { redirect } from 'next/navigation';
+import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@/convex/_generated/api';
+
+const client = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 const normalizeCode = (value: string) =>
   value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 
-export default function DisplayByCodePage() {
-  const params = useParams();
-  const router = useRouter();
-  const code = normalizeCode(params.code as string);
+type Props = {
+  params: Promise<{ code: string }>;
+};
 
-  const matchRef = useQuery(
-    api.matches.getByDisplayCode,
-    code ? { displayCode: code } : 'skip',
+function DisplayCodeMessage({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <main
+      id="main-content"
+      className="min-h-screen bg-black text-white flex items-center justify-center"
+    >
+      <div className="text-center space-y-3">
+        <p className="text-sm uppercase tracking-widest text-white/60">
+          {title}
+        </p>
+        <p className="text-xs text-white/40">{description}</p>
+        <Link
+          href="/"
+          className="text-xs font-bold uppercase tracking-widest text-[#fbbf24]"
+        >
+          Kembali ke Beranda
+        </Link>
+      </div>
+    </main>
   );
+}
 
-  useEffect(() => {
-    if (matchRef?.matchId) {
-      router.replace(`/match/${matchRef.matchId}/display`);
-    }
-  }, [matchRef?.matchId, router]);
+export default async function DisplayByCodePage({ params }: Props) {
+  const { code: rawCode } = await params;
+  const code = normalizeCode(rawCode || '');
 
   if (code.length !== 6) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <p className="text-sm uppercase tracking-widest text-white/60">Invalid Display Code</p>
-          <Link href="/" className="text-xs font-bold uppercase tracking-widest text-[#fbbf24]">
-            Back Home
-          </Link>
-        </div>
-      </div>
+      <DisplayCodeMessage
+        title="Kode Tampilan Tidak Valid"
+        description="Kode harus 6 karakter (A-Z, 0-9)."
+      />
     );
   }
 
-  if (matchRef === undefined) {
+  const matchRef = await client.query(api.matches.getByDisplayCode, {
+    displayCode: code,
+  });
+
+  if (!matchRef?.matchId) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-sm font-mono text-white/60">Resolving display code...</div>
-      </div>
+      <DisplayCodeMessage
+        title="Kode Tampilan Tidak Ditemukan"
+        description="Periksa kembali kode dari admin, lalu coba lagi."
+      />
     );
   }
 
-  if (!matchRef) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <p className="text-sm uppercase tracking-widest text-white/60">Display code not found</p>
-          <Link href="/" className="text-xs font-bold uppercase tracking-widest text-[#fbbf24]">
-            Back Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center">
-      <div className="text-sm font-mono text-white/60">Opening display...</div>
-    </div>
-  );
+  redirect(`/match/${matchRef.matchId}/display`);
 }

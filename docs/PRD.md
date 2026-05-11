@@ -1,8 +1,8 @@
-﻿# Product Requirements Document (PRD)
+# Product Requirements Document (PRD)
 
-**Status:** Implementation-aligned spec (updated **February 12, 2026**)
+**Status:** Implementation-aligned spec (updated **May 7, 2026**)
 
-## Sistem Scoreboard Real-time Berbasis Web (Badminton First)
+## Sistem Scoreboard Real-time Berbasis Web (Badminton Only)
 
 ---
 
@@ -20,9 +20,9 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ## 2. Tujuan Produk
 
-- Menyediakan sistem input skor yang dapat diakses dari HP, laptop, atau tablet
-- Menampilkan scoreboard real-time di layar lapangan melalui browser
-- Memberikan fleksibilitas konfigurasi tampilan (ukuran, layout, warna)
+- Menyediakan sistem input skor badminton yang dapat diakses dari HP, laptop, atau tablet
+- Menampilkan scoreboard badminton real-time di layar lapangan melalui browser
+- Memberikan fleksibilitas konfigurasi tampilan badminton (ukuran, layout, warna)
 - Stabil digunakan di event offline (LAN / WiFi lokal)
 
 ---
@@ -43,29 +43,39 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ## 4. Scope Produk (Target Sistem)
 
-### 4.1 In Scope (V1 - Target)
+### 4.1 In Scope (V1 - Implemented & Active)
 
-- Multi-sport: **Badminton, Basket, Voli, Tenis, Futsal, Sepakbola**
-- Web controller (input skor) untuk tiap sport
+- Badminton-only scoreboard
+- Web controller (input skor) untuk pertandingan badminton
 - Web display (scoreboard fullscreen) di `/match/[id]/display`
 - Real-time update (tanpa refresh)
 - **Multi-match / multi-court** (lebih dari 1 match aktif)
-- Template per olahraga (2-3 template default / sport)
+- Template badminton (modern/classic/minimal/neon)
 - Undo multi-step (disimpan history hingga 50 state)
 - Referee link per match (token) tanpa login untuk wasit
 - Audit log level poin (tiap aksi tercatat)
 
-### 4.2 Out of Scope (Belum Diimplementasikan)
+### 4.2 Planned (Belum Diimplementasikan)
 
-- Template lintas-olahraga (global template library)
+- Interval timer 11 poin & break antar set
+- Best of 5 (opsional format match badminton)
+- Manual end set / manual edit skor via UI dedicated
+- Realtime moderation dashboard (review audit log langsung)
+- Confirmation/lock action di UI wasit (modal/long-press)
+- Animasi visual feedback wasit (highlight/score tick)
+- Doubles rotation / receiver logic lengkap
+- Change ends (badminton)
+- Halaman viewer `match_events` (filter by matchId, actor, timestamp)
+- Production deployment hardening (env/deploy key/preview branch)
+
+### 4.3 Out of Scope
+
 - Hardware scoreboard fisik
 - Integrasi broadcast TV / overlay streaming
 - Statistik lanjutan (shot, foul detail)
 - Multi venue dan cloud sync
-- Interval timer 11 poin & break antar set
-- Best of 5
-- Manual end set / manual edit skor via UI
-- Realtime moderation dashboard (review audit log langsung)
+- Mobile native app (Android/iOS)
+- Inisiatif multi-sport (sport registry, cross-sport templates, global template library)
 
 ---
 
@@ -87,45 +97,44 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ---
 
-## 6. Fitur Utama (Core Features - Multi Sport)
+## 6. Fitur Utama (Core Features - Badminton)
 
-### 6.1 Match Setup
+### 6.1 Match Setup (Implemented)
 
 - Buat match baru via landing page (auto-generate matchId)
-- Pilih sport (badminton/basket/voli/tenis/futsal/sepakbola)
-- Pilih template **per olahraga**
-- Kategori sesuai sport (contoh: badminton MS/WS/MD/WD/XD)
+- Pilih mode badminton (single/double) dan kategori (MS/WS/MD/WD/XD)
+- Pilih template badminton
 - Set nama tim dan pemain (home/away)
 - Admin akses via **PIN global**
 - Generate **referee link** per match (token unik)
 
-### 6.2 Score Control (Rally-based)
+### 6.2 Score Control (Implemented)
 
 - Input berbasis rally: **Point Home** / **Point Away**
 - Undo **multi-step** (tiap klik undo mundur 1 state)
 - Support dua tim (Home vs Away)
-- `score:update` tersedia via mutation `matches.updateScore` untuk koreksi skor, belum ada UI dedicated
+- `score:update` tersedia via mutation `matches.updateScore` untuk koreksi skor (belum ada UI dedicated)
 
-### 6.3 Serve Logic (Badminton)
+### 6.3 Serve Logic (Partially Implemented)
 
 - Server ditentukan otomatis: pemenang rally menjadi server
 - Service court ditentukan dari **paritas skor server** (genap=right, ganjil=left)
 - Indicator servis di display
 - **Doubles rotation / receiver logic belum dimodelkan**
 
-### 6.4 Set & Match Management
+### 6.4 Set & Match Management (Implemented)
 
 - Auto end set ketika skor memenuhi rule (21, win by 2, cap 30)
-- Auto end match saat team menang 2 set
+- Auto end match saat team menang 2 set (best of 3)
 - Tidak ada manual end set / manual override via UI
 - History disimpan persistent di Convex (maks 50 state) untuk undo
 
-### 6.5 Timer
+### 6.5 Timer (Implemented)
 
 - Timer mutation tersedia (`matches.timerStart`, `matches.timerPause`, `matches.timerReset`)
-- UI kontrol timer di control page sudah memakai state timer Convex (sinkron lintas device)
+- UI kontrol timer di control page memakai state timer Convex (sinkron lintas device)
 
-### 6.6 Real-time Sync
+### 6.6 Real-time Sync (Implemented)
 
 - Update skor < 1 detik
 - Sinkron ke semua display aktif
@@ -134,11 +143,11 @@ Sistem ini dirancang berbasis **web** agar tidak bergantung pada jenis device te
 
 ## 7. Konfigurasi Tampilan (Display Config)
 
-Konfigurasi tampilan disimpan di `displayConfig`; parameter yang paling aktif dipakai saat ini adalah `templateId` untuk pemilihan layout display.
+Konfigurasi tampilan disimpan di `displayConfig`; parameter utama saat ini adalah `templateId` untuk pemilihan layout display badminton.
 
-### 7.1 Template Scoreboard (V1)
+### 7.1 Template Scoreboard Badminton (Implemented)
 
-- Badminton (BWF style) melalui template id `modern`
+- Template id: `modern`, `classic`, `minimal`, `neon`
 
 Template menentukan:
 
@@ -146,12 +155,12 @@ Template menentukan:
 - Posisi skor dan nama tim
 - Skala default elemen
 
-### 7.2 Customisasi Template (Status Saat Ini)
+### 7.2 Customisasi Template (Implemented)
 
-- `displayConfig` saat ini menyimpan `templateId` (dan opsional `primaryColor`)
-- Pemilihan template pada pembuatan match (`/create`) sudah terhubung ke mutation `matches.createMatch`
-- UI template selector di `/admin/templates` sudah terhubung ke mutation `matches.changeTemplate` (by `matchId`)
-- Display sudah merender beberapa template (badminton: modern/classic/minimal/neon; sport lain: template khusus per sport)
+- `displayConfig` menyimpan `templateId` (dan opsional `primaryColor`)
+- Pemilihan template pada pembuatan match (`/create`) terhubung ke mutation `matches.createMatch`
+- UI template selector di `/admin/templates` terhubung ke mutation `matches.changeTemplate` (by `matchId`)
+- Display merender template badminton sesuai `templateId`
 
 ---
 
@@ -214,7 +223,7 @@ Bagian ini mendefinisikan **cara wasit berinteraksi dengan sistem** saat pertand
 - UI tahan salah pencet (undo & confirm)
 - Akses via **referee link** (token) tanpa login
 
-### 11.2 Model Input Wasit (Core Concept)
+### 11.2 Model Input Wasit (Implemented)
 
 Wasit **TIDAK** menekan tombol `+1`.
 
@@ -235,7 +244,7 @@ Sistem yang bertanggung jawab:
 - Mengubah service court
 - Update serve indicator
 
-### 11.3 Primary Actions (Wasit)
+### 11.3 Primary Actions (Implemented)
 
 | Aksi                | Deskripsi                 |
 | ------------------- | ------------------------- |
@@ -244,32 +253,26 @@ Sistem yang bertanggung jawab:
 | Timer Start / Pause | Kontrol waktu             |
 | Undo Last Rally     | Batalkan 1 rally terakhir |
 
-### 11.4 Undo / Correction Rule
-
-Karena kesalahan input **pasti terjadi di lapangan**, sistem menyediakan undo.
-
-Aturan:
+### 11.4 Undo / Correction Rule (Implemented)
 
 - Undo **multi-step** (tiap klik mundur 1 state, max 50 state tersimpan)
 - Undo mengembalikan skor + server + service court + set state
 - Undo **disabled** saat match selesai (status finished)
+- Undo tersedia untuk role **Wasit & Admin**
 
-Undo hanya tersedia untuk role **Wasit & Admin**.
+### 11.5 Confirmation & Lock Action (Partially Implemented)
 
-### 11.5 Confirmation & Lock Action
+- Konfirmasi aksi berisiko sudah tersedia via modal di control page
+- Aksi cepat rally tetap tanpa konfirmasi agar flow wasit tidak lambat
+- Mekanisme long-press lock action belum diimplementasikan
 
-Saat ini **belum ada mekanisme konfirmasi** (modal/long-press) di UI.
-Mutation sensitif hanya bisa diakses oleh admin.
-
-### 11.6 Visual Feedback untuk Wasit
+### 11.6 Visual Feedback untuk Wasit (Partially Implemented)
 
 - Perubahan skor muncul instan di UI
 - Indikator servis ikut berubah sesuai state
 - Animasi khusus (highlight/score tick) belum diimplementasikan
 
-### 11.7 State Recovery (Lapangan Real Case)
-
-Skenario yang harus aman:
+### 11.7 State Recovery (Implemented)
 
 - HP wasit mati -> buka ulang -> state kembali
 - Browser reload -> auto sync
@@ -281,14 +284,12 @@ Semua state diambil ulang dari Convex sebagai **single source of truth**.
 
 ## 12. Security & Akses
 
-### 12.1 Role & Permission
-
-Sistem menggunakan role sederhana untuk mengatur akses:
+### 12.1 Role & Permission (Implemented)
 
 | Role    | Hak Akses                                                                        |
 | ------- | -------------------------------------------------------------------------------- |
 | Admin   | Buat match, reset match, pilih template, ubah konfigurasi tampilan, assign wasit |
-| Wasit   | Input skor, kontrol timer                                                         |
+| Wasit   | Input skor, kontrol timer, ubah serve/sisi, challenge, reset/finish, ubah template/konfigurasi, issue referee access token |
 | Display | Read-only, tidak dapat mengirim event                                            |
 
 - Admin akses via **PIN global**
@@ -296,20 +297,20 @@ Sistem menggunakan role sederhana untuk mengatur akses:
 - Validasi role dilakukan di **Convex functions**
 - Display read-only (tanpa PIN)
 
-### 12.2 Referee Link (Token) - Per Match
+### 12.2 Referee Link (Token) - Per Match (Implemented)
 
 - Token unik dibuat oleh admin untuk tiap match
 - Token memiliki masa berlaku (default: sampai match selesai; opsional 24 jam)
 - Token bisa dicabut/di-rotate jika bocor
 - Token hanya valid untuk 1 match
 
-### 12.3 Audit Log (Level Poin)
+### 12.3 Audit Log (Level Poin) (Implemented)
 
 - Semua aksi wasit tercatat (point, undo, timer)
 - Log menyimpan **before/after score**, timestamp, dan `actorTokenId`
 - Admin dapat melihat riwayat log setelah pertandingan (post-match review)
 
-### 12.4 Onboarding Per Role
+### 12.4 Onboarding Per Role (Implemented)
 
 - Setelah masuk, user pilih role (Admin/Wasit)
 - Onboarding ringan 1 layar untuk tiap role
@@ -319,7 +320,7 @@ Sistem menggunakan role sederhana untuk mengatur akses:
 
 ## 13. MVP Definition (Versi 1.0 - Badminton)
 
-Wajib ada:
+### Wajib (Implemented)
 
 - Input skor berbasis rally
 - Serve indicator (single/double)
@@ -329,10 +330,10 @@ Wajib ada:
 - Reconnect & state recovery otomatis
 - Satu match aktif
 
-Nice to have:
+### Nice to Have (Planned)
 
 - Multi lapangan
-- Tema warna
+- Tema warna lebih lanjut
 - QR pairing
 
 ---
@@ -347,89 +348,13 @@ Nice to have:
 
 ---
 
-## 15. Future Improvement
+## 15. Future Improvement (Badminton & Platform)
 
-- Template olahraga lain (futsal, basket, voli, e-sport)
-- Mobile App (Android / iOS) sebagai controller
-- Statistik pertandingan
-- Cloud hosting multi venue
-- Integrasi overlay live streaming
-
----
-
-## 15A. Rencana Landing Page (SaaS)
-
-### Tujuan
-
-- Menjelaskan value utama produk secara singkat
-- Mendorong user mencoba (CTA) atau meminta demo
-- Menjadi pintu masuk dokumentasi dan live demo
-
-### Target Audience
-
-- Venue olahraga
-- Perorangan penyelenggara event/latihan
-
-### Brand & Positioning
-
-- **Brand name (pilihan utama):** Scorehub
-- Alternatif nama (opsional): ScoreHub Live, CourtScore, RallyBoard
-- Tone bahasa: santai
-- Warna utama (landing page): **Amber / Black / Off-White**
-  - Primary: `#F59E0B`
-  - Accent: `#111827`
-  - Support: `#F8FAFC`
-
-### Tagline (Pilihan Draft)
-
-- "Scoreboard real-time, tinggal jalan."
-- "Skor jelas, event lancar."
-- "Real-time di lapangan, simpel di tangan."
-- "Buka. Input. Tampil. Selesai."
-
-### Value Proposition
-
-- Real-time scoreboard tanpa refresh
-- Bisa jalan **tanpa internet** (LAN/WiFi lokal)
-- Setup cepat, UI operator sederhana
-- Display profesional untuk TV/Videotron
-
-### Struktur Halaman (Draft Sections)
-
-1. Hero (headline + subheadline + CTA utama)
-2. Problem → Solution (before/after)
-3. Fitur utama (rally input, serve indicator, set management, realtime display)
-4. Alur penggunaan (Create → Control → Display)
-5. Showcase / screenshot (control & display)
-6. Use cases (kampus, klub, venue)
-7. CTA penutup + link demo
-8. Footer (kontak, docs, status)
-
-### CTA (Final)
-
-- Primary: **Start Match**
-- Secondary: **Upgrade to Pro**
-
-### Monetization (Draft)
-
-- Free tier: **1 match aktif** (tanpa history, 1 template default)
-- Pro tier: multi-match, template tambahan, branding removal, sponsor/ads, cloud sync (planned)
-
-### Asset yang Dibutuhkan
-
-- Screenshot halaman control
-- Screenshot display fullscreen
-- Logo / brand wordmark (jika ada)
-- (Opsional) video demo 20–40 detik
-
-### Tracking (Opsional)
-
-- Klik CTA utama
-- Scroll depth (50% / 90%)
-
-### Status
-
-- **Planned** (belum diimplementasikan)
+- Interval 11 poin dan break antar set
+- Change ends sesuai aturan badminton
+- Model rotasi doubles lengkap
+- Viewer dan moderasi audit log realtime
+- Hardening deployment production
 
 ---
 
@@ -443,60 +368,34 @@ Nice to have:
 
 ## 17. Catatan
 
-- Browser digunakan sebagai media render display, bukan sebagai keterbatasan sistem, demi fleksibilitas dan reliability di lapangan.
+- Browser digunakan sebagai media render display demi fleksibilitas dan reliability di lapangan.
 - Sistem **menggunakan Convex** untuk state match dan audit log agar konsisten lintas device.
 - Penyimpanan persistent diperlukan untuk history match dan akses multi-device selama event.
 
 ---
 
-## 23. Multi-Sport Framework (Planned)
+## 18. Badminton Rules & Match Flow
 
-### 23.1 Sport Registry
-
-- Setiap sport punya definisi rule, format, dan template default
-- Contoh:
-  - Badminton: best of 3, 21 poin, win by 2, cap 30
-  - Basket: quarter, game clock, team foul, 2/3 points
-  - Voli: best of 3/5, rally point 25, win by 2
-  - Tenis: set, game, point (15/30/40/ad)
-  - Futsal/Sepakbola: half, game clock, goal
-
-### 23.2 Template per Sport
-
-- Tiap sport punya 2-3 template default
-- Template hanya muncul untuk sport yang sesuai
-- Template mengatur layout, posisi skor, timer, dan indikator spesifik sport
-
-### 23.3 Multi-Match Dashboard
-
-- Admin bisa melihat semua match aktif
-- Filter per sport / court
-- Aksi cepat: buka control, copy referee link, open display
-
----
-
-## 18. Badminton Rules & Match Flow (Implemented)
-
-### 18.1 Scoring Rules
+### 18.1 Scoring Rules (Implemented)
 
 - Rally point system
 - Set to 21 poin
 - Win by 2 poin
 - Cap di 30 poin
 
-### 18.2 Match Format
+### 18.2 Match Format (Implemented)
 
 - Best of 3 (fixed)
 
-### 18.3 Interval & Break
+### 18.3 Interval & Break (Planned)
 
 - Belum diimplementasikan
 
-### 18.4 Change Ends
+### 18.4 Change Ends (Planned)
 
 - Belum diimplementasikan
 
-### 18.5 Serve Rules (Implemented)
+### 18.5 Serve Rules (Partially Implemented)
 
 - Server = pemenang rally
 - Service court berdasarkan skor **server** (genap=right, ganjil=left)
@@ -558,11 +457,15 @@ Realtime menggunakan subscription query Convex, bukan event socket manual.
   - `matches.undo` (admin/referee)
   - `matches.useChallenge` (admin/referee)
   - `matches.timerStart` / `matches.timerPause` / `matches.timerReset` (admin/referee)
-  - `matches.updateDisplayConfig` (admin)
-  - `matches.changeTemplate` (admin)
+  - `matches.updateDisplayConfig` (admin/referee)
+  - `matches.changeTemplate` (admin/referee)
   - `matches.changeServe` (admin/referee)
   - `matches.toggleSides` (admin/referee)
   - `matches.resetMatch` (admin/referee)
+  - `matches.finishMatch` (admin/referee)
+  - `matches.updateTimer` (admin/referee)
+  - `matches.updateAds` (admin/referee)
+  - `matches.issueRefereeAccessToken` (admin/referee)
   - `matches.deleteMatch` (admin)
 
 ### Convex -> Client (Implemented)
@@ -575,54 +478,38 @@ Realtime menggunakan subscription query Convex, bukan event socket manual.
 
 ## 21. Permission Matrix (Implemented)
 
-| Operation                    | Admin | Wasit | Display |
-| --------------------------- | ----- | ----- | ------- |
-| `matches.createMatch`       | YES   | NO    | NO      |
-| `matches.updateScore`       | YES   | YES   | NO      |
-| `matches.awardPoint`        | YES   | YES   | NO      |
-| `matches.undo`              | YES   | YES   | NO      |
-| `matches.useChallenge`      | YES   | YES   | NO      |
-| `matches.timerStart`        | YES   | YES   | NO      |
-| `matches.timerPause`        | YES   | YES   | NO      |
-| `matches.timerReset`        | YES   | YES   | NO      |
-| `matches.updateDisplayConfig` | YES | NO    | NO      |
-| `matches.changeTemplate`    | YES   | NO    | NO      |
-| `matches.changeServe`       | YES   | YES   | NO      |
-| `matches.toggleSides`       | YES   | YES   | NO      |
-| `matches.resetMatch`        | YES   | YES   | NO      |
-| `matches.deleteMatch`       | YES   | NO    | NO      |
-| `matches.get`               | YES   | YES   | YES     |
-| `matches.listAdmin`         | YES   | NO    | NO      |
+| Operation                      | Admin | Wasit | Display |
+| ------------------------------ | ----- | ----- | ------- |
+| `matches.createMatch`          | YES   | NO    | NO      |
+| `matches.updateScore`          | YES   | YES   | NO      |
+| `matches.awardPoint`           | YES   | YES   | NO      |
+| `matches.undo`                 | YES   | YES   | NO      |
+| `matches.useChallenge`         | YES   | YES   | NO      |
+| `matches.timerStart`           | YES   | YES   | NO      |
+| `matches.timerPause`           | YES   | YES   | NO      |
+| `matches.timerReset`           | YES   | YES   | NO      |
+| `matches.updateDisplayConfig`  | YES   | YES   | NO      |
+| `matches.changeTemplate`       | YES   | YES   | NO      |
+| `matches.changeServe`          | YES   | YES   | NO      |
+| `matches.toggleSides`          | YES   | YES   | NO      |
+| `matches.resetMatch`           | YES   | YES   | NO      |
+| `matches.finishMatch`          | YES   | YES   | NO      |
+| `matches.updateTimer`          | YES   | YES   | NO      |
+| `matches.updateAds`            | YES   | YES   | NO      |
+| `matches.issueRefereeAccessToken` | YES | YES   | NO      |
+| `matches.deleteMatch`          | YES   | NO    | NO      |
+| `matches.get`                  | YES   | YES   | YES     |
+| `matches.listAdmin`            | YES   | NO    | NO      |
 
 ---
 
-## 22. Template System
+## 22. Template System (Badminton)
 
-Template saat ini disimpan sebagai **id** di `displayConfig` dan dirender oleh display page sesuai sport/template. Rule engine generik lintas sport masih planned.
+Template disimpan sebagai **id** di `displayConfig` dan dirender oleh display page untuk layout badminton.
 
-### 22.1 Template Structure (Planned)
+### 22.1 Badminton Template (BWF Style)
 
-```json
-{
-  "id": "modern",
-  "sport": "badminton",
-  "layout": "single-screen-bwf",
-  "mode": "single | double",
-  "supports": ["score", "set", "serveIndicator"],
-  "constraints": {
-    "maxScore": 30,
-    "winRule": "21-point"
-  },
-  "displayRules": {
-    "showOnlyPreviousSetScore": true,
-    "showSetWinIndicator": false
-  }
-}
-```
-
-### 22.2 Badminton Template (BWF Style)
-
-Template ini mengadopsi gaya scoreboard **BWF resmi**, namun dirender dalam **satu layar (single screen)**.
+Template ini mengadopsi gaya scoreboard **BWF resmi**, dirender dalam **satu layar (single screen)**.
 
 #### Layout Characteristics
 
@@ -632,9 +519,7 @@ Template ini mengadopsi gaya scoreboard **BWF resmi**, namun dirender dalam **sa
 - Tidak menampilkan indikator "menang set ke-X"
 - Fokus ke kejelasan skor berjalan
 
-### 22.3 Serve Indicator (Shuttle Icon)
-
-Template badminton mendukung **indikator servis**:
+### 22.2 Serve Indicator (Shuttle Icon)
 
 #### Single
 
@@ -652,9 +537,7 @@ Template badminton mendukung **indikator servis**:
 }
 ```
 
-### 22.4 Set Display Rule
-
-Sesuai kebutuhan:
+### 22.3 Set Display Rule
 
 - NO Tidak menampilkan angka kemenangan set (misal: Set 1 dimenangkan Home)
 - YES Hanya menampilkan **skor akhir set sebelumnya**
@@ -666,14 +549,9 @@ SET 1: 21 - 18
 SET 2: 9 - 12   <- current set (besar)
 ```
 
-### 22.5 Visual Configuration (Live Editable)
+### 22.4 Visual Configuration (Live Editable)
 
-Semua template mendukung konfigurasi visual **real-time**:
-
-- Font size (per elemen):
-  - Team name
-  - Current score
-  - Previous set score
+- Font size (per elemen): team name, current score, previous set score
 - Font weight
 - Warna skor (leading / normal)
 - Spacing antar elemen
@@ -702,27 +580,24 @@ Semua template mendukung konfigurasi visual **real-time**:
 
 ---
 
-## 24. Future Roadmap: Phase 2 (Post-Convex Hardening)
+## 23. Phase 2 Roadmap (Post-Convex Hardening)
 
-Backend modernization ke Convex sudah selesai untuk alur utama create/control/display.
+### 23.1 Current Baseline (Implemented)
 
-### 24.1 Current Baseline
-
-- State match, rules sport, audit log, dan realtime update sudah berjalan di Convex
+- State match, rules badminton, audit log, dan realtime update sudah berjalan di Convex
 - `server/` Socket.io lama sudah tidak digunakan
-- Frontend sudah consume query/mutation Convex via `useQuery` dan `useMutation`
+- Frontend consume query/mutation Convex via `useQuery` dan `useMutation`
 
-### 24.2 Next Priorities
+### 23.2 Next Priorities (Planned)
 
-1. **Timer unification**
-   - Hubungkan UI timer di control page ke state timer Convex (hapus timer lokal agar sinkron lintas device).
+1. **Audit log visibility & moderation**
+   - Tambah viewer `match_events` dan filter penting untuk post-match review dan monitoring.
 
-2. **Template admin integration**
-   - Hubungkan `/admin/templates` ke `matches.changeTemplate` / `matches.updateDisplayConfig`.
+2. **Input safety UX**
+   - Tambah confirm/lock action untuk mencegah salah pencet.
 
-3. **Audit log visibility**
-   - Tambah halaman viewer untuk `match_events` (filter by matchId, actor, timestamp).
+3. **Rule completeness (badminton)**
+   - Tambah interval/break, change ends, dan doubles rotation logic yang lengkap.
 
 4. **Production deployment hardening**
    - Standarkan deployment Convex + frontend (environment variables, deploy key, branch preview).
-

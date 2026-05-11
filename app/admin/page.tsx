@@ -36,6 +36,8 @@ type MatchStatus =
   | 'paused'
   | 'finished';
 
+type DashboardView = 'all' | 'history' | 'result';
+
 interface MatchSummary {
   id: string;
   matchId: string;
@@ -49,22 +51,11 @@ interface MatchSummary {
   updatedAt?: number;
 }
 
-const STATUS_FILTERS: Array<'all' | MatchStatus> = [
-  'all',
-  'created',
-  'ready_for_referee',
-  'live',
-  'paused',
-  'finished',
-];
-
 export default function AdminDashboard() {
   const router = useRouter();
   const [adminPin, setAdminPin] = useState('');
   const [isPinReady, setIsPinReady] = useState(false);
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | MatchStatus>('all');
-  const [sportFilter, setSportFilter] = useState('all');
+  const [viewFilter, setViewFilter] = useState<DashboardView>('all');
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -85,11 +76,84 @@ export default function AdminDashboard() {
     setIsPinReady(true);
   }, []);
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
   useEffect(() => {
-    if (!isAdminAuthenticated()) {
-      router.replace('/');
+    setIsAuthenticated(isAdminAuthenticated());
+  }, []);
+
+  const [localPinInput, setLocalPinInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const verifyAdminMutation = useMutation(api.matches.verifyAdminPin);
+
+  const handleAdminAuth = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!localPinInput) return;
+    setIsVerifying(true);
+    try {
+      const isValid = await verifyAdminMutation({ pin: localPinInput });
+      if (isValid) {
+        localStorage.setItem(
+          ADMIN_AUTH_STORAGE_KEY,
+          JSON.stringify({ pin: localPinInput, ts: Date.now() }),
+        );
+        setAdminPin(localPinInput);
+        setIsAuthenticated(true);
+      } else {
+        setAuthError('PIN Administrator Salah');
+      }
+    } catch (err) {
+      setAuthError('Gagal verifikasi PIN');
+    } finally {
+      setIsVerifying(false);
     }
-  }, [router]);
+  };
+
+  if (isPinReady && !isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-black/10 shadow-2xl overflow-hidden p-8 sm:p-10 text-center space-y-8">
+          <div className="space-y-3">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-black flex items-center justify-center shadow-xl shadow-black/20">
+              <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl uppercase font-black tracking-widest font-[family-name:var(--font-bebas)]">Akses Admin</h1>
+            <p className="text-slate-500 font-medium text-sm">Masukkan PIN administrator untuk mengelola turnamen.</p>
+          </div>
+          
+          <form onSubmit={handleAdminAuth} className="space-y-6">
+            <div className="space-y-2">
+              <Input 
+                type="password" 
+                placeholder="••••" 
+                value={localPinInput} 
+                onChange={(e) => setLocalPinInput(e.target.value)} 
+                className="h-16 text-center text-3xl tracking-[0.5em] font-bold rounded-2xl border-black/10 bg-black/5 focus:bg-white focus:border-black/20 transition-all" 
+                autoFocus
+              />
+              {authError && (
+                <p className="text-xs font-bold uppercase tracking-widest text-red-500 animate-shake">{authError}</p>
+              )}
+            </div>
+            
+            <div className="flex gap-3">
+              <Link href="/" className="flex-1 h-14 inline-flex items-center justify-center rounded-full border border-black/10 text-[11px] font-black uppercase tracking-[0.2em] text-black/60 hover:border-black/30 transition-all">Kembali</Link>
+              <Button 
+                type="submit"
+                disabled={isVerifying} 
+                className="flex-[2] h-14 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold uppercase tracking-[0.3em] shadow-lg shadow-black/20 transition-all"
+              >
+                {isVerifying ? "Memverifikasi..." : "Masuk"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
   const matchData = useQuery(
     api.matches.listAdmin,
@@ -98,12 +162,13 @@ export default function AdminDashboard() {
 
   const finishMatch = useMutation(api.matches.finishMatch);
   const deleteMatch = useMutation(api.matches.deleteMatch);
+  const issueRefereeAccessToken = useMutation(api.matches.issueRefereeAccessToken);
 
   const onFinishMatch = async (matchId: string) => {
     if (!adminPin) return;
     try {
       await finishMatch({ matchId, role: 'admin', pin: adminPin });
-      setFeedback({ type: 'success', message: 'Match berhasil diakhiri.' });
+      setFeedback({ type: 'success', message: 'Pertandingan berhasil diakhiri.' });
     } catch (error) {
       console.error('Failed to finish match:', error);
       setFeedback({
@@ -117,7 +182,7 @@ export default function AdminDashboard() {
     if (!adminPin) return;
     try {
       await deleteMatch({ matchId, pin: adminPin });
-      setFeedback({ type: 'success', message: 'Match berhasil dihapus.' });
+      setFeedback({ type: 'success', message: 'Pertandingan berhasil dihapus.' });
     } catch (error) {
       console.error('Failed to delete match:', error);
       setFeedback({
@@ -151,41 +216,29 @@ export default function AdminDashboard() {
     }));
   }, [matchData]);
 
-  const sportOptions = useMemo(() => {
-    const sports = Array.from(new Set(matches.map((match) => match.sport)));
-    return sports.filter(Boolean).sort();
-  }, [matches]);
-
   const filteredMatches = useMemo(() => {
-    const term = query.trim().toLowerCase();
     return matches.filter((match) => {
-      const matchesQuery =
-        !term ||
-        match.matchId.toLowerCase().includes(term) ||
-        (match.displayCode || '').toLowerCase().includes(term) ||
-        match.home.name.toLowerCase().includes(term) ||
-        match.away.name.toLowerCase().includes(term);
-      const matchesStatus =
-        statusFilter === 'all' || match.status === statusFilter;
-      const matchesSport = sportFilter === 'all' || match.sport === sportFilter;
-      return matchesQuery && matchesStatus && matchesSport;
+      if (viewFilter === 'history') return match.status !== 'finished';
+      if (viewFilter === 'result') return match.status === 'finished';
+      return true;
     });
-  }, [matches, query, statusFilter, sportFilter]);
+  }, [matches, viewFilter]);
 
   const statusCounts = useMemo(() => {
     return matches.reduce(
       (acc, match) => {
-        acc.total += 1;
-        acc[match.status] += 1;
+        acc.all += 1;
+        if (match.status === 'finished') {
+          acc.result += 1;
+        } else {
+          acc.history += 1;
+        }
         return acc;
       },
       {
-        total: 0,
-        created: 0,
-        ready_for_referee: 0,
-        live: 0,
-        paused: 0,
-        finished: 0,
+        all: 0,
+        history: 0,
+        result: 0,
       } as Record<string, number>,
     );
   }, [matches]);
@@ -252,117 +305,53 @@ export default function AdminDashboard() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Total
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.total}
+            {statusCounts.all}
           </div>
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Langsung
+          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Riwayat
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.live}
+            {statusCounts.history}
           </div>
         </Card>
         <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Siap Wasit
+          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Hasil
           </div>
           <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.ready_for_referee}
-          </div>
-        </Card>
-        <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Baru
-          </div>
-          <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.created}
-          </div>
-        </Card>
-        <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Selesai
-          </div>
-          <div className="mt-2 text-2xl font-black text-foreground">
-            {statusCounts.finished}
+            {statusCounts.result}
           </div>
         </Card>
       </div>
 
       <Card className="p-4 rounded-3xl border border-black/10 bg-white/90">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Cari
-            </label>
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Cari ID match, kode tampilan, atau tim..."
-              className="mt-2 h-10 rounded-2xl bg-black/5 border-transparent focus:bg-white focus:border-black/20"
-            />
-          </div>
-          <div className="space-y-3">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Status
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {STATUS_FILTERS.map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setStatusFilter(status)}
-                    className={`h-11 px-4 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                      statusFilter === status
-                        ? 'bg-black text-white'
-                        : 'bg-black/5 text-black/50 hover:bg-black/10'
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Cabang Olahraga
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSportFilter('all')}
-                  className={`h-11 px-4 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                    sportFilter === 'all'
-                      ? 'bg-black text-white'
-                      : 'bg-black/5 text-black/50 hover:bg-black/10'
-                  }`}
-                >
-                  Semua
-                </button>
-                {sportOptions.map((sport) => (
-                  <button
-                    key={sport}
-                    type="button"
-                    onClick={() => setSportFilter(sport)}
-                    className={`h-11 px-4 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                      sportFilter === sport
-                        ? 'bg-black text-white'
-                        : 'bg-black/5 text-black/50 hover:bg-black/10'
-                    }`}
-                  >
-                    {sport}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {(['all', 'history', 'result'] as DashboardView[]).map((view) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setViewFilter(view)}
+              className={`h-11 px-5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                viewFilter === view
+                  ? 'bg-black text-white'
+                  : 'bg-black/5 text-black/50 hover:bg-black/10'
+              }`}
+            >
+              {view === 'all'
+                ? 'total'
+                : view === 'history'
+                  ? 'riwayat'
+                  : 'hasil'}
+            </button>
+          ))}
         </div>
       </Card>
 
@@ -377,17 +366,7 @@ export default function AdminDashboard() {
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed rounded-xl">
-          <div className="text-muted-foreground mb-4">Pertandingan tidak ditemukan</div>
-          <Button
-            onClick={() => {
-              setQuery('');
-              setStatusFilter('all');
-              setSportFilter('all');
-            }}
-            className="rounded-full bg-black text-white hover:bg-black/90 tracking-widest uppercase font-bold text-xs h-10 px-6"
-          >
-            Reset Filters
-          </Button>
+          <div className="text-muted-foreground mb-1">Belum ada pertandingan pada kategori ini.</div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -406,16 +385,16 @@ export default function AdminDashboard() {
                       {match.matchId}
                     </span>
                   </div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-black/50">
+                  <div className="text-xs font-bold uppercase tracking-wider text-black/50">
                     CODE: {match.displayCode || '-'}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/5 px-2 py-1 rounded text-black/60">
+                  <span className="text-xs font-bold uppercase tracking-wider bg-black/5 px-2 py-1 rounded text-black/60">
                     {match.sport}
                   </span>
                   <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${statusBadge[match.status]}`}
+                    className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded ${statusBadge[match.status]}`}
                   >
                     {match.status}
                   </span>
@@ -473,23 +452,37 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-3 gap-2 mt-auto">
                 <Button
                   variant="outline"
-                  className="w-full text-[10px] h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
-                  onClick={() => {
-                    if (!match.displayCode) return;
-                    const link = `${window.location.origin}/referee/join?code=${encodeURIComponent(match.displayCode)}`;
-                    navigator.clipboard.writeText(link);
-                    setFeedback({
-                      type: 'success',
-                      message: 'Link wasit berhasil disalin.',
-                    });
+                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
+                  onClick={async () => {
+                    if (!match.displayCode || !adminPin) return;
+                    try {
+                      const access = await issueRefereeAccessToken({
+                        matchId: match.matchId,
+                        role: 'admin',
+                        pin: adminPin,
+                        refereeName: match.assignedReferee || undefined,
+                      });
+                      const link = `${window.location.origin}/match/${access.matchId}/control?role=referee&token=${encodeURIComponent(access.token)}`;
+                      navigator.clipboard.writeText(link);
+                      setFeedback({
+                        type: 'success',
+                        message: 'Link kontrol wasit direct berhasil disalin.',
+                      });
+                    } catch (error) {
+                      console.error('Failed to issue referee access token:', error);
+                      setFeedback({
+                        type: 'error',
+                        message: 'Gagal membuat link direct wasit.',
+                      });
+                    }
                   }}
                   disabled={!match.displayCode}
                 >
-                  Link Wasit
+                  Link Kontrol
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-[10px] h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
+                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
                   onClick={() => {
                     if (!match.displayCode) return;
                     const link = `${window.location.origin}/display/${match.displayCode}`;
@@ -505,7 +498,7 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full text-[10px] h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
+                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
                   onClick={() => {
                     if (!match.displayCode) return;
                     setSharePin('');
@@ -530,13 +523,13 @@ export default function AdminDashboard() {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-xs h-11 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
-                    >
-                      DELETE
-                    </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs h-11 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+                >
+                  HAPUS
+                </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -610,14 +603,38 @@ export default function AdminDashboard() {
             </Button>
             <Button
               type="button"
-              onClick={() => {
-                if (!shareMatch?.displayCode) return;
-                const pinText = sharePin || '[isi PIN wasit]';
-                const msg = `Akses Wasit\n\nKode Tampilan: ${shareMatch.displayCode}\nPIN: ${pinText}\n\nLink Wasit:\n${window.location.origin}/referee/join?code=${encodeURIComponent(shareMatch.displayCode)}\n\nLink Display:\n${window.location.origin}/display/${shareMatch.displayCode}`;
-                const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-                window.open(wa, '_blank', 'noopener,noreferrer');
-                setShareMatch(null);
-                setSharePin('');
+              onClick={async () => {
+                if (!shareMatch?.displayCode || !adminPin) return;
+                try {
+                  const access = await issueRefereeAccessToken({
+                    matchId: shareMatch.matchId,
+                    role: 'admin',
+                    pin: adminPin,
+                    refereeName: shareMatch.assignedReferee || undefined,
+                  });
+                  const controlLink = `${window.location.origin}/match/${access.matchId}/control?role=referee&token=${encodeURIComponent(access.token)}`;
+                  const pinText = sharePin || '[backup PIN opsional]';
+                  const msg = `Akses Wasit
+
+Kode Tampilan: ${shareMatch.displayCode}
+PIN: ${pinText}
+
+Link Kontrol Wasit (langsung masuk):
+${controlLink}
+
+Link Display:
+${window.location.origin}/display/${shareMatch.displayCode}`;
+                  const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                  window.open(wa, '_blank', 'noopener,noreferrer');
+                  setShareMatch(null);
+                  setSharePin('');
+                } catch (error) {
+                  console.error('Failed to issue referee access token for WhatsApp:', error);
+                  setFeedback({
+                    type: 'error',
+                    message: 'Gagal membuat link direct wasit untuk WhatsApp.',
+                  });
+                }
               }}
             >
               Kirim ke WhatsApp

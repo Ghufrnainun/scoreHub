@@ -10,10 +10,8 @@ export function proxy(request: NextRequest) {
     const role = searchParams.get('role');
 
     if (role === 'referee') {
-      const url = request.nextUrl.clone();
-      url.pathname = `/referee/match/${matchId}`;
-      url.search = '';
-      return NextResponse.redirect(url);
+      // Let referee access control route directly so token query survives.
+      return NextResponse.next();
     }
 
     if (role !== 'admin') {

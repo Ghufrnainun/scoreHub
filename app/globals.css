@@ -35,6 +35,15 @@
   --ring: rgba(11, 18, 32, 0.2);
 
   --radius: 0.5rem; /* 8px modest radius */
+  --text-caption: 0.75rem;
+  --text-label: 0.875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-subtitle: 1.5rem;
+  --text-title: 2rem;
+  --leading-tight: 1.2;
+  --leading-body: 1.58;
+  --leading-relaxed: 1.68;
 
   /* Custom Tournament Colors */
   --court-green: #15803d;
@@ -126,6 +135,19 @@
   }
   body {
     @apply bg-background text-foreground transition-colors duration-200;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
+  }
+  p,
+  li,
+  dd {
+    line-height: var(--leading-body);
+  }
+  small {
+    font-size: var(--text-caption);
+    line-height: var(--leading-relaxed);
   }
 }
 

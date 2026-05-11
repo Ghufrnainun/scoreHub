@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConvexConnectionState, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import type { DisplayConfig, MatchRole, MatchState } from '@/lib/match-types';
+import type {
+  DisplayConfig,
+  MatchRole,
+  MatchState,
+  MatchFormat,
+  TeamLineupRow,
+} from '@/lib/match-types';
 
 interface UseMatchOptions {
   matchId: string;
@@ -29,7 +35,18 @@ interface UseMatchReturn {
   useChallenge: (team: 'home' | 'away') => void;
   toggleSides: () => void;
   resetMatch: () => void;
+  finishMatch: () => void;
   updateTimer: (elapsed: number, duration?: number) => void;
+  updateMatchMetadata: (payload: {
+    tournamentName?: string;
+    assignedReferee?: string;
+    matchFormat?: MatchFormat;
+    homeTeamName?: string;
+    awayTeamName?: string;
+    homePlayers?: { name: string; country?: string }[];
+    awayPlayers?: { name: string; country?: string }[];
+    teamLineup?: TeamLineupRow[];
+  }) => void;
   // Timer computed value
   remainingTime: number;
 }
@@ -60,7 +77,9 @@ export function useMatch({
   const toggleSidesMutation = useMutation(api.matches.toggleSides);
 
   const resetMatchMutation = useMutation(api.matches.resetMatch);
+  const finishMatchMutation = useMutation(api.matches.finishMatch);
   const updateTimerMutation = useMutation(api.matches.updateTimer);
+  const updateMatchMetadataMutation = useMutation(api.matches.updateMatchMetadata);
 
   const runMutation = useCallback(async (fn: () => Promise<unknown>) => {
     try {
@@ -104,7 +123,7 @@ export function useMatch({
     if (match.timer.startedAt && !match.timer.pausedAt) {
       const interval = setInterval(() => {
         setRemainingTime(calculateRemaining());
-      }, 100);
+      }, 500);
 
       return () => clearInterval(interval);
     }
@@ -180,6 +199,10 @@ export function useMatch({
     runMutation(() => resetMatchMutation({ matchId, role, pin, token }));
   }, [matchId, pin, role, resetMatchMutation, runMutation, token]);
 
+  const finishMatch = useCallback(() => {
+    runMutation(() => finishMatchMutation({ matchId, role, pin, token }));
+  }, [finishMatchMutation, matchId, pin, role, runMutation, token]);
+
   const updateTimer = useCallback(
     (elapsed: number, duration?: number) => {
       runMutation(() =>
@@ -187,6 +210,30 @@ export function useMatch({
       );
     },
     [matchId, pin, role, runMutation, token, updateTimerMutation],
+  );
+
+  const updateMatchMetadata = useCallback(
+    (payload: {
+      tournamentName?: string;
+      assignedReferee?: string;
+      matchFormat?: MatchFormat;
+      homeTeamName?: string;
+      awayTeamName?: string;
+      homePlayers?: { name: string; country?: string }[];
+      awayPlayers?: { name: string; country?: string }[];
+      teamLineup?: TeamLineupRow[];
+    }) => {
+      runMutation(() =>
+        updateMatchMetadataMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          ...payload,
+        }),
+      );
+    },
+    [matchId, pin, role, runMutation, token, updateMatchMetadataMutation],
   );
 
   return {
@@ -205,7 +252,9 @@ export function useMatch({
     useChallenge,
     toggleSides,
     resetMatch,
+    finishMatch,
     updateTimer,
+    updateMatchMetadata,
     remainingTime,
   };
 }

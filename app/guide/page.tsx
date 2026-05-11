@@ -155,7 +155,7 @@ function SectionTitle({
 }) {
   return (
     <div id={id} className="scroll-mt-24">
-      <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-black/45">
+      <p className="text-xs font-bold uppercase tracking-[0.28em] text-black/45">
         {kicker}
       </p>
       <h2 className="mt-3 font-[family-name:var(--font-bebas)] text-4xl uppercase tracking-[0.06em] text-black md:text-5xl">
@@ -192,7 +192,7 @@ export default function GuidePage() {
               <p className="font-[family-name:var(--font-bebas)] text-sm leading-none uppercase tracking-[0.28em]">
                 Scorehub
               </p>
-              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/50">
+              <span className="text-xs font-bold uppercase tracking-[0.22em] text-black/50">
                 Complete Guide
               </span>
             </div>
@@ -201,13 +201,13 @@ export default function GuidePage() {
           <div className="flex items-center gap-2">
             <Link
               href="/create"
-              className="hidden rounded-full border border-black/15 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black sm:inline-flex"
+              className="hidden rounded-full border border-black/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black sm:inline-flex"
             >
               Pusat Kontrol
             </Link>
             <Link
               href="/"
-              className="rounded-full bg-black px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-transform hover:-translate-y-0.5"
+              className="rounded-full bg-black px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white transition-transform hover:-translate-y-0.5"
             >
               Beranda
             </Link>
@@ -218,7 +218,7 @@ export default function GuidePage() {
       <main id="main-content" className="relative z-10 mx-auto max-w-6xl px-4 pb-20 pt-10 lg:px-8 lg:pt-16">
         <section className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-start">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-amber-400/35 bg-amber-100/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-amber-800">
+            <p className="inline-flex items-center gap-2 rounded-full border border-amber-400/35 bg-amber-100/70 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-amber-800">
               Panduan Operasional
             </p>
             <h1 className="mt-6 font-[family-name:var(--font-bebas)] text-5xl uppercase tracking-[0.06em] leading-[0.88] text-balance text-black md:text-7xl">
@@ -246,7 +246,7 @@ export default function GuidePage() {
           </div>
 
           <aside className="rounded-3xl border border-black/10 bg-white/70 p-5 backdrop-blur">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.25em] text-black/50">Navigasi Cepat</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-black/50">Navigasi Cepat</h2>
             <div className="mt-4 grid gap-2 text-sm">
               {[
                 { href: '#quick-start', label: 'Quick Start 2 Menit' },
@@ -270,7 +270,7 @@ export default function GuidePage() {
         <section className="mt-8 grid gap-3 sm:grid-cols-3">
           {quickStats.map((item) => (
             <div key={item.label} className="rounded-2xl border border-black/10 bg-white/70 px-4 py-4 backdrop-blur">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">{item.label}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-black/45">{item.label}</p>
               <p className="mt-1 text-xl font-black uppercase tracking-wide">{item.value}</p>
             </div>
           ))}
@@ -290,7 +290,7 @@ export default function GuidePage() {
                   <span className="grid h-9 w-9 place-items-center rounded-xl bg-black text-sm font-bold text-white">
                     {index + 1}
                   </span>
-                  <span className="rounded-full border border-black/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black/55">
+                  <span className="rounded-full border border-black/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-black/55">
                     {step.action}
                   </span>
                 </div>
@@ -326,7 +326,7 @@ export default function GuidePage() {
                 </ul>
                 <Link
                   href={guide.cta.href}
-                  className="mt-5 inline-flex rounded-full border border-black/15 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black"
+                  className="mt-5 inline-flex rounded-full border border-black/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black"
                 >
                   {guide.cta.label}
                 </Link>
@@ -397,7 +397,7 @@ export default function GuidePage() {
         </section>
 
         <section className="mt-16 rounded-3xl border border-black/10 bg-black p-8 text-white md:p-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">Siap Operasional</p>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/60">Siap Operasional</p>
           <h2 className="mt-3 font-[family-name:var(--font-bebas)] text-4xl uppercase tracking-[0.06em] md:text-5xl">
             Jalankan Match Pertama Kamu
           </h2>
