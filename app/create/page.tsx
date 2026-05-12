@@ -26,7 +26,8 @@ import {
 } from '@/components/ui/dialog';
 import sportConfig from '@/config/sports.json';
 import { api } from '@/convex/_generated/api';
-import { ADMIN_AUTH_STORAGE_KEY, isAdminAuthenticated } from '@/lib/auth';
+import { isAdminAuthenticated } from '@/lib/auth';
+import { loadValidAdminSession } from '@/lib/admin-session';
 
 // --- ICONS ---
 const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
@@ -177,7 +178,7 @@ export default function CreateMatchPage() {
     TEMPLATE_DEFAULTS[DEFAULT_SPORT],
   );
   const [createPin, setCreatePin] = useState('');
-  const [adminPin, setAdminPin] = useState('');
+  const [adminSessionToken, setAdminSessionToken] = useState('');
   const [tournamentName, setTournamentName] = useState('');
   const [umpireName, setUmpireName] = useState('');
   const [manualDisplayCode, setManualDisplayCode] = useState('');
@@ -231,21 +232,8 @@ export default function CreateMatchPage() {
   }, [theme]);
 
   useEffect(() => {
-    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed?.pin) {
-          setAdminPin(parsed.pin);
-          return;
-        }
-      } catch {
-        // Ignore malformed local storage payload.
-      }
-    }
-    if (process.env.NEXT_PUBLIC_ADMIN_PIN) {
-      setAdminPin(process.env.NEXT_PUBLIC_ADMIN_PIN);
-    }
+    const session = loadValidAdminSession();
+    setAdminSessionToken(session?.token || '');
   }, []);
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
@@ -377,8 +365,8 @@ export default function CreateMatchPage() {
 
   const handleCreateMatch = async () => { 
     setFieldErrors({});
-    if (!adminPin || adminPin.length < 4) { 
-      failValidation('general', 'PIN admin belum valid. Silakan login admin terlebih dahulu.'); 
+    if (!adminSessionToken) { 
+      failValidation('general', 'Sesi admin tidak valid. Silakan login ulang.'); 
       return; 
     } 
 
@@ -508,14 +496,10 @@ export default function CreateMatchPage() {
           },
         },
         pin: createPin,
-        adminPin,
+        adminSessionToken,
         templateId: selectedTemplate || TEMPLATE_DEFAULTS[selectedSport],
       });
 
-      localStorage.setItem(
-        ADMIN_AUTH_STORAGE_KEY,
-        JSON.stringify({ pin: adminPin, ts: Date.now() }),
-      );
       setCreatedMatch({
         matchId: newMatchId,
         displayCode: (data?.displayCode as string) || '',
@@ -555,14 +539,14 @@ export default function CreateMatchPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="w-10 h-10 rounded-xl bg-[#111827] text-[#F59E0B] flex items-center justify-center hover:scale-105 transition-transform"
+            className="w-10 h-10 flex items-center justify-center hover:scale-105 transition-transform"
           >
             <Image
-              src="/scorehub-logo.svg"
+              src="/logo-pb.png"
               alt="Scorehub logo"
-              width={20}
-              height={20}
-              className="h-5 w-5"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
               priority
             />
           </Link>

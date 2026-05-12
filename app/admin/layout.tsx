@@ -3,10 +3,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ADMIN_AUTH_STORAGE_KEY, ADMIN_AUTH_TTL_MS } from '@/lib/auth';
+import { loadValidAdminSession } from '@/lib/admin-session';
+import { clearAdminSession, saveAdminSession } from '@/lib/auth';
 
 // Icons
 const DashboardIcon = ({ className }: { className?: string }) => (
@@ -113,61 +116,34 @@ export default function AdminLayout({
   const [isAuthed, setIsAuthed] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [error, setError] = useState('');
-
-  const adminPin = useMemo(() => {
-    return process.env.NEXT_PUBLIC_ADMIN_PIN || '';
-  }, []);
+  const verifyAdminMutation = useMutation(api.matches.verifyAdminPin);
 
   useEffect(() => {
-    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-    if (!adminPin) {
+    const session = loadValidAdminSession();
+    if (session) {
       setIsAuthed(true);
-      setIsReady(true);
-      return;
-    }
-
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as {
-          pin?: string;
-          ts?: number;
-        };
-        const isValid =
-          parsed?.pin === adminPin &&
-          typeof parsed.ts === 'number' &&
-          Date.now() - parsed.ts < ADMIN_AUTH_TTL_MS;
-        if (isValid) {
-          setIsAuthed(true);
-        }
-      } catch {
-        // Ignore invalid storage
-      }
     }
     // Set sidebar open by default on desktop
     if (window.innerWidth >= 768) {
       setIsSidebarOpen(true);
     }
     setIsReady(true);
-  }, [adminPin]);
+  }, []);
 
-  const handlePinSubmit = () => {
-    if (!adminPin) {
-      setIsAuthed(true);
-      setError('');
-      return;
+  const handlePinSubmit = async () => {
+    if (!pinInput.trim()) return;
+    try {
+      const result = await verifyAdminMutation({ pin: pinInput.trim() });
+      if (result?.token && result?.expiresAt) {
+        saveAdminSession(result);
+        setIsAuthed(true);
+        setError('');
+      } else {
+        setError('Login admin gagal.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login admin gagal.');
     }
-
-    if (pinInput.trim() !== adminPin) {
-      setError('PIN salah. Coba lagi.');
-      return;
-    }
-
-    localStorage.setItem(
-      ADMIN_AUTH_STORAGE_KEY,
-      JSON.stringify({ pin: adminPin, ts: Date.now() }),
-    );
-    setIsAuthed(true);
-    setError('');
   };
 
   if (!isReady) {
@@ -185,39 +161,39 @@ export default function AdminLayout({
       <div className="min-h-dvh bg-background text-foreground flex items-center justify-center px-6">
         <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="size-10 flex items-center justify-center">
               <Image
-                src="/scorehub-logo.svg"
+                src="/logo-pb.png"
                 alt="Scorehub logo"
-                width={20}
-                height={20}
-                className="h-4 w-4"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
               />
             </div>
             <div>
               <p className="text-sm font-semibold text-pretty">Akses Admin</p>
               <p className="text-xs text-muted-foreground text-pretty">
-                Masukkan PIN global untuk masuk.
+                Masukkan password admin untuk masuk.
               </p>
             </div>
           </div>
 
           <div className="mt-5 space-y-3">
-            <label htmlFor="admin-pin" className="text-xs font-semibold">
-              PIN
+            <label htmlFor="admin-password" className="text-xs font-semibold">
+              Password
             </label>
-            <Input
-              id="admin-pin"
-              name="adminPin"
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              type="password"
-              spellCheck={false}
-              value={pinInput}
-              onChange={(event) => {
-                setPinInput(event.target.value.replace(/\D/g, '').slice(0, 6));
-                setError('');
-              }}
+              <Input
+                id="admin-password"
+                name="adminPassword"
+                autoComplete="current-password"
+                inputMode="text"
+                type="password"
+                spellCheck={false}
+                value={pinInput}
+                onChange={(event) => {
+                  setPinInput(event.target.value);
+                  setError('');
+                }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   handlePinSubmit();
@@ -233,11 +209,11 @@ export default function AdminLayout({
             <Button className="w-full" onClick={handlePinSubmit}>
               Masuk Admin
             </Button>
-            <p className="text-[11px] text-muted-foreground text-pretty">
-              PIN disimpan lokal selama 8 jam.
-            </p>
+              <p className="text-[11px] text-muted-foreground text-pretty">
+              Sesi admin disimpan lokal selama 8 jam.
+              </p>
+            </div>
           </div>
-        </div>
       </div>
     );
   }
@@ -260,13 +236,13 @@ export default function AdminLayout({
       >
         <div className="h-16 flex items-center justify-center border-b px-4">
           <div className="flex items-center gap-2 font-black text-xl tracking-tight text-black">
-            <div className="w-8 h-8 rounded-lg bg-[#111827] text-[#F59E0B] flex items-center justify-center">
+            <div className="w-8 h-8 flex items-center justify-center">
               <Image
-                src="/scorehub-logo.svg"
+                src="/logo-pb.png"
                 alt="Scorehub logo"
-                width={20}
-                height={20}
-                className="h-4 w-4"
+                width={24}
+                height={24}
+                className="h-6 w-6 object-contain"
               />
             </div>
             {isSidebarOpen && (
@@ -311,7 +287,13 @@ export default function AdminLayout({
         </nav>
 
         <div className="p-4 border-t">
-          <Link href="/">
+          <Link
+            href="/"
+            onClick={() => {
+              clearAdminSession();
+              setIsAuthed(false);
+            }}
+          >
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-black/60 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer group">
               <LogoutIcon className="w-5 h-5" />
               {isSidebarOpen && (

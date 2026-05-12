@@ -2,6 +2,7 @@ import { ConvexError } from 'convex/values';
 import type { MatchRole } from './sports/types';
 
 const encoder = new TextEncoder();
+export const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 8;
 
 const bytesToHex = (bytes: Uint8Array): string =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -17,37 +18,60 @@ export function generateToken(bytes = 4): string {
   return bytesToHex(buffer).toUpperCase();
 }
 
-export function isGlobalAdminPin(pin?: string): boolean {
-  const globalPin = process.env.ADMIN_PIN;
-  return Boolean(globalPin && pin && pin === globalPin);
+
+export async function assertAdminSession(
+  ctx: any,
+  adminSessionToken?: string,
+): Promise<void> {
+  if (!adminSessionToken) {
+    throw new ConvexError('Admin session required');
+  }
+
+  const tokenHash = await hashSecret(adminSessionToken);
+  const session = await ctx.db
+    .query('admin_sessions')
+    .withIndex('by_tokenHash', (q: any) => q.eq('tokenHash', tokenHash))
+    .unique();
+
+  if (!session) {
+    throw new ConvexError('Invalid admin session');
+  }
+
+  if (session.revokedAt) {
+    throw new ConvexError('Admin session revoked');
+  }
+
+  if (session.expiresAt <= Date.now()) {
+    throw new ConvexError('Admin session expired');
+  }
+
+  await ctx.db.patch(session._id, { lastUsedAt: Date.now() });
 }
 
 export async function assertAdminAccess(
-  match: { adminPinHash: string },
-  pin?: string,
+  ctx: any,
+  adminSessionToken?: string,
 ): Promise<void> {
-  if (isGlobalAdminPin(pin)) return;
-  if (!pin) {
-    throw new ConvexError('PIN required');
+  if (adminSessionToken) {
+    await assertAdminSession(ctx, adminSessionToken);
+    return;
   }
-  const pinHash = await hashSecret(pin);
-  if (pinHash !== match.adminPinHash) {
-    throw new ConvexError('Invalid PIN');
-  }
+  throw new ConvexError('Admin session required');
 }
 
 export async function assertRefereeOrAdminAccess(
+  ctx: any,
   match: {
-    adminPinHash: string;
     refereePinHash?: string;
     refereeTokenHash?: string;
   },
   role: MatchRole,
   pin?: string,
   token?: string,
+  adminSessionToken?: string,
 ): Promise<void> {
   if (role === 'admin') {
-    await assertAdminAccess(match, pin);
+    await assertAdminAccess(ctx, adminSessionToken);
     return;
   }
 
@@ -55,11 +79,9 @@ export async function assertRefereeOrAdminAccess(
     throw new ConvexError('Only referee/admin can perform this action');
   }
 
-  if (isGlobalAdminPin(pin)) return;
-
   const pinHash = pin ? await hashSecret(pin) : null;
   const pinOk = pinHash
-    ? pinHash === (match.refereePinHash || match.adminPinHash)
+    ? pinHash === match.refereePinHash
     : false;
   const tokenOk =
     token && match.refereeTokenHash

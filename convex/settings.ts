@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import { assertAdminSession } from './utils';
 
 export const get = query({
   args: { key: v.string() },
@@ -12,14 +13,14 @@ export const get = query({
   },
 });
 
-import { isGlobalAdminPin } from './utils';
-
 export const update = mutation({
-  args: { key: v.string(), value: v.any(), adminPin: v.string() },
+  args: {
+    key: v.string(),
+    value: v.any(),
+    adminSessionToken: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    if (!isGlobalAdminPin(args.adminPin)) {
-      throw new Error('Unauthorized: Invalid Admin PIN');
-    }
+    await assertAdminSession(ctx, args.adminSessionToken);
 
     const existing = await ctx.db
       .query('settings')

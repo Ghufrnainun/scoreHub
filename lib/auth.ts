@@ -1,5 +1,10 @@
-export const ADMIN_AUTH_STORAGE_KEY = 'scorehub:admin:auth';
+export const ADMIN_AUTH_STORAGE_KEY = 'scorehub:admin:session';
 export const ADMIN_AUTH_TTL_MS = 1000 * 60 * 60 * 8;
+
+export interface AdminSession {
+  token: string;
+  expiresAt: number;
+}
 
 export const REFEREE_SESSION_STORAGE_PREFIX = 'scorehub:referee:session:';
 
@@ -13,6 +18,44 @@ export interface RefereeSession {
 
 export const getRefereeSessionStorageKey = (matchId: string) =>
   `${REFEREE_SESSION_STORAGE_PREFIX}${matchId}`;
+
+const getAdminSessionStorage = () =>
+  typeof window === 'undefined' ? null : window.sessionStorage;
+
+export const saveAdminSession = (session: AdminSession) => {
+  const storage = getAdminSessionStorage();
+  if (!storage) return;
+  storage.setItem(ADMIN_AUTH_STORAGE_KEY, JSON.stringify(session));
+};
+
+export const loadAdminSession = (): AdminSession | null => {
+  const storage = getAdminSessionStorage();
+  if (!storage) return null;
+  const raw = storage.getItem(ADMIN_AUTH_STORAGE_KEY);
+  const fallbackRaw = raw || window.localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+  const source = raw || fallbackRaw;
+  if (!source) return null;
+  if (!raw && fallbackRaw) {
+    storage.setItem(ADMIN_AUTH_STORAGE_KEY, fallbackRaw);
+  }
+  try {
+    const parsed = JSON.parse(source) as Partial<AdminSession>;
+    if (!parsed?.token || !parsed?.expiresAt) return null;
+    return {
+      token: parsed.token,
+      expiresAt: parsed.expiresAt,
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const clearAdminSession = () => {
+  const storage = getAdminSessionStorage();
+  if (!storage) return;
+  storage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+};
 
 export const saveRefereeSession = (session: RefereeSession) => {
   if (typeof window === 'undefined') return;
@@ -36,15 +79,7 @@ export const loadRefereeSession = (
 };
 
 export const isAdminAuthenticated = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed?.pin || !parsed?.ts) return false;
-    const isExpired = Date.now() - parsed.ts > ADMIN_AUTH_TTL_MS;
-    return !isExpired;
-  } catch {
-    return false;
-  }
+  const session = loadAdminSession();
+  if (!session) return false;
+  return session.expiresAt > Date.now();
 };

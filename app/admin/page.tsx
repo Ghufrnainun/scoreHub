@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useRouter } from 'next/navigation';
+import { ConvexError } from 'convex/values';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ADMIN_AUTH_STORAGE_KEY, isAdminAuthenticated } from '@/lib/auth';
+import { saveAdminSession } from '@/lib/auth';
+import { loadValidAdminSession } from '@/lib/admin-session';
 
 type MatchStatus =
   | 'created'
@@ -52,9 +53,8 @@ interface MatchSummary {
 }
 
 export default function AdminDashboard() {
-  const router = useRouter();
-  const [adminPin, setAdminPin] = useState('');
-  const [isPinReady, setIsPinReady] = useState(false);
+  const [adminSessionToken, setAdminSessionToken] = useState('');
+  const [isSessionReady, setIsSessionReady] = useState(false);
   const [viewFilter, setViewFilter] = useState<DashboardView>('all');
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
@@ -64,22 +64,9 @@ export default function AdminDashboard() {
   const [sharePin, setSharePin] = useState('');
 
   useEffect(() => {
-    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setAdminPin(parsed?.pin || '');
-      } catch {
-        setAdminPin('');
-      }
-    }
-    setIsPinReady(true);
-  }, []);
-
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  useEffect(() => {
-    setIsAuthenticated(isAdminAuthenticated());
+    const session = loadValidAdminSession();
+    setAdminSessionToken(session?.token || '');
+    setIsSessionReady(true);
   }, []);
 
   const [localPinInput, setLocalPinInput] = useState('');
@@ -92,25 +79,29 @@ export default function AdminDashboard() {
     if (!localPinInput) return;
     setIsVerifying(true);
     try {
-      const isValid = await verifyAdminMutation({ pin: localPinInput });
-      if (isValid) {
-        localStorage.setItem(
-          ADMIN_AUTH_STORAGE_KEY,
-          JSON.stringify({ pin: localPinInput, ts: Date.now() }),
-        );
-        setAdminPin(localPinInput);
-        setIsAuthenticated(true);
+      const authResult = await verifyAdminMutation({ pin: localPinInput });
+      if (authResult?.token && authResult?.expiresAt) {
+        saveAdminSession({
+          token: authResult.token,
+          expiresAt: authResult.expiresAt,
+        });
+        setAdminSessionToken(authResult.token);
+        setAuthError('');
       } else {
-        setAuthError('PIN Administrator Salah');
+        setAuthError('Login admin gagal.');
       }
     } catch (err) {
-      setAuthError('Gagal verifikasi PIN');
+      const message =
+        err instanceof ConvexError
+          ? String(err.data || 'Gagal verifikasi kredensial admin')
+          : 'Gagal verifikasi kredensial admin';
+      setAuthError(message);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  if (isPinReady && !isAuthenticated) {
+  if (isSessionReady && !adminSessionToken) {
     return (
       <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-black/10 shadow-2xl overflow-hidden p-8 sm:p-10 text-center space-y-8">
@@ -121,7 +112,7 @@ export default function AdminDashboard() {
               </svg>
             </div>
             <h1 className="text-3xl uppercase font-black tracking-widest font-[family-name:var(--font-bebas)]">Akses Admin</h1>
-            <p className="text-slate-500 font-medium text-sm">Masukkan PIN administrator untuk mengelola turnamen.</p>
+            <p className="text-slate-500 font-medium text-sm">Masukkan password admin untuk mengelola turnamen.</p>
           </div>
           
           <form onSubmit={handleAdminAuth} className="space-y-6">
@@ -157,7 +148,9 @@ export default function AdminDashboard() {
 
   const matchData = useQuery(
     api.matches.listAdmin,
-    isPinReady ? { adminPin: adminPin || undefined } : 'skip',
+    isSessionReady
+      ? { adminSessionToken: adminSessionToken || undefined }
+      : 'skip',
   );
 
   const finishMatch = useMutation(api.matches.finishMatch);
@@ -165,9 +158,13 @@ export default function AdminDashboard() {
   const issueRefereeAccessToken = useMutation(api.matches.issueRefereeAccessToken);
 
   const onFinishMatch = async (matchId: string) => {
-    if (!adminPin) return;
+    if (!adminSessionToken) return;
     try {
-      await finishMatch({ matchId, role: 'admin', pin: adminPin });
+      await finishMatch({
+        matchId,
+        role: 'admin',
+        adminSessionToken,
+      });
       setFeedback({ type: 'success', message: 'Pertandingan berhasil diakhiri.' });
     } catch (error) {
       console.error('Failed to finish match:', error);
@@ -179,9 +176,9 @@ export default function AdminDashboard() {
   };
 
   const onDeleteMatch = async (matchId: string) => {
-    if (!adminPin) return;
+    if (!adminSessionToken) return;
     try {
-      await deleteMatch({ matchId, pin: adminPin });
+      await deleteMatch({ matchId, adminSessionToken });
       setFeedback({ type: 'success', message: 'Pertandingan berhasil dihapus.' });
     } catch (error) {
       console.error('Failed to delete match:', error);
@@ -192,7 +189,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const isLoading = !isPinReady || matchData === undefined;
+  const isLoading = !isSessionReady || matchData === undefined;
 
   const matches = useMemo<MatchSummary[]>(() => {
     const data = matchData || [];
@@ -454,12 +451,12 @@ export default function AdminDashboard() {
                   variant="outline"
                   className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
                   onClick={async () => {
-                    if (!match.displayCode || !adminPin) return;
+                    if (!match.displayCode || !adminSessionToken) return;
                     try {
                       const access = await issueRefereeAccessToken({
                         matchId: match.matchId,
                         role: 'admin',
-                        pin: adminPin,
+                        adminSessionToken,
                         refereeName: match.assignedReferee || undefined,
                       });
                       const link = `${window.location.origin}/match/${access.matchId}/control?role=referee&token=${encodeURIComponent(access.token)}`;
@@ -604,12 +601,12 @@ export default function AdminDashboard() {
             <Button
               type="button"
               onClick={async () => {
-                if (!shareMatch?.displayCode || !adminPin) return;
+                if (!shareMatch?.displayCode || !adminSessionToken) return;
                 try {
                   const access = await issueRefereeAccessToken({
                     matchId: shareMatch.matchId,
                     role: 'admin',
-                    pin: adminPin,
+                    adminSessionToken,
                     refereeName: shareMatch.assignedReferee || undefined,
                   });
                   const controlLink = `${window.location.origin}/match/${access.matchId}/control?role=referee&token=${encodeURIComponent(access.token)}`;

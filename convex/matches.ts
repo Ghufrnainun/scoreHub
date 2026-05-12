@@ -4,7 +4,9 @@ import type { MatchRole, MatchState, TeamSide } from './sports/types';
 import { getRulesForSport, resolveSportId } from './sports/registry';
 import {
   assertAdminAccess,
+  assertAdminSession,
   assertRefereeOrAdminAccess,
+  ADMIN_SESSION_TTL_MS,
   generateToken,
   hashSecret,
 } from './utils';
@@ -46,6 +48,9 @@ const teamInput = v.object({
 
 const MAX_REFEREE_PIN_ATTEMPTS = 5;
 const REFEREE_LOCK_MS = 5 * 60 * 1000;
+const MAX_ADMIN_LOGIN_ATTEMPTS = 5;
+const ADMIN_LOGIN_LOCK_MS = 10 * 60 * 1000;
+const ADMIN_AUTH_KEY = 'global_admin_auth';
 
 const normalizeDisplayCode = (value: string) =>
   value
@@ -207,6 +212,26 @@ const getRefereeAuthState = (match: any) => ({
   lastAttemptAt: match.refereeAuth?.lastAttemptAt ?? null,
 });
 
+const getAdminAuthState = async (ctx: any) => {
+  const existing = await ctx.db
+    .query('admin_auth_state')
+    .withIndex('by_key', (q: any) => q.eq('key', ADMIN_AUTH_KEY))
+    .unique();
+
+  return (
+    existing || {
+      key: ADMIN_AUTH_KEY,
+      failedAttempts: 0,
+      lockUntil: null,
+      lastAttemptAt: null,
+      updatedAt: Date.now(),
+    }
+  );
+};
+
+const getAdminSecret = () =>
+  process.env.ADMIN_PASSWORD || '';
+
 export const get = query({
   args: { matchId: v.string() },
   handler: async (ctx, args) => {
@@ -254,12 +279,9 @@ export const getByDisplayCode = query({
 });
 
 export const listAdmin = query({
-  args: { adminPin: v.optional(v.string()) },
+  args: { adminSessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const globalPin = process.env.ADMIN_PIN;
-    if (globalPin && args.adminPin !== globalPin) {
-      return [];
-    }
+    await assertAdminSession(ctx, args.adminSessionToken);
 
     const matches = await ctx.db.query('matches').collect();
     return matches
@@ -302,18 +324,12 @@ export const createMatch = mutation({
       away: teamInput,
     }),
     pin: v.string(),
-    adminPin: v.string(),
+    adminSessionToken: v.optional(v.string()),
     createdBy: v.optional(v.string()),
     templateId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const globalAdminPin = process.env.ADMIN_PIN;
-    if (!globalAdminPin) {
-      throw new ConvexError('ADMIN_PIN is not configured');
-    }
-    if (args.adminPin !== globalAdminPin) {
-      throw new ConvexError('Only admin can create match');
-    }
+    await assertAdminSession(ctx, args.adminSessionToken);
 
     const existing = await ctx.db
       .query('matches')
@@ -350,7 +366,6 @@ export const createMatch = mutation({
 
     const now = Date.now();
     const refereeToken = generateToken(8);
-    const adminPinHash = await hashSecret(args.adminPin);
     const refereePinHash = await hashSecret(args.pin);
     const refereeTokenHash = await hashSecret(refereeToken);
 
@@ -416,7 +431,6 @@ export const createMatch = mutation({
 
     await ctx.db.insert('matches', {
       ...match,
-      adminPinHash,
       refereePinHash,
       refereeTokenHash,
     });
@@ -553,16 +567,19 @@ export const issueRefereeAccessToken = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     refereeName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     if (match.status === 'finished') {
@@ -599,6 +616,7 @@ export const updateScore = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     team: teamSide,
     delta: v.number(),
@@ -606,10 +624,12 @@ export const updateScore = mutation({
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
     if (match.status === 'finished') {
       throw new ConvexError('Match already finished');
@@ -659,6 +679,7 @@ export const awardPoint = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     winner: teamSide,
     value: v.optional(v.number()),
@@ -666,10 +687,12 @@ export const awardPoint = mutation({
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
     if (match.status === 'finished') {
       throw new ConvexError('Match already finished');
@@ -709,8 +732,7 @@ export const awardPoint = mutation({
 
     await ctx.db.replace(match._id, {
       ...updated,
-      adminPinHash: match.adminPinHash,
-      refereePinHash: match.refereePinHash || match.adminPinHash,
+      refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
 
@@ -725,7 +747,6 @@ export const awardPoint = mutation({
 
     return sanitizeMatch({
       ...updated,
-      adminPinHash: match.adminPinHash,
       refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
@@ -737,15 +758,18 @@ export const undo = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const history = Array.isArray(match.history) ? match.history : [];
@@ -776,8 +800,7 @@ export const undo = mutation({
 
     await ctx.db.replace(match._id, {
       ...restored,
-      adminPinHash: match.adminPinHash,
-      refereePinHash: match.refereePinHash || match.adminPinHash,
+      refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
 
@@ -792,7 +815,6 @@ export const undo = mutation({
 
     return sanitizeMatch({
       ...restored,
-      adminPinHash: match.adminPinHash,
       refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
@@ -804,15 +826,18 @@ export const resetMatch = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const matchState = stripSystemFields(match) as MatchState;
@@ -863,8 +888,7 @@ export const resetMatch = mutation({
 
     await ctx.db.replace(match._id, {
       ...resetState,
-      adminPinHash: match.adminPinHash,
-      refereePinHash: match.refereePinHash || match.adminPinHash,
+      refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
 
@@ -879,7 +903,6 @@ export const resetMatch = mutation({
 
     return sanitizeMatch({
       ...resetState,
-      adminPinHash: match.adminPinHash,
       refereePinHash: match.refereePinHash,
       refereeTokenHash: match.refereeTokenHash,
     });
@@ -891,15 +914,18 @@ export const toggleSides = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const now = Date.now();
@@ -932,6 +958,7 @@ export const changeServe = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     team: teamSide,
     position: v.optional(v.union(v.literal('left'), v.literal('right'))),
@@ -939,10 +966,12 @@ export const changeServe = mutation({
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const now = Date.now();
@@ -975,16 +1004,19 @@ export const useChallenge = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     team: teamSide,
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const team = match.teams[args.team as TeamSide];
@@ -1028,6 +1060,7 @@ export const updateDisplayConfig = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     config: v.object({
       templateId: v.optional(v.string()),
@@ -1037,10 +1070,12 @@ export const updateDisplayConfig = mutation({
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const current = match.displayConfig || { templateId: 'modern' };
@@ -1077,6 +1112,7 @@ export const updateMatchMetadata = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     tournamentName: v.optional(v.string()),
     assignedReferee: v.optional(v.string()),
@@ -1095,10 +1131,12 @@ export const updateMatchMetadata = mutation({
     try {
       const match = await ensureMatch(ctx, args.matchId);
       await assertRefereeOrAdminAccess(
-        match,
+      ctx,
+      match,
         args.role as MatchRole,
         args.pin,
-        args.token,
+      args.token,
+      args.adminSessionToken,
       );
 
       const nextHomePlayers =
@@ -1257,16 +1295,19 @@ export const changeTemplate = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     templateId: v.string(),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const displayConfig = match.displayConfig || {
@@ -1306,15 +1347,18 @@ export const timerStart = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const timer = match.timer || {
@@ -1362,15 +1406,18 @@ export const timerPause = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const timer = match.timer;
@@ -1414,15 +1461,18 @@ export const timerReset = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const updatedTimer = {
@@ -1461,6 +1511,7 @@ export const updateAds = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     active: v.boolean(),
     assetId: v.optional(v.string()),
@@ -1468,10 +1519,12 @@ export const updateAds = mutation({
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const ads = {
@@ -1507,15 +1560,18 @@ export const finishMatch = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     // Only allow if not already finished? Or just idempotent.
@@ -1559,6 +1615,7 @@ export const updateTimer = mutation({
     matchId: v.string(),
     role: matchRole,
     pin: v.optional(v.string()),
+    adminSessionToken: v.optional(v.string()),
     token: v.optional(v.string()),
     elapsed: v.number(), // New elapsed time in seconds
     duration: v.optional(v.number()), // New duration (for countdowns)
@@ -1566,10 +1623,12 @@ export const updateTimer = mutation({
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
     await assertRefereeOrAdminAccess(
+      ctx,
       match,
       args.role as MatchRole,
       args.pin,
       args.token,
+      args.adminSessionToken,
     );
 
     const timer = match.timer || {
@@ -1627,11 +1686,11 @@ export const updateTimer = mutation({
 export const deleteMatch = mutation({
   args: {
     matchId: v.string(),
-    pin: v.string(),
+    adminSessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAccess(match, args.pin);
+    await assertAdminAccess(ctx, args.adminSessionToken);
 
     const events = await ctx.db
       .query('match_events')
@@ -1656,11 +1715,78 @@ export const deleteMatch = mutation({
 export const verifyAdminPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, args) => {
-    const globalAdminPin = process.env.ADMIN_PIN;
-    if (!globalAdminPin) {
-      console.error('ADMIN_PIN is not configured in backend');
-      return false;
+    const adminSecret = getAdminSecret();
+    if (!adminSecret) {
+      console.error('ADMIN_PASSWORD is not configured in backend');
+      throw new ConvexError('Admin auth is not configured');
     }
-    return args.pin === globalAdminPin;
+
+    const now = Date.now();
+    const authState = await getAdminAuthState(ctx);
+    if (authState.lockUntil && authState.lockUntil > now) {
+      const remainingSeconds = Math.ceil((authState.lockUntil - now) / 1000);
+      throw new ConvexError(
+        `Too many failed attempts. Try again in ${remainingSeconds}s.`,
+      );
+    }
+
+    const isValid = args.pin === adminSecret;
+    if (!isValid) {
+      const failedAttempts = (authState.failedAttempts || 0) + 1;
+      const shouldLock = failedAttempts >= MAX_ADMIN_LOGIN_ATTEMPTS;
+      const nextAuthState = {
+        key: ADMIN_AUTH_KEY,
+        failedAttempts: shouldLock ? 0 : failedAttempts,
+        lockUntil: shouldLock ? now + ADMIN_LOGIN_LOCK_MS : undefined,
+        lastAttemptAt: now,
+        updatedAt: now,
+      };
+
+      const existing = await ctx.db
+        .query('admin_auth_state')
+        .withIndex('by_key', (q) => q.eq('key', ADMIN_AUTH_KEY))
+        .unique();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, nextAuthState);
+      } else {
+        await ctx.db.insert('admin_auth_state', nextAuthState);
+      }
+
+      if (shouldLock) {
+        throw new ConvexError(
+          'Too many failed attempts. Access temporarily locked.',
+        );
+      }
+
+      throw new ConvexError('Invalid administrator password');
+    }
+
+    const existing = await ctx.db
+      .query('admin_auth_state')
+      .withIndex('by_key', (q) => q.eq('key', ADMIN_AUTH_KEY))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        failedAttempts: 0,
+        lockUntil: undefined,
+        lastAttemptAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const token = generateToken(24);
+    const tokenHash = await hashSecret(token);
+    const expiresAt = now + ADMIN_SESSION_TTL_MS;
+    await ctx.db.insert('admin_sessions', {
+      tokenHash,
+      expiresAt,
+      createdAt: now,
+      lastUsedAt: now,
+    });
+
+    return { token, expiresAt };
   },
 });
+
+

@@ -109,8 +109,7 @@ DEFAULT_MATCH_DURATION=1200
 MAX_MATCHES_PER_SERVER=50
 
 # Admin Access
-NEXT_PUBLIC_ADMIN_PIN=8574
-ADMIN_PIN=8574
+ADMIN_PASSWORD=8574
 ```
 
 *(Tekan `Ctrl + X`, lalu `Y`, lalu `Enter` untuk menyimpan di editor nano).*

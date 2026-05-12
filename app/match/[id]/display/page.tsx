@@ -194,13 +194,13 @@ export default function BwfScoreboard() {
         <div className="h-14 bg-black/50 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-20 group-hover:h-16 transition-[height] duration-300">
           <div className="flex items-center gap-4 sm:gap-8">
             <Link href="/admin" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 rounded-lg bg-[#fbbf24] flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Image
-                  src="/scorehub-logo.svg"
+                  src="/logo-pb.png"
                   alt="Scorehub logo"
-                  width={18}
-                  height={18}
-                  className="h-4 w-4"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 object-contain"
                 />
               </div>
               <span className="text-xs font-black tracking-[0.2em] uppercase text-white/50 group-hover:text-white transition-colors">

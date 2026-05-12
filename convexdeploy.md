@@ -49,7 +49,7 @@ NEXT_PUBLIC_CONVEX_URL=https://<deployment-name>.convex.cloud
 CONVEX_DEPLOYMENT=<your-deployment-slug>
 
 # Optional gate UI admin (client-side)
-NEXT_PUBLIC_ADMIN_PIN=1234
+ADMIN_PASSWORD=1234
 ```
 
 Catatan:
@@ -59,10 +59,10 @@ Catatan:
 
 ## 5. Set Secret di Convex (Server-side)
 
-`ADMIN_PIN` untuk validasi server-side tidak dibaca dari browser. Set di deployment Convex:
+`ADMIN_PASSWORD` untuk validasi server-side tidak dibaca dari browser. Set di deployment Convex:
 
 ```bash
-npx convex env set ADMIN_PIN 1234
+npx convex env set ADMIN_PASSWORD 1234
 ```
 
 Cek env di Convex:
@@ -162,14 +162,14 @@ Kesimpulan praktis:
 
 ### Unauthorized / PIN mismatch
 
-- Pastikan `ADMIN_PIN` di Convex env sesuai value yang kamu pakai
-- Jika pakai admin UI gate, sinkronkan juga dengan `NEXT_PUBLIC_ADMIN_PIN`
+- Pastikan `ADMIN_PASSWORD` di Convex env sesuai value yang kamu pakai
+- Jika pakai admin UI gate, pastikan menggunakan `ADMIN_PASSWORD` yang sesuai.
 
 ## 10. Checklist Ringkas
 
 - [ ] `npx convex dev` sukses dan linked ke deployment yang benar
 - [ ] `.env.local` berisi `NEXT_PUBLIC_CONVEX_URL` + `CONVEX_DEPLOYMENT`
-- [ ] `ADMIN_PIN` sudah di-set via `npx convex env set`
+- [ ] `ADMIN_PASSWORD` sudah di-set via `npx convex env set`
 - [ ] `npm run dev` jalan dan flow create/control/display realtime
 - [ ] Vercel sudah punya `CONVEX_DEPLOY_KEY`
 - [ ] Build command Vercel pakai `npx convex deploy --cmd "npm run build"`
@@ -185,5 +185,5 @@ Berdasarkan setup saat ini, project sudah siap untuk deploy MVP:
 Yang wajib dicek sebelum deploy production:
 
 - `CONVEX_DEPLOY_KEY` di Vercel environment variables
-- `ADMIN_PIN` di Convex deployment env (`npx convex env set ADMIN_PIN ...`)
+- `ADMIN_PASSWORD` di Convex deployment env (`npx convex env set ADMIN_PASSWORD ...`)
 - `NEXT_PUBLIC_CONVEX_URL` mengarah ke deployment Convex yang benar (production, bukan dev yang salah)

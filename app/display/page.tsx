@@ -65,13 +65,13 @@ export default function SmartTvLaunchPage() {
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center z-10">
         {/* Brand Logo */}
         <div className="flex items-center gap-3 mb-12 opacity-80">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-900/20">
+          <div className="w-12 h-12 flex items-center justify-center">
             <Image
-              src="/scorehub-logo.svg"
+              src="/logo-pb.png"
               alt="Scorehub"
-              width={24}
-              height={24}
-              className="w-6 h-6"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
             />
           </div>
           <div>

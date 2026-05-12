@@ -109,10 +109,27 @@ const sportStateShape = v.object({
 });
 
 export default defineSchema({
+  admin_auth_state: defineTable({
+    key: v.string(),
+    failedAttempts: v.number(),
+    lockUntil: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
+
+  admin_sessions: defineTable({
+    tokenHash: v.string(),
+    expiresAt: v.number(),
+    revokedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+  }).index('by_tokenHash', ['tokenHash'])
+    .index('by_expiresAt', ['expiresAt']),
+
   matches: defineTable({
     matchId: v.string(),
     displayCode: v.optional(v.string()),
-    adminPinHash: v.string(),
+    adminPinHash: v.optional(v.string()),
     refereePinHash: v.optional(v.string()),
     refereeTokenHash: v.string(),
     createdBy: v.optional(v.string()),

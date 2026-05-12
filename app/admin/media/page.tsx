@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useQuery, useMutation } from 'convex/react'; 
 import { api } from '@/convex/_generated/api'; 
 import { Loader2, Trash2, MonitorPlay } from 'lucide-react'; 
-import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth'; 
+import { loadValidAdminSession } from '@/lib/admin-session'; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,20 +25,15 @@ export default function MediaManager() {
   const removeAsset = useMutation(api.media.remove);
   const generateUploadUrl = useMutation(api.media.generateUploadUrl);
 
-  const [pin, setPin] = useState('');
+  const [adminSessionToken, setAdminSessionToken] = useState('');
   useEffect(() => {
-    const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-    if (stored) {
-      try {
-        const p = JSON.parse(stored);
-        setPin(p.pin);
-      } catch {}
-    }
+    const session = loadValidAdminSession();
+    setAdminSessionToken(session?.token || '');
   }, []);
 
   const authorizedMatches = useQuery(
     api.matches.listAdmin,
-    pin ? { adminPin: pin } : 'skip',
+    adminSessionToken ? { adminSessionToken } : 'skip',
   );
   const updateAds = useMutation(api.matches.updateAds);
 
@@ -138,7 +133,7 @@ export default function MediaManager() {
       await updateAds({ 
         matchId: selectedMatchId, 
         role: 'admin', 
-        pin, 
+        adminSessionToken, 
         active: true, 
         assetId: assetId, 
       });
@@ -161,7 +156,7 @@ export default function MediaManager() {
       await updateAds({ 
         matchId: selectedMatchId, 
         role: 'admin', 
-        pin, 
+        adminSessionToken, 
         active: false, 
         assetId: undefined, 
       });

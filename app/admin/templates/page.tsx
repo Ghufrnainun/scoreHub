@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Loader2 } from 'lucide-react';
-import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
+import { loadValidAdminSession } from '@/lib/admin-session';
 
 interface Template {
   id: string;
@@ -59,20 +59,15 @@ export default function TemplatesPage() {
     message: string;
   } | null>(null);
 
-  const [pin, setPin] = useState('');
+  const [adminSessionToken, setAdminSessionToken] = useState('');
   useEffect(() => {
-    const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-    if (stored) {
-      try {
-        const p = JSON.parse(stored);
-        setPin(p.pin);
-      } catch {}
-    }
+    const session = loadValidAdminSession();
+    setAdminSessionToken(session?.token || '');
   }, []);
 
   const authorizedMatches = useQuery(
     api.matches.listAdmin,
-    pin ? { adminPin: pin } : 'skip',
+    adminSessionToken ? { adminSessionToken } : 'skip',
   );
   const changeTemplate = useMutation(api.matches.changeTemplate);
   const [isApplying, setIsApplying] = useState(false);
@@ -92,7 +87,7 @@ export default function TemplatesPage() {
       await changeTemplate({ 
         matchId: selectedMatchId, 
         role: 'admin', 
-        pin, 
+        adminSessionToken, 
         templateId: selectedId, 
       }); 
       setFeedback({

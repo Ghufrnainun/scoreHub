@@ -16,6 +16,7 @@ interface UseMatchOptions {
   role: MatchRole;
   pin?: string;
   token?: string;
+  adminSessionToken?: string;
 }
 
 interface UseMatchReturn {
@@ -56,6 +57,7 @@ export function useMatch({
   role,
   pin,
   token,
+  adminSessionToken,
 }: UseMatchOptions): UseMatchReturn {
   const matchResult = useQuery(api.matches.get, { matchId });
   const match = matchResult ?? null;
@@ -133,83 +135,129 @@ export function useMatch({
   const awardPoint = useCallback(
     (winner: 'home' | 'away', value?: number) => {
       runMutation(() =>
-        awardPointMutation({ matchId, role, pin, token, winner, value }),
+        awardPointMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          adminSessionToken,
+          winner,
+          value,
+        }),
       );
     },
-    [awardPointMutation, matchId, pin, role, runMutation, token],
+    [awardPointMutation, matchId, pin, role, runMutation, token, adminSessionToken],
   );
 
   const updateScore = useCallback(
     (team: 'home' | 'away', delta: number) => {
       runMutation(() =>
-        updateScoreMutation({ matchId, role, pin, token, team, delta }),
+        updateScoreMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          adminSessionToken,
+          team,
+          delta,
+        }),
       );
     },
-    [matchId, pin, role, runMutation, token, updateScoreMutation],
+    [matchId, pin, role, runMutation, token, updateScoreMutation, adminSessionToken],
   );
 
   const undo = useCallback(() => {
-    runMutation(() => undoMutation({ matchId, role, pin, token }));
-  }, [matchId, pin, role, runMutation, token, undoMutation]);
+    runMutation(() => undoMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [matchId, pin, role, runMutation, token, undoMutation, adminSessionToken]);
 
   const startTimer = useCallback(() => {
-    runMutation(() => timerStartMutation({ matchId, role, pin, token }));
-  }, [matchId, pin, role, runMutation, timerStartMutation, token]);
+    runMutation(() => timerStartMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [matchId, pin, role, runMutation, timerStartMutation, token, adminSessionToken]);
 
   const pauseTimer = useCallback(() => {
-    runMutation(() => timerPauseMutation({ matchId, role, pin, token }));
-  }, [matchId, pin, role, runMutation, timerPauseMutation, token]);
+    runMutation(() => timerPauseMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [matchId, pin, role, runMutation, timerPauseMutation, token, adminSessionToken]);
 
   const resetTimer = useCallback(() => {
-    runMutation(() => timerResetMutation({ matchId, role, pin, token }));
-  }, [matchId, pin, role, runMutation, timerResetMutation, token]);
+    runMutation(() => timerResetMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [matchId, pin, role, runMutation, timerResetMutation, token, adminSessionToken]);
 
   const updateConfig = useCallback(
     (config: Partial<DisplayConfig>) => {
       runMutation(() =>
-        updateConfigMutation({ matchId, role, pin, token, config }),
+        updateConfigMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          adminSessionToken,
+          config,
+        }),
       );
     },
-    [matchId, pin, role, runMutation, token, updateConfigMutation],
+    [matchId, pin, role, runMutation, token, updateConfigMutation, adminSessionToken],
   );
 
   const changeServe = useCallback(
     (team: 'home' | 'away', position?: 'left' | 'right') => {
       runMutation(() =>
-        changeServeMutation({ matchId, role, pin, token, team, position }),
+        changeServeMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          adminSessionToken,
+          team,
+          position,
+        }),
       );
     },
-    [changeServeMutation, matchId, pin, role, runMutation, token],
+    [changeServeMutation, matchId, pin, role, runMutation, token, adminSessionToken],
   );
 
   const useChallenge = useCallback(
     (team: 'home' | 'away') => {
       runMutation(() =>
-        useChallengeMutation({ matchId, role, pin, token, team }),
+        useChallengeMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          adminSessionToken,
+          team,
+        }),
       );
     },
-    [matchId, pin, role, runMutation, token, useChallengeMutation],
+    [matchId, pin, role, runMutation, token, useChallengeMutation, adminSessionToken],
   );
 
   const toggleSides = useCallback(() => {
-    runMutation(() => toggleSidesMutation({ matchId, role, pin, token }));
-  }, [matchId, pin, role, runMutation, token, toggleSidesMutation]);
+    runMutation(() => toggleSidesMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [matchId, pin, role, runMutation, token, toggleSidesMutation, adminSessionToken]);
 
   const resetMatch = useCallback(() => {
-    runMutation(() => resetMatchMutation({ matchId, role, pin, token }));
-  }, [matchId, pin, role, resetMatchMutation, runMutation, token]);
+    runMutation(() => resetMatchMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [matchId, pin, role, resetMatchMutation, runMutation, token, adminSessionToken]);
 
   const finishMatch = useCallback(() => {
-    runMutation(() => finishMatchMutation({ matchId, role, pin, token }));
-  }, [finishMatchMutation, matchId, pin, role, runMutation, token]);
+    runMutation(() => finishMatchMutation({ matchId, role, pin, token, adminSessionToken }));
+  }, [finishMatchMutation, matchId, pin, role, runMutation, token, adminSessionToken]);
 
   const updateTimer = useCallback(
     (elapsed: number, duration?: number) => {
       runMutation(() =>
-        updateTimerMutation({ matchId, role, pin, token, elapsed, duration }),
+        updateTimerMutation({
+          matchId,
+          role,
+          pin,
+          token,
+          adminSessionToken,
+          elapsed,
+          duration,
+        }),
       );
     },
-    [matchId, pin, role, runMutation, token, updateTimerMutation],
+    [matchId, pin, role, runMutation, token, updateTimerMutation, adminSessionToken],
   );
 
   const updateMatchMetadata = useCallback(
@@ -229,11 +277,12 @@ export function useMatch({
           role,
           pin,
           token,
+          adminSessionToken,
           ...payload,
         }),
       );
     },
-    [matchId, pin, role, runMutation, token, updateMatchMetadataMutation],
+    [matchId, pin, role, runMutation, token, updateMatchMetadataMutation, adminSessionToken],
   );
 
   return {

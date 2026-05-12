@@ -7,22 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { ADMIN_AUTH_STORAGE_KEY } from '@/lib/auth';
+import { loadValidAdminSession } from '@/lib/admin-session';
 
 export default function SettingsPage() { 
-  const [pin, setPin] = useState(''); 
+  const [adminSessionToken, setAdminSessionToken] = useState(''); 
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
   useEffect(() => {
-    const stored = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-    if (stored) {
-      try {
-        const p = JSON.parse(stored);
-        setPin(p.pin);
-      } catch {}
-    }
+    const session = loadValidAdminSession();
+    setAdminSessionToken(session?.token || '');
   }, []);
 
   const existingColor = useQuery(api.settings.get, { key: 'primaryColor' });
@@ -44,7 +39,7 @@ export default function SettingsPage() {
       await updateSetting({ 
         key: 'primaryColor', 
         value: primaryColor, 
-        adminPin: pin, 
+        adminSessionToken, 
       }); 
       setFeedback({
         type: 'success',

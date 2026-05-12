@@ -177,14 +177,14 @@ export default function GuidePage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="grid h-10 w-10 place-items-center rounded-xl bg-[#111827] text-[#F59E0B] transition-transform hover:scale-105"
+              className="flex h-10 w-10 items-center justify-center transition-transform hover:scale-105"
             >
               <Image
-                src="/scorehub-logo.svg"
+                src="/logo-pb.png"
                 alt="Scorehub logo"
-                width={20}
-                height={20}
-                className="h-5 w-5"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
                 priority
               />
             </Link>
