@@ -148,8 +148,8 @@ export default function AdminDashboard() {
 
   const matchData = useQuery(
     api.matches.listAdmin,
-    isSessionReady
-      ? { adminSessionToken: adminSessionToken || undefined }
+    isSessionReady && adminSessionToken
+      ? { adminSessionToken }
       : 'skip',
   );
 

@@ -45,7 +45,10 @@ export async function assertAdminSession(
     throw new ConvexError('Admin session expired');
   }
 
-  await ctx.db.patch(session._id, { lastUsedAt: Date.now() });
+  // Queries in Convex are read-only; only touch session metadata when writes are available.
+  if (typeof ctx.db.patch === 'function') {
+    await ctx.db.patch(session._id, { lastUsedAt: Date.now() });
+  }
 }
 
 export async function assertAdminAccess(
