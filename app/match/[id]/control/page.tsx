@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import type { MatchRole } from '@/lib/match-types';
 import { cn } from '@/lib/utils';
 import { loadRefereeSession, saveRefereeSession } from '@/lib/auth';
+import { loadValidAdminSession } from '@/lib/admin-session';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,12 +175,20 @@ export default function ControlPage() {
   const role = (searchParams.get('role') || 'admin') as MatchRole;
   const pin = searchParams.get('pin') || undefined;
   const queryToken = searchParams.get('token') || undefined;
-  const [sessionReady, setSessionReady] = useState(
-    role !== 'referee' || !!queryToken,
-  );
+  const [sessionReady, setSessionReady] = useState(false);
   const [token, setToken] = useState<string | undefined>(queryToken);
+  const [adminSessionToken, setAdminSessionToken] = useState<string | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
+    if (role === 'admin') {
+      const adminSession = loadValidAdminSession();
+      setAdminSessionToken(adminSession?.token);
+      setSessionReady(true);
+      return;
+    }
+
     if (role !== 'referee') {
       setSessionReady(true);
       return;
@@ -217,6 +226,7 @@ export default function ControlPage() {
     role,
     pin,
     token,
+    adminSessionToken,
   });
 
   // Auto-persist referee session once match is successfully loaded and token is verified
@@ -399,6 +409,39 @@ export default function ControlPage() {
         <p className="text-sm font-mono text-muted-foreground">
           Menyiapkan sesi wasit...
         </p>
+      </div>
+    );
+  }
+
+  if (role === 'admin' && !sessionReady) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <p className="text-sm font-mono text-muted-foreground">
+          Menyiapkan sesi admin...
+        </p>
+      </div>
+    );
+  }
+
+  if (role === 'admin' && !adminSessionToken) {
+    return (
+      <div className="min-h-screen bg-background text-foreground px-4 py-16">
+        <div className="max-w-xl mx-auto rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+            Sesi Admin Tidak Ditemukan
+          </p>
+          <h1 className="mt-3 text-3xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
+            Masuk Admin Dulu
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Login dari halaman admin untuk membuka kontrol pertandingan.
+          </p>
+          <Link href="/admin" className="inline-block mt-6">
+            <Button className="rounded-full text-xs uppercase tracking-widest font-bold">
+              Ke Halaman Admin
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
