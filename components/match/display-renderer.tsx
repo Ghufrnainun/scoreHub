@@ -119,7 +119,7 @@ interface TemplateProps {
 }
 
 const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
-  const { teams, sets, server, status, currentSet, category, isFlipped } =
+  const { teams, sets, server, status, currentSet, category } =
     match;
   const home = match.teams.home;
   const away = match.teams.away;
@@ -257,15 +257,15 @@ const ModernTemplate = ({ match, displaySettings }: TemplateProps) => {
       </div>
 
       <div className="rounded-lg overflow-hidden bg-black shadow-2xl flex flex-col">
-        {isFlipped ? renderRow(away, false) : renderRow(home, true)}
-        {isFlipped ? renderRow(home, true) : renderRow(away, false)}
+        {renderRow(home, true)}
+        {renderRow(away, false)}
       </div>
     </div>
   );
 };
 
 const ClassicTemplate = ({ match, displaySettings }: TemplateProps) => {
-  const { teams, sets, server, currentSet, isFlipped } = match;
+  const { teams, sets, server, currentSet } = match;
   const home = match.teams.home;
   const away = match.teams.away;
 
@@ -317,15 +317,15 @@ const ClassicTemplate = ({ match, displaySettings }: TemplateProps) => {
   return (
     <div className="flex items-center justify-center p-8">
       <div className="w-full max-w-6xl rounded-xl border-4 border-slate-700 overflow-hidden shadow-2xl">
-        {isFlipped ? renderRow(away, false) : renderRow(home, true)}
-        {isFlipped ? renderRow(home, true) : renderRow(away, false)}
+        {renderRow(home, true)}
+        {renderRow(away, false)}
       </div>
     </div>
   );
 };
 
 const MinimalTemplate = ({ match, displaySettings }: TemplateProps) => {
-  const { teams, server, isFlipped } = match;
+  const { teams, server } = match;
   const home = match.teams.home;
   const away = match.teams.away;
 
@@ -387,14 +387,14 @@ const MinimalTemplate = ({ match, displaySettings }: TemplateProps) => {
 
   return (
     <div className="flex-1 flex divide-x divide-slate-800">
-      {isFlipped ? renderSide(away, false) : renderSide(home, true)}
-      {isFlipped ? renderSide(home, true) : renderSide(away, false)}
+      {renderSide(home, true)}
+      {renderSide(away, false)}
     </div>
   );
 };
 
 const NeonTemplate = ({ match, displaySettings }: TemplateProps) => {
-  const { teams, server, isFlipped } = match;
+  const { teams, server } = match;
   const home = match.teams.home;
   const away = match.teams.away;
 
@@ -466,7 +466,7 @@ const NeonTemplate = ({ match, displaySettings }: TemplateProps) => {
   return (
     <div className="flex-1 flex p-8 bg-[#050505]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-      {isFlipped ? renderNeonPanel(away, false) : renderNeonPanel(home, true)}
+      {renderNeonPanel(home, true)}
       <div className="flex flex-col items-center justify-center gap-4 z-10">
         <div className="w-px h-32 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
         <span className="text-2xl font-black italic text-white/20 uppercase tracking-tighter">
@@ -474,7 +474,7 @@ const NeonTemplate = ({ match, displaySettings }: TemplateProps) => {
         </span>
         <div className="w-px h-32 bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
       </div>
-      {isFlipped ? renderNeonPanel(home, true) : renderNeonPanel(away, false)}
+      {renderNeonPanel(away, false)}
     </div>
   );
 };

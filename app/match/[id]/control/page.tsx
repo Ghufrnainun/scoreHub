@@ -1745,7 +1745,7 @@ export default function ControlPage() {
                       <div className="flex items-center gap-2">
                         {scoreTableConfig.showServe ? (
                           <div
-                            className={`w-2 h-2 rounded-full ${awayServing ? 'bg-red-500' : 'bg-transparent'}`}
+                            className={`w-2 h-2 rounded-full ${awayServing ? 'bg-blue-500' : 'bg-transparent'}`}
                           />
                         ) : null}
                         <span>{getPrimaryTableLabel('away')}</span>

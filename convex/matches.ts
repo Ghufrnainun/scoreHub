@@ -773,9 +773,6 @@ export const undo = mutation({
     );
 
     const history = Array.isArray(match.history) ? match.history : [];
-    if (match.status === 'finished') {
-      throw new ConvexError('Undo is not allowed after match is finished');
-    }
     if (history.length === 0) {
       throw new ConvexError('Nothing to undo');
     }
@@ -1578,9 +1575,17 @@ export const finishMatch = mutation({
     // If we want to toggle, we'd need a different mutation or arg.
     // For now, "finish" means set to finished.
 
+    const matchState = stripSystemFields(match) as MatchState;
+    const history = Array.isArray(match.history) ? match.history : [];
+    const snapshot = snapshotMatch(matchState);
+    const nextHistory = [...history, snapshot];
+    if (nextHistory.length > 50) nextHistory.shift();
+
     const now = Date.now();
-    const updated: Partial<MatchState> = {
+    const updated: MatchState = {
+      ...matchState,
       status: 'finished',
+      history: nextHistory,
       updatedAt: now,
       timer: match.timer
         ? {
@@ -1592,21 +1597,26 @@ export const finishMatch = mutation({
         : undefined,
     };
 
-    await ctx.db.patch(match._id, updated);
+    await ctx.db.replace(match._id, {
+      ...updated,
+      refereePinHash: match.refereePinHash,
+      refereeTokenHash: match.refereeTokenHash,
+    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
       action: 'match:finish',
-      before: stripSystemFields(match) as MatchState,
-      after: {
-        ...(stripSystemFields(match) as MatchState),
-        ...updated,
-      },
+      before: matchState,
+      after: updated,
       role: args.role as MatchRole,
       token: args.token,
     });
 
-    return sanitizeMatch({ ...match, ...updated });
+    return sanitizeMatch({
+      ...updated,
+      refereePinHash: match.refereePinHash,
+      refereeTokenHash: match.refereeTokenHash,
+    });
   },
 });
 

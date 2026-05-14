@@ -38,3 +38,6 @@ next-env.d.ts
 .next
 .shared
 .trae
+
+/output/*
+.playwright-cli/*
