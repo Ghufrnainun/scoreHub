@@ -32,6 +32,8 @@ const CATEGORY_NAMES: Record<string, string> = {
   '': 'Tunggal Putra',
 };
 
+const LEGACY_FALLBACK_TIMEOUT_MS = 12000;
+
 export default function BwfScoreboard() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -57,6 +59,7 @@ export default function BwfScoreboard() {
   // Overlay Mode Logic
   const queryOverlay = searchParams.get('overlay') === 'true';
   const isOverlay = queryOverlay || displaySettings.overlay?.enabled;
+  const disableLegacyFallback = searchParams.get('noLegacy') === '1';
 
   const overlayConfig = {
     background: displaySettings.overlay?.background || 'transparent',
@@ -121,6 +124,18 @@ export default function BwfScoreboard() {
     return () =>
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    if (disableLegacyFallback) return;
+    if (!isLoading) return;
+
+    const timer = window.setTimeout(() => {
+      const legacyUrl = `/match/${encodeURIComponent(matchId)}/legacy`;
+      window.location.replace(legacyUrl);
+    }, LEGACY_FALLBACK_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [disableLegacyFallback, isLoading, matchId]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
