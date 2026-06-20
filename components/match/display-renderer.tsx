@@ -778,48 +778,289 @@ const SoccerTemplate = ({ match, displaySettings }: TemplateProps) => {
   );
 };
 
+const FLAG_ISO_MAP: Record<string, string> = {
+  INA: 'id', IDN: 'id', INDONESIA: 'id',
+  MAS: 'my', MALAYSIA: 'my',
+  CHN: 'cn', CHINA: 'cn',
+  JPN: 'jp', JAPAN: 'jp',
+  KOR: 'kr', KOREA: 'kr',
+  DEN: 'dk', DENMARK: 'dk',
+  IND: 'in', INDIA: 'in',
+  THA: 'th', THAILAND: 'th',
+  TPE: 'tw', TAIPEI: 'tw',
+  HKG: 'hk', HKC: 'hk', 'HONG KONG': 'hk',
+  SGP: 'sg', SINGAPORE: 'sg',
+  ENG: 'gb-eng', ENGLAND: 'gb-eng',
+  GBR: 'gb',
+  NED: 'nl', NETHERLANDS: 'nl',
+  GER: 'de', GERMANY: 'de',
+  FRA: 'fr', FRANCE: 'fr',
+  ESP: 'es', SPAIN: 'es',
+  USA: 'us', CAN: 'ca', CANADA: 'ca',
+  AUS: 'au', AUSTRALIA: 'au',
+  PHL: 'ph', PHILIPPINES: 'ph',
+  VIE: 'vn', VIETNAM: 'vn',
+  MYS: 'my',
+};
+
+const BwfCourtTemplate = ({ match, displaySettings }: TemplateProps) => {
+  const { teams, sets, server, status, currentSet, category } = match;
+  const home = teams.home;
+  const away = teams.away;
+  const isFinished = status === 'finished';
+  const isHomeServing = server === 'home';
+  const isAwayServing = server === 'away';
+
+  const isSingles = category === 'MS' || category === 'WS';
+  const formatPlayerName = (team: any) => {
+    if (isSingles) {
+      return team.players?.[0]?.name || team.name;
+    }
+    return team.players?.length
+      ? team.players.map((p: any) => p.name).join(' / ')
+      : team.name;
+  };
+
+  const homeName = formatPlayerName(home);
+  const awayName = formatPlayerName(away);
+
+  // Custom colors for players (default: home is orange, away is green)
+  const isDefaultHomeColor = displaySettings.teamColors.home === '#3b82f6';
+  const isDefaultAwayColor = displaySettings.teamColors.away === '#ef4444';
+  const homeColor = isDefaultHomeColor ? '#FF9F29' : (displaySettings.teamColors.home || '#FF9F29');
+  const awayColor = isDefaultAwayColor ? '#39FF14' : (displaySettings.teamColors.away || '#39FF14');
+
+  const homeCode = (displaySettings.teamCodes.home || getCountryCode(home.country) || home.name.slice(0, 3)).toUpperCase();
+  const awayCode = (displaySettings.teamCodes.away || getCountryCode(away.country) || away.name.slice(0, 3)).toUpperCase();
+
+  const getIsoCode = (code: string) => {
+    const upper = code.trim().toUpperCase();
+    if (FLAG_ISO_MAP[upper]) {
+      return FLAG_ISO_MAP[upper];
+    }
+    if (upper.length === 2) {
+      return upper.toLowerCase();
+    }
+    return '';
+  };
+
+  const homeIso = getIsoCode(homeCode);
+  const awayIso = getIsoCode(awayCode);
+
+  // Compile scores history
+  const allSets: { home: number; away: number; isActive: boolean }[] = [];
+
+  // Fill in past sets
+  const currentSetIndex = currentSet - 1;
+  for (let i = 0; i < currentSetIndex; i++) {
+    const past = sets[i] || { home: 0, away: 0 };
+    allSets.push({
+      home: past.home,
+      away: past.away,
+      isActive: false,
+    });
+  }
+
+  // Fill in current set
+  if (!isFinished) {
+    allSets.push({
+      home: home.score,
+      away: away.score,
+      isActive: true,
+    });
+  } else {
+    // If finished, make sure we show all played sets
+    for (let i = allSets.length; i < sets.length; i++) {
+      allSets.push({
+        home: sets[i].home,
+        away: sets[i].away,
+        isActive: i === sets.length - 1, // last set is concluding
+      });
+    }
+  }
+
+  return (
+    <div className="flex-1 w-full h-full bg-black text-white flex p-6 sm:p-12 md:p-16 select-none font-sans overflow-hidden items-stretch">
+      {/* Left Column (55% width) - Matches the screenshot layout */}
+      <div className="w-[55%] flex flex-col justify-between h-full py-2 sm:py-6">
+        {/* Category: MS, WS, etc. */}
+        <div>
+          <h1 className="text-7xl sm:text-[100px] md:text-[130px] font-black leading-none text-white tracking-tighter uppercase font-sans">
+            {category || 'MS'}
+          </h1>
+        </div>
+
+        {/* Players Block */}
+        <div className="space-y-6 sm:space-y-12">
+          {/* Player 1 Row */}
+          <div className="space-y-1 sm:space-y-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {homeIso && (
+                <img
+                  src={`https://flagcdn.com/h80/${homeIso}.png`}
+                  alt={homeCode}
+                  className="h-8 sm:h-12 w-auto object-contain border border-white/10 shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
+              <span className="text-2xl sm:text-[44px] font-black tracking-widest text-white font-sans uppercase">
+                {homeCode}
+              </span>
+              {isHomeServing && !isFinished && (
+                <ShuttlecockIcon
+                  isServing={true}
+                  className="w-8 h-8 text-[#fbbf24] animate-pulse ml-2 flex-shrink-0"
+                />
+              )}
+            </div>
+            <h2
+              className="text-3xl sm:text-[54px] md:text-[68px] font-extrabold tracking-tight uppercase leading-none truncate pr-4"
+              style={{ color: homeColor }}
+            >
+              {homeName}
+            </h2>
+          </div>
+
+          {/* Player 2 Row */}
+          <div className="space-y-1 sm:space-y-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {awayIso && (
+                <img
+                  src={`https://flagcdn.com/h80/${awayIso}.png`}
+                  alt={awayCode}
+                  className="h-8 sm:h-12 w-auto object-contain border border-white/10 shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
+              <span className="text-2xl sm:text-[44px] font-black tracking-widest text-white font-sans uppercase">
+                {awayCode}
+              </span>
+              {isAwayServing && !isFinished && (
+                <ShuttlecockIcon
+                  isServing={true}
+                  className="w-8 h-8 text-[#fbbf24] animate-pulse ml-2 flex-shrink-0"
+                />
+              )}
+            </div>
+            <h2
+              className="text-3xl sm:text-[54px] md:text-[68px] font-extrabold tracking-tight uppercase leading-none truncate pr-4"
+              style={{ color: awayColor }}
+            >
+              {awayName}
+            </h2>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column (45% width) - Score blocks columns */}
+      <div className="w-[45%] flex items-end justify-end h-full py-4 sm:py-6">
+        <div className="flex divide-x divide-slate-800/80 border-2 border-slate-800/80 bg-black h-[280px] sm:h-[380px] md:h-[440px] rounded-2xl overflow-hidden shadow-2xl">
+          {allSets.map((set, idx) => {
+            const isHomeServingActive = set.isActive && isHomeServing && !isFinished;
+            const isAwayServingActive = set.isActive && isAwayServing && !isFinished;
+
+            // Highlight the winner's score box if match is finished
+            const isHomeWinnerHighlight = isFinished && idx === allSets.length - 1 && match.winner === 'home';
+            const isAwayWinnerHighlight = isFinished && idx === allSets.length - 1 && match.winner === 'away';
+
+            const highlightHome = isHomeServingActive || isHomeWinnerHighlight;
+            const highlightAway = isAwayServingActive || isAwayWinnerHighlight;
+
+            return (
+              <div key={idx} className="w-[90px] sm:w-[150px] md:w-[180px] flex flex-col h-full">
+                {/* Player 1 score block */}
+                <div
+                  className={cn(
+                    'flex-1 flex items-center justify-center transition-all duration-300',
+                    highlightHome ? '' : 'bg-black',
+                  )}
+                  style={highlightHome ? { backgroundColor: homeColor } : undefined}
+                >
+                  <span
+                    className="text-6xl sm:text-[100px] md:text-[140px] font-black leading-none font-sans tabular-nums select-none tracking-tighter"
+                    style={{ color: highlightHome ? '#000000' : homeColor }}
+                  >
+                    {set.home}
+                  </span>
+                </div>
+
+                {/* Divider between home and away */}
+                <div className="h-[2px] w-full bg-slate-800/60" />
+
+                {/* Player 2 score block */}
+                <div
+                  className={cn(
+                    'flex-1 flex items-center justify-center transition-all duration-300',
+                    highlightAway ? '' : 'bg-black',
+                  )}
+                  style={highlightAway ? { backgroundColor: awayColor } : undefined}
+                >
+                  <span
+                    className="text-6xl sm:text-[100px] md:text-[140px] font-black leading-none font-sans tabular-nums select-none tracking-tighter"
+                    style={{ color: highlightAway ? '#000000' : awayColor }}
+                  >
+                    {set.away}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function DisplayRenderer({ match, displaySettings }: TemplateProps) {
-    if (match.sport !== 'badminton') {
-      if (match.sport === 'basketball') {
-        return (
-          <BasketballTemplate match={match} displaySettings={displaySettings} />
-        );
-      }
-      if (match.sport === 'volleyball') {
-        return (
-          <VolleyballTemplate match={match} displaySettings={displaySettings} />
-        );
-      }
-      if (match.sport === 'tennis') {
-        return (
-          <TennisTemplate match={match} displaySettings={displaySettings} />
-        );
-      }
-      if (match.sport === 'soccer' || match.sport === 'futsal') {
-        return (
-          <SoccerTemplate match={match} displaySettings={displaySettings} />
-        );
-      }
+  if (match.sport !== 'badminton') {
+    if (match.sport === 'basketball') {
       return (
         <BasketballTemplate match={match} displaySettings={displaySettings} />
       );
     }
-
-    switch (displaySettings.template) {
-      case 'classic':
-        return (
-          <ClassicTemplate match={match} displaySettings={displaySettings} />
-        );
-      case 'minimal':
-        return (
-          <MinimalTemplate match={match} displaySettings={displaySettings} />
-        );
-      case 'neon':
-        return <NeonTemplate match={match} displaySettings={displaySettings} />;
-      case 'modern':
-      default:
-        return (
-          <ModernTemplate match={match} displaySettings={displaySettings} />
-        );
+    if (match.sport === 'volleyball') {
+      return (
+        <VolleyballTemplate match={match} displaySettings={displaySettings} />
+      );
     }
+    if (match.sport === 'tennis') {
+      return (
+        <TennisTemplate match={match} displaySettings={displaySettings} />
+      );
+    }
+    if (match.sport === 'soccer' || match.sport === 'futsal') {
+      return (
+        <SoccerTemplate match={match} displaySettings={displaySettings} />
+      );
+    }
+    return (
+      <BasketballTemplate match={match} displaySettings={displaySettings} />
+    );
+  }
+
+  switch (displaySettings.template) {
+    case 'classic':
+      return (
+        <ClassicTemplate match={match} displaySettings={displaySettings} />
+      );
+    case 'minimal':
+      return (
+        <MinimalTemplate match={match} displaySettings={displaySettings} />
+      );
+    case 'neon':
+      return <NeonTemplate match={match} displaySettings={displaySettings} />;
+    case 'bwf-court':
+      return (
+        <BwfCourtTemplate match={match} displaySettings={displaySettings} />
+      );
+    case 'modern':
+    default:
+      return (
+        <ModernTemplate match={match} displaySettings={displaySettings} />
+      );
+  }
 }

@@ -98,12 +98,30 @@ const LogoutIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const OverlayIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+    />
+  </svg>
+);
+
 const MENU_ITEMS = [
   { name: 'Pertandingan', path: '/admin', icon: DashboardIcon },
   { name: 'Media & Iklan', path: '/admin/media', icon: MediaIcon },
+  { name: 'Overlay OBS', path: '/admin/overlay', icon: OverlayIcon },
   { name: 'Templat', path: '/admin/templates', icon: TemplateIcon },
   { name: 'Pengaturan', path: '/admin/settings', icon: SettingsIcon },
 ];
+
 
 export default function AdminLayout({
   children,

@@ -872,7 +872,7 @@ export default function ControlPage() {
               </button>
               <button
                 onClick={() => {
-                  const url = `${window.location.origin}${displayPath}?overlay=true`;
+                  const url = `${window.location.origin}/overlay/${encodeURIComponent(matchId)}?style=bwf`;
                   navigator.clipboard.writeText(url);
                   pushCopyFeedback('OBS overlay link copied');
                 }}

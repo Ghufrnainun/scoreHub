@@ -4,6 +4,7 @@ export interface DisplaySettings {
     | 'classic'
     | 'minimal'
     | 'neon'
+    | 'bwf-court'
     | 'hoops-classic'
     | 'hoops-led'
     | 'volley-clean'
