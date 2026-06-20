@@ -302,6 +302,7 @@ export const listAdmin = query({
           home: match.teams.home.score,
           away: match.teams.away.score,
         },
+        ads: match.ads,
         createdAt: match.createdAt,
         updatedAt: match.updatedAt,
       }));
@@ -435,12 +436,6 @@ export const createMatch = mutation({
       refereeTokenHash,
     });
 
-    await ctx.db.insert('referee_tokens', {
-      matchId: args.matchId,
-      tokenHash: refereeTokenHash,
-      expiresAt: now + 1000 * 60 * 60 * 12,
-      createdAt: now,
-    });
 
     await recordEvent(ctx, {
       matchId: args.matchId,
@@ -532,12 +527,6 @@ export const joinAsReferee = mutation({
       updatedAt: now,
     });
 
-    await ctx.db.insert('referee_tokens', {
-      matchId: match.matchId,
-      tokenHash: sessionTokenHash,
-      expiresAt: now + 1000 * 60 * 60 * 12,
-      createdAt: now,
-    });
 
     await recordEvent(ctx, {
       matchId: match.matchId,
@@ -596,12 +585,6 @@ export const issueRefereeAccessToken = mutation({
       updatedAt: now,
     });
 
-    await ctx.db.insert('referee_tokens', {
-      matchId: args.matchId,
-      tokenHash,
-      expiresAt: now + 1000 * 60 * 60 * 12,
-      createdAt: now,
-    });
 
     return {
       matchId: match.matchId,
@@ -1552,6 +1535,45 @@ export const updateAds = mutation({
   },
 });
 
+export const updateAdsBroadcast = mutation({
+  args: {
+    adminSessionToken: v.string(),
+    active: v.boolean(),
+    assetId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await assertAdminSession(ctx, args.adminSessionToken);
+
+    const matches = await ctx.db.query('matches').collect();
+    const activeMatches = matches.filter((m) => m.status !== 'finished');
+    const now = Date.now();
+
+    const ads = {
+      active: args.active,
+      currentAssetId: args.assetId,
+    };
+
+    for (const match of activeMatches) {
+      await ctx.db.patch(match._id, {
+        ads,
+        updatedAt: now,
+      });
+
+      await recordEvent(ctx, {
+        matchId: match.matchId,
+        action: 'ads:update',
+        before: stripSystemFields(match) as MatchState,
+        after: {
+          ...(stripSystemFields(match) as MatchState),
+          ads,
+          updatedAt: now,
+        },
+        role: 'admin',
+      });
+    }
+  },
+});
+
 export const finishMatch = mutation({
   args: {
     matchId: v.string(),
@@ -1710,13 +1732,6 @@ export const deleteMatch = mutation({
       await ctx.db.delete(event._id);
     }
 
-    const tokens = await ctx.db
-      .query('referee_tokens')
-      .withIndex('by_matchId', (q) => q.eq('matchId', args.matchId))
-      .collect();
-    for (const token of tokens) {
-      await ctx.db.delete(token._id);
-    }
 
     await ctx.db.delete(match._id);
   },

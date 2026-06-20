@@ -183,13 +183,6 @@ export default defineSchema({
     createdAt: v.number(),
   }).index('by_matchId_createdAt', ['matchId', 'createdAt']),
 
-  referee_tokens: defineTable({
-    matchId: v.string(),
-    tokenHash: v.string(),
-    expiresAt: v.optional(v.number()),
-    revokedAt: v.optional(v.number()),
-    createdAt: v.number(),
-  }).index('by_matchId', ['matchId']),
 
   media_assets: defineTable({
     name: v.string(),

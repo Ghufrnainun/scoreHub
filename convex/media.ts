@@ -1,11 +1,27 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import type { Id } from './_generated/dataModel';
+import { assertAdminSession } from './utils';
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query('media_assets').order('desc').collect();
+    const assets = await ctx.db.query('media_assets').order('desc').collect();
+    return await Promise.all(
+      assets.map(async (asset) => {
+        let resolvedUrl = asset.url;
+        if (asset.storageId) {
+          const storageUrl = await ctx.storage.getUrl(asset.storageId);
+          if (storageUrl) {
+            resolvedUrl = storageUrl;
+          }
+        }
+        return {
+          ...asset,
+          url: resolvedUrl,
+        };
+      })
+    );
   },
 });
 
@@ -15,8 +31,10 @@ export const create = mutation({
     url: v.string(), // fallback or public URL
     type: v.union(v.literal('image'), v.literal('video')),
     storageId: v.optional(v.id('_storage')),
+    adminSessionToken: v.string(),
   },
   handler: async (ctx, args) => {
+    await assertAdminSession(ctx, args.adminSessionToken);
     return await ctx.db.insert('media_assets', {
       name: args.name,
       url: args.url,
@@ -27,13 +45,32 @@ export const create = mutation({
   },
 });
 
-export const generateUploadUrl = mutation(async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
+export const generateUploadUrl = mutation({
+  args: { adminSessionToken: v.string() },
+  handler: async (ctx, args) => {
+    await assertAdminSession(ctx, args.adminSessionToken);
+    return await ctx.storage.generateUploadUrl();
+  },
 });
 
 export const remove = mutation({
-  args: { id: v.id('media_assets') },
+  args: {
+    id: v.id('media_assets'),
+    adminSessionToken: v.string(),
+  },
   handler: async (ctx, args) => {
+    await assertAdminSession(ctx, args.adminSessionToken);
+
+    // Hapus file fisik dari storage jika ada
+    const asset = await ctx.db.get(args.id);
+    if (asset && asset.storageId) {
+      try {
+        await ctx.storage.delete(asset.storageId);
+      } catch (err) {
+        console.error('Gagal menghapus file fisik dari storage:', err);
+      }
+    }
+
     await ctx.db.delete(args.id);
   },
 });

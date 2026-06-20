@@ -248,7 +248,7 @@ export default function BwfScoreboard() {
             {adAsset?.type === 'video' ? (
               <video
                 src={adAsset.url}
-                className="h-full w-full object-contain"
+                className="h-full w-full object-cover"
                 autoPlay
                 muted
                 playsInline
@@ -263,7 +263,7 @@ export default function BwfScoreboard() {
                 fill
                 sizes="100vw"
                 unoptimized
-                className="h-full w-full object-contain"
+                className="h-full w-full object-cover"
                 onError={() => setAdLoadFailed(true)}
               />
             )}

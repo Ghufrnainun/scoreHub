@@ -32,14 +32,9 @@ export const loadAdminSession = (): AdminSession | null => {
   const storage = getAdminSessionStorage();
   if (!storage) return null;
   const raw = storage.getItem(ADMIN_AUTH_STORAGE_KEY);
-  const fallbackRaw = raw || window.localStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-  const source = raw || fallbackRaw;
-  if (!source) return null;
-  if (!raw && fallbackRaw) {
-    storage.setItem(ADMIN_AUTH_STORAGE_KEY, fallbackRaw);
-  }
+  if (!raw) return null;
   try {
-    const parsed = JSON.parse(source) as Partial<AdminSession>;
+    const parsed = JSON.parse(raw) as Partial<AdminSession>;
     if (!parsed?.token || !parsed?.expiresAt) return null;
     return {
       token: parsed.token,
@@ -54,7 +49,6 @@ export const clearAdminSession = () => {
   const storage = getAdminSessionStorage();
   if (!storage) return;
   storage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-  window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
 };
 
 export const saveRefereeSession = (session: RefereeSession) => {

@@ -6,8 +6,23 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useQuery, useMutation } from 'convex/react'; 
 import { api } from '@/convex/_generated/api'; 
-import { Loader2, Trash2, MonitorPlay } from 'lucide-react'; 
+import { 
+  Loader2, 
+  Trash2, 
+  MonitorPlay, 
+  UploadCloud, 
+  Sparkles, 
+  Database, 
+  AlertCircle, 
+  PlusCircle, 
+  Plus, 
+  ChevronDown,
+  CheckCircle2,
+  Image as ImageIcon, 
+  Video as VideoIcon 
+} from 'lucide-react'; 
 import { loadValidAdminSession } from '@/lib/admin-session'; 
+import { cn } from '@/lib/utils'; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +33,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function MediaManager() {
   const assets = useQuery(api.media.list);
@@ -36,6 +57,7 @@ export default function MediaManager() {
     adminSessionToken ? { adminSessionToken } : 'skip',
   );
   const updateAds = useMutation(api.matches.updateAds);
+  const updateAdsBroadcast = useMutation(api.matches.updateAdsBroadcast);
 
   const [newItemUrl, setNewItemUrl] = useState('');
   const [newItemName, setNewItemName] = useState('');
@@ -50,12 +72,75 @@ export default function MediaManager() {
     message: string;
   } | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'file' | 'url'>('file');
+  const [isDragging, setIsDragging] = useState(false);
+  const [filePreviewUrl, setFilePreviewUrl] = useState('');
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.[0]) {
+      const file = e.dataTransfer.files[0];
+      handleFileSelected(file);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
-      setSelectedFile(e.target.files[0]);
-      setNewItemName(e.target.files[0].name.split('.')[0]);
-      setNewItemUrl('');
+      const file = e.target.files[0];
+      handleFileSelected(file);
     }
+  };
+
+  const handleFileSelected = (file: File) => {
+    setSelectedFile(file);
+    setNewItemName(file.name.split('.')[0]);
+    setNewItemUrl('');
+    
+    // Auto-detect type
+    if (file.type.startsWith('video/')) {
+      setNewItemType('video');
+    } else {
+      setNewItemType('image');
+    }
+
+    // Generate preview
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFilePreviewUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreviewUrl('');
+    }
+  };
+
+  const isFileSizeValid = (file: File) => {
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+    const MAX_VIDEO_SIZE = 15 * 1024 * 1024;
+    if (file.type.startsWith('video/')) {
+      return file.size <= MAX_VIDEO_SIZE;
+    }
+    return file.size <= MAX_IMAGE_SIZE;
+  };
+
+  const formatDate = (timestamp?: number) => {
+    if (!timestamp) return '-';
+    return new Date(timestamp).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
   const handleAdd = async () => { 
@@ -67,7 +152,18 @@ export default function MediaManager() {
       let storageId = undefined; 
 
       if (selectedFile) {
-        const postUrl = await generateUploadUrl();
+        // Validasi ukuran file: Maksimal 5MB untuk gambar, 15MB untuk video
+        const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+        const MAX_VIDEO_SIZE = 15 * 1024 * 1024;
+
+        if (newItemType === 'image' && selectedFile.size > MAX_IMAGE_SIZE) {
+          throw new Error('Ukuran gambar melebihi batas maksimal (5MB).');
+        }
+        if (newItemType === 'video' && selectedFile.size > MAX_VIDEO_SIZE) {
+          throw new Error('Ukuran video melebihi batas maksimal (15MB).');
+        }
+
+        const postUrl = await generateUploadUrl({ adminSessionToken });
         const result = await fetch(postUrl, {
           method: 'POST',
           headers: { 'Content-Type': selectedFile.type },
@@ -83,10 +179,12 @@ export default function MediaManager() {
         url: finalUrl,
         type: newItemType,
         storageId,
+        adminSessionToken,
       });
       setNewItemUrl(''); 
       setNewItemName(''); 
       setSelectedFile(null); 
+      setFilePreviewUrl('');
       setFeedback({
         type: 'success',
         message: 'Media berhasil ditambahkan ke library.',
@@ -95,7 +193,7 @@ export default function MediaManager() {
       console.error(e); 
       setFeedback({
         type: 'error',
-        message: 'Gagal mengunggah media. Silakan coba lagi.',
+        message: e instanceof Error ? e.message : 'Gagal mengunggah media. Silakan coba lagi.',
       });
     } finally { 
       setIsSubmitting(false); 
@@ -105,7 +203,7 @@ export default function MediaManager() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await removeAsset({ id: deleteTarget.id as any });
+      await removeAsset({ id: deleteTarget.id as any, adminSessionToken });
       setFeedback({
         type: 'success',
         message: `Media '${deleteTarget.name}' berhasil dihapus.`,
@@ -130,13 +228,21 @@ export default function MediaManager() {
       return; 
     } 
     try {
-      await updateAds({ 
-        matchId: selectedMatchId, 
-        role: 'admin', 
-        adminSessionToken, 
-        active: true, 
-        assetId: assetId, 
-      });
+      if (selectedMatchId === 'ALL') {
+        await updateAdsBroadcast({
+          adminSessionToken,
+          active: true,
+          assetId,
+        });
+      } else {
+        await updateAds({ 
+          matchId: selectedMatchId, 
+          role: 'admin', 
+          adminSessionToken, 
+          active: true, 
+          assetId: assetId, 
+        });
+      }
       setFeedback({
         type: 'success',
         message: 'Media berhasil ditayangkan ke display.',
@@ -153,13 +259,21 @@ export default function MediaManager() {
   const handleClearDisplay = async () => { 
     if (!selectedMatchId) return; 
     try {
-      await updateAds({ 
-        matchId: selectedMatchId, 
-        role: 'admin', 
-        adminSessionToken, 
-        active: false, 
-        assetId: undefined, 
-      });
+      if (selectedMatchId === 'ALL') {
+        await updateAdsBroadcast({
+          adminSessionToken,
+          active: false,
+          assetId: undefined,
+        });
+      } else {
+        await updateAds({ 
+          matchId: selectedMatchId, 
+          role: 'admin', 
+          adminSessionToken, 
+          active: false, 
+          assetId: undefined, 
+        });
+      }
       setFeedback({
         type: 'success',
         message: 'Media pada display berhasil dibersihkan.',
@@ -173,38 +287,112 @@ export default function MediaManager() {
     }
   }; 
 
+  const isAssetActive = (assetId: string) => {
+    if (!selectedMatchId) return false;
+    if (selectedMatchId === 'ALL') {
+      const activeMatches = authorizedMatches?.filter((m: any) => m.status !== 'finished') || [];
+      if (activeMatches.length === 0) return false;
+      return activeMatches.every((m: any) => m.ads?.active && m.ads?.currentAssetId === assetId);
+    } else {
+      const match = authorizedMatches?.find((m: any) => m.matchId === selectedMatchId);
+      return !!(match?.ads?.active && match?.ads?.currentAssetId === assetId);
+    }
+  };
+
   return ( 
-    <div className="space-y-8 max-w-6xl mx-auto"> 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"> 
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 select-none"> 
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">  
         <div> 
-          <h1 className="text-2xl font-bold tracking-tight">Media Aset</h1> 
-          <p className="text-muted-foreground"> 
-            Kelola gambar dan video untuk jeda pertandingan. 
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <MonitorPlay className="w-6 h-6 text-primary" />
+            Media & Iklan
+          </h1> 
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium"> 
+            Kelola dan siarkan media jeda pertandingan secara langsung ke display lapangan. 
           </p> 
         </div> 
 
-        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm">
-          <span className="text-xs font-bold uppercase text-muted-foreground ml-2"> 
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <span className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 ml-3"> 
             Match Tujuan: 
           </span> 
-          <select
-            className="h-8 text-sm border-none bg-transparent focus:ring-0 cursor-pointer min-w-[200px]"
-            value={selectedMatchId}
-            onChange={(e) => setSelectedMatchId(e.target.value)}
-          >
-            <option value="">-- Pilih Match Aktif --</option> 
-            {authorizedMatches?.map((m: any, i: number) => ( 
-              <option key={m._id || i} value={m.matchId}> 
-                {m.matchId} ({m.category || 'Pertandingan'}) 
-              </option> 
-            ))} 
-          </select> 
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                {selectedMatchId === '' ? (
+                  <span className="text-slate-400 dark:text-slate-500">-- Pilih Match Aktif --</span>
+                ) : selectedMatchId === 'ALL' ? (
+                  <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Semua Lapangan (Siaran)
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    {selectedMatchId} ({authorizedMatches?.find((m: any) => m.matchId === selectedMatchId)?.category || 'Pertandingan'})
+                  </span>
+                )}
+                <ChevronDown className="w-4 h-4 opacity-55" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[260px] p-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl">
+              <DropdownMenuItem 
+                onClick={() => setSelectedMatchId('')}
+                className="rounded-lg py-2 cursor-pointer font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900"
+              >
+                -- Pilih Match Aktif --
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setSelectedMatchId('ALL')}
+                className="rounded-lg py-2 cursor-pointer font-black text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 flex items-center gap-2"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Semua Lapangan (Siaran)
+              </DropdownMenuItem>
+              <div className="h-px bg-slate-100 dark:bg-slate-800 my-1.5" />
+              <div className="px-2 py-1 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                Daftar Pertandingan
+              </div>
+              {authorizedMatches && authorizedMatches.length > 0 ? (
+                authorizedMatches.map((m: any, i: number) => {
+                  const isLive = m.status === 'live' || m.status === 'active';
+                  return (
+                    <DropdownMenuItem
+                      key={m._id || i}
+                      onClick={() => setSelectedMatchId(m.matchId)}
+                      className={cn(
+                        "rounded-lg py-2 cursor-pointer flex items-center justify-between",
+                        selectedMatchId === m.matchId ? "bg-slate-100 dark:bg-slate-800 font-bold" : "hover:bg-slate-50 dark:hover:bg-slate-900"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "h-2 w-2 rounded-full",
+                          isLive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                        )} />
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{m.matchId}</span>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded">
+                        {m.category || 'Pertandingan'}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })
+              ) : (
+                <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                  Tidak ada match aktif
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {selectedMatchId && ( 
             <Button
               variant="ghost"
               size="sm"
               onClick={handleClearDisplay}
-              className="text-red-500 hover:text-red-700 h-8"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-9 rounded-lg font-bold px-3 transition-all"
             > 
               Bersihkan Display 
             </Button> 
@@ -212,159 +400,419 @@ export default function MediaManager() {
         </div> 
       </div> 
 
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Aset</p>
+          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1 leading-none">{assets?.length || 0}</p>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sedang Tayang</p>
+          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 leading-none">
+            {authorizedMatches ? authorizedMatches.filter((m: any) => m.ads?.active).length : 0}
+          </p>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Penyimpanan</p>
+          <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-1 flex flex-col justify-center leading-normal">
+            <span>{assets ? `${assets.filter((a: any) => a.type === 'image').length} Gambar` : '0 Gambar'}</span>
+            <span>{assets ? `${assets.filter((a: any) => a.type === 'video').length} Video` : '0 Video'}</span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Match Aktif</p>
+          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1 leading-none">
+            {authorizedMatches ? authorizedMatches.filter((m: any) => m.status !== 'finished').length : 0}
+          </p>
+        </div>
+      </div>
+
       {feedback ? (
         <div
           role="status"
           aria-live="polite"
-          className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+          className={`rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center gap-2 shadow-xs transition-all ${
             feedback.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-red-200 bg-red-50 text-red-700'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-400'
+              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400'
           }`}
         >
+          {feedback.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+          )}
           {feedback.message}
         </div>
       ) : null}
 
-      <Card className="p-6"> 
-        <h3 className="font-bold mb-4">Tambah Aset Baru</h3> 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px_auto] gap-4 items-end"> 
-          <div className="space-y-2"> 
-            <label className="text-xs font-bold text-muted-foreground uppercase"> 
-              Nama Aset 
-            </label> 
-            <Input 
-              placeholder="Contoh: Banner Sponsor" 
-              value={newItemName} 
-              onChange={(e) => setNewItemName(e.target.value)} 
-            /> 
-          </div> 
+      {!selectedMatchId ? (
+        <div className="rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50/50 dark:border-amber-900/30 dark:from-amber-950/15 dark:to-orange-950/5 p-4 flex items-start gap-3.5 shadow-xs">
+          <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl mt-0.5">
+            <AlertCircle className="w-5 h-5 animate-bounce" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-black text-amber-900 dark:text-amber-400 uppercase tracking-wide">Match Tujuan Belum Dipilih</h4>
+            <p className="text-xs text-amber-700 dark:text-amber-500 leading-relaxed font-medium">
+              Silakan pilih <strong>Match Tujuan</strong> pada selektor di pojok kanan atas terlebih dahulu untuk mengaktifkan tombol penyiaran media ke layar display masing-masing lapangan.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
-          <div className="space-y-2"> 
-            <label className="text-xs font-bold text-muted-foreground uppercase"> 
-              Sumber (File atau URL) 
-            </label> 
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type="file"
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                  onChange={handleFileSelect}
-                  accept="image/*,video/*"
-                />
-                <div className="h-10 w-full border border-input rounded-md px-3 py-2 text-sm text-muted-foreground flex items-center truncate">
-                  {selectedFile 
-                    ? selectedFile.name 
-                    : newItemUrl 
-                      ? 'Menggunakan URL...' 
-                      : 'Klik untuk upload atau tempel URL ->'} 
-                </div> 
-              </div> 
-              {!selectedFile && (
-                <Input
-                  placeholder="https://..."
-                  value={newItemUrl}
-                  onChange={(e) => setNewItemUrl(e.target.value)}
-                  className="w-1/2"
-                />
+      {/* Add New Asset Card */}
+      <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl bg-white dark:bg-slate-900/40 backdrop-blur-xs relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <PlusCircle className="w-5 h-5 text-primary" />
+              Tambah Aset Baru
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Unggah gambar atau video iklan untuk ditayangkan.</p>
+          </div>
+
+          {/* Tab buttons */}
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex gap-1">
+            <button
+              onClick={() => {
+                setActiveTab('file');
+                setNewItemUrl('');
+              }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                activeTab === 'file'
+                  ? "bg-white dark:bg-slate-900 text-slate-950 dark:text-white shadow-xs"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
               )}
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              Upload File
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('url');
+                setSelectedFile(null);
+              }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                activeTab === 'url'
+                  ? "bg-white dark:bg-slate-900 text-slate-950 dark:text-white shadow-xs"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Link URL
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          <div className="md:col-span-4 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                Nama Aset
+              </label>
+              <Input
+                placeholder="Contoh: Banner Sponsor Utama"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                className="h-10 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus-visible:ring-primary/20"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                Tipe Media
+              </label>
+              <select
+                className="flex h-10 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:ring-primary/20 cursor-pointer font-semibold text-slate-800 dark:text-slate-200"
+                value={newItemType}
+                onChange={(e) =>
+                  setNewItemType(e.target.value as 'image' | 'video')
+                }
+              >
+                <option value="image">Image (JPG, PNG, GIF, WebP)</option>
+                <option value="video">Video (MP4, WebM)</option>
+              </select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase"> 
-              Tipe 
-            </label> 
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={newItemType}
-              onChange={(e) =>
-                setNewItemType(e.target.value as 'image' | 'video')
-              }
-            >
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-            </select>
+          <div className="md:col-span-8 h-full flex flex-col justify-end">
+            {activeTab === 'file' ? (
+              <div className="space-y-3 w-full">
+                <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+                  Unggah Berkas
+                </label>
+                
+                {/* Drag and Drop Zone */}
+                {!selectedFile ? (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={cn(
+                      "border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 relative group h-36 min-h-[144px]",
+                      isDragging
+                        ? "border-primary bg-primary/5 shadow-md shadow-primary/5"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/20"
+                    )}
+                  >
+                    <input
+                      type="file"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={handleFileSelect}
+                      accept="image/*,video/*"
+                    />
+                    <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-primary transition-colors mb-2" />
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Seret & taruh berkas di sini, atau klik untuk memilih
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Maksimal 5MB untuk Gambar, 15MB untuk Video
+                    </p>
+                  </div>
+                ) : (
+                  /* File selected preview box */
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950/40 flex items-center justify-between gap-4 h-36 min-h-[144px]">
+                    <div className="flex items-center gap-4 truncate">
+                      <div className="w-20 h-20 rounded-xl bg-slate-200 dark:bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center border border-black/5 relative">
+                        {newItemType === 'image' && filePreviewUrl ? (
+                          <img src={filePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : newItemType === 'video' ? (
+                          <VideoIcon className="w-8 h-8 text-primary" />
+                        ) : (
+                          <ImageIcon className="w-8 h-8 text-primary" />
+                        )}
+                      </div>
+                      <div className="truncate space-y-1">
+                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{selectedFile.name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <span>{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300" />
+                          <span className={cn(
+                            "font-bold uppercase text-[9px] px-1.5 py-0.5 rounded-md",
+                            isFileSizeValid(selectedFile)
+                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                          )}>
+                            {isFileSizeValid(selectedFile) ? 'Ukuran Aman' : 'Terlalu Besar'}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setFilePreviewUrl('');
+                      }}
+                      className="rounded-xl font-bold border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500 h-9"
+                    >
+                      Ganti File
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3 w-full">
+                <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+                  Alamat URL Media
+                </label>
+                <div className="relative flex items-center">
+                  <Input
+                    placeholder="https://images.unsplash.com/... atau link media eksternal"
+                    value={newItemUrl}
+                    onChange={(e) => setNewItemUrl(e.target.value)}
+                    className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus-visible:ring-primary/20 pl-4 pr-12 w-full"
+                  />
+                  <div className="absolute right-4 text-slate-400">
+                    {newItemType === 'video' ? <VideoIcon className="w-5 h-5" /> : <ImageIcon className="w-5 h-5" />}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-blue-100 bg-blue-50/50 dark:border-blue-950/30 dark:bg-blue-950/10 p-3 text-[10px] text-blue-700 dark:text-blue-400 font-bold leading-relaxed">
+                  💡 Catatan URL Eksternal: Pastikan link yang disalin langsung menunjuk ke file media (.png, .jpg, .mp4, dll.) dan dapat diakses publik oleh browser.
+                </div>
+              </div>
+            )}
+            
+            {/* Submit button bar */}
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={handleAdd}
+                disabled={
+                  isSubmitting ||
+                  (!newItemUrl && !selectedFile) ||
+                  !newItemName ||
+                  !!(selectedFile && !isFileSizeValid(selectedFile))
+                }
+                className="h-10 px-6 rounded-xl font-bold gap-2 text-sm shadow-sm"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Simpan Aset ke Library
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
+        </div>
+      </Card>
 
-          <Button 
-            onClick={handleAdd} 
-            disabled={isSubmitting || (!newItemUrl && !selectedFile)} 
-          > 
-            {isSubmitting ? ( 
-              <Loader2 className="w-4 h-4 animate-spin" /> 
-            ) : ( 
-              'Tambah Aset' 
-            )} 
-          </Button> 
-        </div> 
-      </Card> 
+      {/* Library Section */}
+      <div className="space-y-4 pt-4"> 
+        <div className="flex justify-between items-center">
+          <h3 className="font-black text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <ImageIcon className="w-5 h-5 text-primary" />
+            Perpustakaan Media ({assets?.length || 0})
+          </h3> 
+        </div>
 
-      <div className="space-y-4"> 
-        <h3 className="font-bold text-lg">Perpustakaan ({assets?.length || 0})</h3> 
         {!assets ? (
-          <div className="flex justify-center p-8">
-            <Loader2 className="animate-spin" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="animate-spin text-slate-400" />
+          </div>
+        ) : assets.length === 0 ? (
+          <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl py-16 text-center">
+            <ImageIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Belum ada aset media</p>
+            <p className="text-xs text-muted-foreground mt-1">Unggah file atau masukkan link URL untuk memulai.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {assets.map((asset: any) => {
-              const displayUrl = asset.storageId
-                ? `${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${asset.storageId}`
-                : asset.url;
+              const displayUrl = asset.url;
 
               return (
                 <Card
                   key={asset._id}
-                  className="overflow-hidden group relative"
+                  className={cn(
+                    "overflow-hidden group relative transition-all duration-300 rounded-2xl bg-white dark:bg-slate-900 border",
+                    isAssetActive(asset._id)
+                      ? "ring-2 ring-emerald-500 dark:ring-emerald-400 shadow-lg shadow-emerald-500/10 border-transparent"
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs hover:shadow-md"
+                  )}
                 >
-                  <div className="aspect-video bg-black/10 relative flex items-center justify-center">
+                  <div className="relative w-full aspect-video bg-slate-50 dark:bg-slate-950/60 overflow-hidden flex items-center justify-center">
+                    {/* Blinking badge for active ad */}
+                    {isAssetActive(asset._id) && (
+                      <div className="absolute top-3 right-3 z-20 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-md shadow-black/10 animate-pulse select-none">
+                        <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+                        Sedang Tayang
+                      </div>
+                    )}
+                    
+                    {/* Media content */}
                     {asset.type === 'image' ? (
                       <img
                         src={displayUrl}
                         alt={asset.name}
-                        width={1920}
-                        height={1080}
                         loading="lazy"
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                     ) : (
                       <video
                         src={displayUrl}
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                         controls
                         preload="metadata"
                       />
                     )}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="secondary" 
-                        onClick={() => handlePushToDisplay(asset._id)} 
-                        disabled={!selectedMatchId} 
-                        aria-label={`Tayangkan ${asset.name} ke display`}
-                      > 
-                        <MonitorPlay className="w-4 h-4 mr-2" /> 
-                        Tayang ke Display 
-                      </Button> 
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        aria-label={`Hapus aset ${asset.name}`}
-                        onClick={() =>
-                          setDeleteTarget({ id: asset._id, name: asset.name })
-                        } 
-                      > 
-                        <Trash2 className="w-4 h-4" /> 
-                      </Button> 
+
+                    {/* Interactive overlay on hover */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 z-10 p-4">
+                      <p className="text-white text-xs font-bold truncate max-w-full mb-1 select-none">
+                        {asset.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {isAssetActive(asset._id) ? (
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={handleClearDisplay} 
+                            aria-label={`Hentikan tayangan ${asset.name}`}
+                            className="font-bold shadow-lg rounded-xl h-9 px-4"
+                          > 
+                            <span className="w-2 h-2 rounded-full bg-white mr-2 animate-ping" />
+                            Hentikan Tayangan 
+                          </Button> 
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            variant="default" 
+                            onClick={() => handlePushToDisplay(asset._id)} 
+                            disabled={!selectedMatchId} 
+                            aria-label={`Tayangkan ${asset.name} ke display`}
+                            className="font-bold bg-white text-slate-900 hover:bg-slate-100 rounded-xl h-9 px-4 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                          > 
+                            <MonitorPlay className="w-4 h-4 mr-2" /> 
+                            Tayangkan 
+                          </Button> 
+                        )}
+                        
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          disabled={isAssetActive(asset._id)}
+                          aria-label={`Hapus aset ${asset.name}`}
+                          onClick={() =>
+                            setDeleteTarget({ id: asset._id, name: asset.name })
+                          } 
+                          className={cn(
+                            "rounded-xl h-9 w-9 p-0 flex items-center justify-center shadow-lg",
+                            isAssetActive(asset._id) && "bg-slate-800 text-slate-500 opacity-50 cursor-not-allowed hover:bg-slate-800"
+                          )}
+                          title={isAssetActive(asset._id) ? "Media sedang ditayangkan, tidak bisa dihapus" : "Hapus Media"}
+                        > 
+                          <Trash2 className="w-4 h-4" /> 
+                        </Button> 
+                      </div>
                     </div>
                   </div>
-                  <div className="p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold truncate">{asset.name}</span>
-                      <span className="text-xs uppercase font-bold bg-secondary px-2 py-0.5 rounded text-muted-foreground">
+
+                  {/* Card footer details */}
+                  <div className="p-4 space-y-2 select-none">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">
+                        {asset.name}
+                      </span>
+                      <span className={cn(
+                        "text-[9px] uppercase font-black px-2 py-0.5 rounded-md flex-shrink-0 tracking-wider",
+                        asset.type === 'video' 
+                          ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400" 
+                          : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      )}>
                         {asset.type}
                       </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold pt-1 border-t border-black/5 dark:border-white/5">
+                      <span className="flex items-center gap-1 font-bold">
+                        {asset.storageId ? (
+                          <>
+                            <Database className="w-3.5 h-3.5 text-slate-400" />
+                            Cloud Storage
+                          </>
+                        ) : (
+                          <>
+                            <PlusCircle className="w-3.5 h-3.5 text-slate-400" />
+                            External Link
+                          </>
+                        )}
+                      </span>
+                      <span>{formatDate(asset.createdAt)}</span>
                     </div>
                   </div>
                 </Card>
@@ -374,6 +822,7 @@ export default function MediaManager() {
         )} 
       </div> 
 
+      {/* Delete Confirmation Alert */}
       <AlertDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {
