@@ -51,14 +51,15 @@ function getIsoCode(country?: string): string {
   return '';
 }
 
-function ShuttleIcon({ className, size = 16 }: { className?: string; size?: number }) {
+function ShuttleIcon({ className, size = 16, color }: { className?: string; size?: number; color?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="currentColor"
       className={className}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, color: color }}
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <path d="M12 2C9.5 2 7.5 4.2 7.5 7c0 1.2.4 2.3 1 3.1L5 21h14l-3.5-10.9c.6-.8 1-1.9 1-3.1C16.5 4.2 14.5 2 12 2z" opacity="0.25"/>
       <circle cx="12" cy="7" r="2.5"/>
@@ -118,13 +119,15 @@ export function BroadcastOverlay({
     });
   }
 
-  // Fill in current live set
-  allSetsScores.push({
-    p1: match.teams.home.score,
-    p2: match.teams.away.score,
-    active: matchWinner === 0 && !isFinished,
-    setLabel: `SET ${currentSetIndex + 1}`,
-  });
+  // Fill in current live set (only if match is not finished)
+  if (!isFinished) {
+    allSetsScores.push({
+      p1: match.teams.home.score,
+      p2: match.teams.away.score,
+      active: matchWinner === 0,
+      setLabel: `SET ${currentSetIndex + 1}`,
+    });
+  }
 
   const p1Wins = match.teams.home.setsWon;
   const p2Wins = match.teams.away.setsWon;
@@ -169,23 +172,24 @@ export function BroadcastOverlay({
     const team = match.teams[side];
     const isoCode = side === 'home' ? homeIso : awayIso;
     return (
-      <div className="w-8 h-5 bg-white border border-gray-200 shadow-sm flex items-center justify-center rounded overflow-hidden flex-shrink-0">
+      <div className="w-8 h-5 bg-white border border-gray-200 shadow-sm flex items-center justify-center rounded overflow-hidden flex-shrink-0 relative">
+        <div className="absolute opacity-30 text-gray-500 select-none" title={team.country}>
+          <ShuttleIcon size={12} />
+        </div>
         {team.logo ? (
-          <img src={team.logo} alt="Logo" className="w-full h-full object-contain bg-white" />
+          <img src={team.logo} alt="Logo" width={32} height={20} className="w-full h-full object-contain bg-white relative z-10" />
         ) : isoCode ? (
           <img
             src={`https://flagcdn.com/h40/${isoCode}.png`}
             alt={isoCode}
-            className="w-full h-full object-cover"
+            width={32}
+            height={20}
+            className="w-full h-full object-cover relative z-10 bg-transparent"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
-        ) : (
-          <span className="text-sm leading-none" title={team.country}>
-            🏸
-          </span>
-        )}
+        ) : null}
       </div>
     );
   };
@@ -196,7 +200,7 @@ export function BroadcastOverlay({
       return (
         <div 
           id="broadcast-overlay-classic" 
-          className="flex flex-col select-none transition-all w-full"
+          className="flex flex-col select-none w-full"
         >
           <div className="relative flex items-stretch w-full">
             {/* Main Name Cards (P1 & P2 vertical stacked rows) */}
@@ -266,7 +270,7 @@ export function BroadcastOverlay({
                 return (
                   <div 
                     key={setIdx}
-                    className={`relative w-[52px] h-[99px] flex flex-col justify-between p-1 select-none rounded shadow-md transition-all duration-300 ${
+                    className={`relative w-[52px] h-[99px] flex flex-col justify-between p-1 select-none rounded shadow-md transition-colors duration-300 ${
                       isActiveSet 
                         ? 'bg-gradient-to-b from-[#8c6131] to-[#4c3115] text-white border-x border-[#b08754]/40 z-10' 
                         : 'bg-white/95 text-gray-700 border-x border-gray-100'
@@ -316,7 +320,7 @@ export function BroadcastOverlay({
               className="mt-2 bg-[#51361b] text-[#f5d9b2] text-[10px] font-sans font-bold uppercase tracking-widest px-4 py-1 self-start rounded shadow-md border border-[#8c6131]/30"
               style={{ backgroundColor: accentColor }}
             >
-              🏆 MATCH WON BY {matchWinner === 1 ? homeName : awayName}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="inline-block mr-1 -mt-0.5"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg> MATCH WON BY {matchWinner === 1 ? homeName : awayName}
             </motion.div>
           )}
         </div>
@@ -335,23 +339,24 @@ export function BroadcastOverlay({
             <div className="h-[46px] bg-gradient-to-r from-white via-[#fbfbfc] to-[#eae9ee] rounded-full shadow-lg border border-gray-200/60 pl-2 pr-1.5 flex items-center justify-between w-full">
               <div className="flex items-center gap-3 overflow-hidden flex-1">
                 {showFlags && (
-                  <div className="w-[38px] h-[26px] rounded-full overflow-hidden shadow-sm flex items-center justify-center bg-white border border-gray-100 flex-shrink-0">
+                  <div className="w-[38px] h-[26px] rounded-full overflow-hidden shadow-sm flex items-center justify-center bg-white border border-gray-100 flex-shrink-0 relative">
+                    <div className="absolute opacity-30 text-gray-400 select-none" title={match.teams.home.country}>
+                      <ShuttleIcon size={14} />
+                    </div>
                     {match.teams.home.logo ? (
-                      <img src={match.teams.home.logo} alt="Logo" className="w-full h-full object-contain bg-white" />
+                      <img src={match.teams.home.logo} alt="Logo" width={38} height={26} className="w-full h-full object-contain bg-white relative z-10" />
                     ) : homeIso ? (
                       <img
                         src={`https://flagcdn.com/h80/${homeIso}.png`}
                         alt={homeIso}
-                        className="w-full h-full object-cover"
+                        width={38}
+                        height={26}
+                        className="w-full h-full object-cover relative z-10 bg-transparent"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
-                    ) : (
-                      <span className="text-base" title={match.teams.home.country}>
-                        🏸
-                      </span>
-                    )}
+                    ) : null}
                   </div>
                 )}
                 <div className="flex flex-col overflow-hidden">
@@ -401,23 +406,24 @@ export function BroadcastOverlay({
             <div className="h-[46px] bg-gradient-to-r from-white via-[#fbfbfc] to-[#eae9ee] rounded-full shadow-lg border border-gray-200/60 pl-2 pr-1.5 flex items-center justify-between w-full">
               <div className="flex items-center gap-3 overflow-hidden flex-1">
                 {showFlags && (
-                  <div className="w-[38px] h-[26px] rounded-full overflow-hidden shadow-sm flex items-center justify-center bg-white border border-gray-100 flex-shrink-0">
+                  <div className="w-[38px] h-[26px] rounded-full overflow-hidden shadow-sm flex items-center justify-center bg-white border border-gray-100 flex-shrink-0 relative">
+                    <div className="absolute opacity-30 text-gray-400 select-none" title={match.teams.away.country}>
+                      <ShuttleIcon size={14} />
+                    </div>
                     {match.teams.away.logo ? (
-                      <img src={match.teams.away.logo} alt="Logo" className="w-full h-full object-contain bg-white" />
+                      <img src={match.teams.away.logo} alt="Logo" width={38} height={26} className="w-full h-full object-contain bg-white relative z-10" />
                     ) : awayIso ? (
                       <img
                         src={`https://flagcdn.com/h80/${awayIso}.png`}
                         alt={awayIso}
-                        className="w-full h-full object-cover"
+                        width={38}
+                        height={26}
+                        className="w-full h-full object-cover relative z-10 bg-transparent"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
-                    ) : (
-                      <span className="text-base" title={match.teams.away.country}>
-                        🏸
-                      </span>
-                    )}
+                    ) : null}
                   </div>
                 )}
                 <div className="flex flex-col overflow-hidden">
@@ -472,7 +478,7 @@ export function BroadcastOverlay({
               className="mt-1 ml-4 bg-[#7f1818] text-[#ffebeb] text-[9px] font-sans font-black uppercase tracking-widest px-4 py-1 self-start rounded-full shadow-md border border-red-500/20"
               style={{ backgroundColor: accentColor }}
             >
-              🏆 {matchWinner === 1 ? homeName : awayName} VICTORY (Set Score {p1Wins}-{p2Wins})
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="inline-block mr-1 -mt-0.5"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg> {matchWinner === 1 ? homeName : awayName} VICTORY (Set Score {p1Wins}-{p2Wins})
             </motion.div>
           )}
         </div>

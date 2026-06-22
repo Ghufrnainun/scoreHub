@@ -62,7 +62,7 @@ export default function OverlayPage({ params }: OverlayPageProps) {
       >
         {chroma !== 'transparent' && (
           <p className="text-white/60 text-sm font-mono">
-            Match &quot;{matchId}&quot; tidak ditemukan
+            Match &ldquo;{matchId}&rdquo; tidak ditemukan
           </p>
         )}
       </div>
@@ -111,6 +111,7 @@ export default function OverlayPage({ params }: OverlayPageProps) {
         <BwfOverlay
           match={match}
           position={standardPosition}
+          accentColor={accentColor}
         />
       )}
 
@@ -132,7 +133,7 @@ export default function OverlayPage({ params }: OverlayPageProps) {
       )}
 
       {/* Winner banner — shown on top of everything */}
-      {showWinner && <MatchWinnerBanner match={match} />}
+      {showWinner && <MatchWinnerBanner match={match} accentColor={accentColor} />}
     </div>
   );
 }

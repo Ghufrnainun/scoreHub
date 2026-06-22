@@ -9,6 +9,7 @@ import type { MatchState } from '@/lib/match-types';
 export interface BwfOverlayProps {
   match: MatchState;
   position?: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right' | 'bottom-center' | 'top-center';
+  accentColor?: string;
 }
 
 // ─── Country → Flag mapping ───────────────────────────────────────────────────
@@ -59,6 +60,7 @@ function ShuttleIcon({ className }: { className?: string }) {
       fill="currentColor"
       className={className}
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       {/* Simplified shuttlecock shape */}
       <path d="M12 2C9.5 2 7.5 4.2 7.5 7c0 1.2.4 2.3 1 3.1L5 21h14l-3.5-10.9c.6-.8 1-1.9 1-3.1C16.5 4.2 14.5 2 12 2z" opacity="0.25"/>
@@ -86,6 +88,7 @@ interface BwfTeamRowProps {
   teamColor: string;
   isDoubles: boolean;
   isFinished: boolean;
+  accentColor?: string;
 }
 
 function BwfTeamRow({
@@ -100,6 +103,7 @@ function BwfTeamRow({
   teamColor,
   isDoubles,
   isFinished: _isFinished,
+  accentColor,
 }: BwfTeamRowProps) {
   const isoCode = getIsoCode(country ?? players[0]?.country);
 
@@ -119,26 +123,25 @@ function BwfTeamRow({
 
       {/* ── Left: flag block ── */}
       <div
-        className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5"
+        className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 relative"
         style={{
           width: 52,
           background: `linear-gradient(160deg, ${teamColor}EE 0%, ${teamColor}BB 100%)`,
           boxShadow: `inset -2px 0 8px rgba(0,0,0,0.3)`,
         }}
       >
-        {isoCode ? (
+        <ShuttleIcon className="absolute w-[22px] h-[22px] opacity-40 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]" />
+        {isoCode && (
           <img
             src={`https://flagcdn.com/h40/${isoCode}.png`}
             alt={isoCode}
-            className="h-6 w-auto object-contain border border-white/10 shadow-sm"
+            width={36}
+            height={24}
+            className="h-6 w-auto object-contain border border-white/10 shadow-sm relative z-10 bg-transparent"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
-        ) : (
-          <span className="text-[22px] leading-none" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }}>
-            🏸
-          </span>
         )}
       </div>
 
@@ -243,7 +246,7 @@ function BwfTeamRow({
           width: 68,
           background: isWinner
             ? 'rgba(245, 197, 24, 0.14)'
-            : 'rgba(255,255,255,0.055)',
+            : 'rgba(0, 0, 0, 0.25)', // Bypasses OBS transparent-page premultiplication blending bug (was white rgba(255,255,255,0.055))
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -262,10 +265,10 @@ function BwfTeamRow({
             value={score}
             digitClassName={[
               'tabular-nums font-black leading-none',
-              isWinner ? 'text-[#f5c518]' : 'text-white',
               // Scale font based on digit count
               score >= 100 ? 'text-[28px]' : 'text-[36px]',
             ].join(' ')}
+            style={{ color: isWinner ? '#f5c518' : accentColor || '#fbbf24' }}
           />
         </ScoreGlowFlash>
       </div>
@@ -275,7 +278,7 @@ function BwfTeamRow({
 
 // ─── Main overlay ─────────────────────────────────────────────────────────────
 
-export function BwfOverlay({ match, position = 'bottom-left' }: BwfOverlayProps) {
+export function BwfOverlay({ match, position = 'bottom-left', accentColor }: BwfOverlayProps) {
   const currentSet = match.currentSet;
   const sets = match.sets ?? [];
   const isFinished = match.status === 'finished';
@@ -380,6 +383,7 @@ export function BwfOverlay({ match, position = 'bottom-left' }: BwfOverlayProps)
           teamColor={homeColor}
           isDoubles={isDoubles}
           isFinished={isFinished}
+          accentColor={accentColor}
         />
 
         {/* ── Row divider ── */}
@@ -399,6 +403,7 @@ export function BwfOverlay({ match, position = 'bottom-left' }: BwfOverlayProps)
           teamColor={awayColor}
           isDoubles={isDoubles}
           isFinished={isFinished}
+          accentColor={accentColor}
         />
       </motion.div>
     </div>

@@ -18,6 +18,7 @@ function ShuttleIcon({ className, size = 16, color }: { className?: string; size
       className={className}
       style={{ width: size, height: size, color: color }}
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <circle cx="12" cy="7" r="2.5"/>
       <path d="M9.5 9.5 L6 20 H18 L14.5 9.5" strokeWidth="0.5" stroke="currentColor" fill="none"/>
@@ -215,8 +216,9 @@ function TeamRow({
       <ScoreGlowFlash trigger={score}>
         <ScoreFlipDigit
           value={score}
-          digitClassName={`text-3xl font-black tabular-nums ${isWinner ? '' : ''}`}
+          digitClassName="text-3xl font-black tabular-nums"
           className=""
+          style={{ color: isWinner ? '#fbbf24' : accentColor }}
         />
       </ScoreGlowFlash>
     </div>

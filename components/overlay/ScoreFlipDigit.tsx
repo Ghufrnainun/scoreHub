@@ -7,6 +7,7 @@ interface ScoreFlipDigitProps {
   value: number;
   className?: string;
   digitClassName?: string;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -17,6 +18,7 @@ export function ScoreFlipDigit({
   value,
   className = '',
   digitClassName = '',
+  style,
 }: ScoreFlipDigitProps) {
   const prevValueRef = useRef(value);
   const [displayValue, setDisplayValue] = useState(value);
@@ -50,7 +52,7 @@ export function ScoreFlipDigit({
             duration: 0.18,
             ease: [0.22, 1, 0.36, 1],
           }}
-          style={{ transformOrigin: 'center center', display: 'inline-block' }}
+          style={{ transformOrigin: 'center center', display: 'inline-block', ...style }}
         >
           {String(displayValue).padStart(2, '0')}
         </motion.span>

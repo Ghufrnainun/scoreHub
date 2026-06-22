@@ -18,6 +18,7 @@ function ShuttleIcon({ className, size = 16, color }: { className?: string; size
       className={className}
       style={{ width: size, height: size, color: color }}
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <circle cx="12" cy="7" r="2.5"/>
       <path d="M9.5 9.5 L6 20 H18 L14.5 9.5" strokeWidth="0.5" stroke="currentColor" fill="none"/>
@@ -174,9 +175,17 @@ function MinimalRow({
         <motion.span
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="text-xs"
+          className="flex items-center"
         >
-          👑
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.5)]"
+          >
+            <path d="M2 19h20v3H2zM2 5l5 5 5-7 5 7 5-5-2 12H4z" />
+          </svg>
         </motion.span>
       )}
 
@@ -198,8 +207,9 @@ function MinimalRow({
       <ScoreGlowFlash trigger={score}>
         <ScoreFlipDigit
           value={score}
-          digitClassName={`text-xl font-black tabular-nums ${isWinner ? '' : ''}`}
+          digitClassName="text-xl font-black tabular-nums"
           className=""
+          style={{ color: isWinner ? '#fbbf24' : accentColor }}
         />
       </ScoreGlowFlash>
     </div>

@@ -17,6 +17,7 @@ function ShuttleIcon({ className }: { className?: string }) {
       fill="currentColor"
       className={className}
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <circle cx="12" cy="7" r="2.5"/>
       <path d="M9.5 9.5 L6 20 H18 L14.5 9.5" strokeWidth="0.5" stroke="currentColor" fill="none"/>
@@ -36,6 +37,10 @@ export function DisplayStyleOverlay({
   const sets = match.sets ?? [];
   const isFinished = match.status === 'finished';
   const isDoubles = (match.teams.home.players?.length ?? 0) >= 2;
+
+  const showSet1 = sets.length >= 1;
+  const showSet2 = sets.length >= 2;
+  const showSet3 = sets.length >= 3;
 
   const positionClass = {
     'bottom-left': 'bottom-6 left-6',
@@ -112,25 +117,31 @@ export function DisplayStyleOverlay({
         {/* Right: Scores */}
         <div className="flex bg-[#030408]/90">
           {/* Set 1 Score */}
-          <div className="w-16 flex items-center justify-center bg-[#07080f]/50 border-l border-white/5">
-            <span className="text-sm font-black text-white/55 tabular-nums">
-              {sets[0] ? pastScores[0] : currentSet === 1 && !isFinished ? team.score : '-'}
-            </span>
-          </div>
+          {showSet1 && (
+            <div className="w-16 flex items-center justify-center bg-[#07080f]/50 border-l border-white/5">
+              <span className="text-sm font-black text-white/55 tabular-nums">
+                {pastScores[0]}
+              </span>
+            </div>
+          )}
 
           {/* Set 2 Score */}
-          <div className="w-16 flex items-center justify-center bg-[#07080f]/50 border-l border-white/5">
-            <span className="text-sm font-black text-white/55 tabular-nums">
-              {sets[1] ? pastScores[1] : currentSet === 2 && !isFinished ? team.score : '-'}
-            </span>
-          </div>
+          {showSet2 && (
+            <div className="w-16 flex items-center justify-center bg-[#07080f]/50 border-l border-white/5">
+              <span className="text-sm font-black text-white/55 tabular-nums">
+                {pastScores[1]}
+              </span>
+            </div>
+          )}
 
           {/* Set 3 Score */}
-          <div className="w-16 flex items-center justify-center bg-[#07080f]/50 border-l border-white/5">
-            <span className="text-sm font-black text-white/55 tabular-nums">
-              {sets[2] ? pastScores[2] : currentSet === 3 && !isFinished ? team.score : '-'}
-            </span>
-          </div>
+          {showSet3 && (
+            <div className="w-16 flex items-center justify-center bg-[#07080f]/50 border-l border-white/5">
+              <span className="text-sm font-black text-white/55 tabular-nums">
+                {pastScores[2]}
+              </span>
+            </div>
+          )}
 
           {/* Current Score / Points */}
           <div
@@ -138,15 +149,16 @@ export function DisplayStyleOverlay({
             style={{
               background: isWinner
                 ? 'rgba(251, 191, 36, 0.12)'
-                : 'rgba(255,255,255,0.02)',
+                : 'rgba(0, 0, 0, 0.2)',
             }}
           >
             <ScoreGlowFlash trigger={team.score}>
               <ScoreFlipDigit
                 value={team.score}
-                digitClassName={`text-2xl font-black tabular-nums ${
-                  isWinner ? 'text-amber-400' : isServing ? 'text-white' : 'text-white/80'
-                }`}
+                digitClassName="text-2xl font-black tabular-nums"
+                style={{
+                  color: isWinner ? '#fbbf24' : isServing ? accentColor : `${accentColor}cc`,
+                }}
               />
             </ScoreGlowFlash>
           </div>
@@ -192,9 +204,9 @@ export function DisplayStyleOverlay({
             </div>
 
             <div className="flex text-[9px] font-bold text-white/45 uppercase tracking-widest text-center">
-              <div className="w-16">SET 1</div>
-              <div className="w-16">SET 2</div>
-              <div className="w-16">SET 3</div>
+              {showSet1 && <div className="w-16">SET 1</div>}
+              {showSet2 && <div className="w-16">SET 2</div>}
+              {showSet3 && <div className="w-16">SET 3</div>}
               <div className="w-20 text-white/70">POIN</div>
             </div>
           </div>

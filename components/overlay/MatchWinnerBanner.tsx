@@ -5,9 +5,10 @@ import type { MatchState } from '@/lib/match-types';
 
 interface MatchWinnerBannerProps {
   match: MatchState;
+  accentColor?: string;
 }
 
-export function MatchWinnerBanner({ match }: MatchWinnerBannerProps) {
+export function MatchWinnerBanner({ match, accentColor = '#fbbf24' }: MatchWinnerBannerProps) {
   const isFinished = match.status === 'finished';
   const winner = match.winner;
   const winnerName = winner
@@ -56,8 +57,8 @@ export function MatchWinnerBanner({ match }: MatchWinnerBannerProps) {
               transition={{ delay: 0.7, duration: 0.5 }}
               className="text-4xl font-black uppercase tracking-widest mb-1"
               style={{
-                color: '#fbbf24',
-                textShadow: '0 0 40px rgba(251,191,36,0.5)',
+                color: accentColor,
+                textShadow: `0 0 40px ${accentColor}80`,
               }}
             >
               {winnerName}
@@ -89,7 +90,7 @@ export function MatchWinnerBanner({ match }: MatchWinnerBannerProps) {
               key={i}
               className="absolute w-2 h-2 rounded-full"
               style={{
-                background: i % 3 === 0 ? '#fbbf24' : i % 3 === 1 ? '#3b82f6' : '#ef4444',
+                background: i % 3 === 0 ? accentColor : i % 3 === 1 ? '#3b82f6' : '#ef4444',
                 left: `${8 + i * 7.5}%`,
                 top: '50%',
               }}

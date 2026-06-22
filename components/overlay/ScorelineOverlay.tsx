@@ -27,6 +27,7 @@ function ShuttleIcon({ className, size = 16, color }: { className?: string; size
       className={className}
       style={{ width: size, height: size, color: color }}
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <circle cx="12" cy="7" r="2.5"/>
       <path d="M9.5 9.5 L6 20 H18 L14.5 9.5" strokeWidth="0.5" stroke="currentColor" fill="none"/>
@@ -47,6 +48,8 @@ export function ScorelineOverlay({
   const currentSet = match.currentSet;
   const sets = match.sets || [];
   const isFinished = match.status === 'finished';
+  const isHomeWinner = isFinished && match.winner === 'home';
+  const isAwayWinner = isFinished && match.winner === 'away';
 
   const posClass = position === 'bottom'
     ? 'bottom-0 left-0 right-0'
@@ -141,7 +144,8 @@ export function ScorelineOverlay({
             <ScoreGlowFlash trigger={homeScore}>
               <ScoreFlipDigit
                 value={homeScore}
-                digitClassName="text-4xl font-black text-white tabular-nums"
+                digitClassName="text-4xl font-black tabular-nums"
+                style={{ color: isHomeWinner ? '#fbbf24' : accentColor }}
               />
             </ScoreGlowFlash>
           </div>
@@ -159,7 +163,8 @@ export function ScorelineOverlay({
             <ScoreGlowFlash trigger={awayScore}>
               <ScoreFlipDigit
                 value={awayScore}
-                digitClassName="text-4xl font-black text-white tabular-nums"
+                digitClassName="text-4xl font-black tabular-nums"
+                style={{ color: isAwayWinner ? '#fbbf24' : accentColor }}
               />
             </ScoreGlowFlash>
           </div>
