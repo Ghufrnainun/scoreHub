@@ -54,9 +54,9 @@ export function CornerBarOverlay({
     'bottom-left': 'bottom-6 left-6',
     'bottom-right': 'bottom-6 right-6',
     'bottom-center': 'bottom-6 left-1/2 -translate-x-1/2',
-    'top-left': 'top-6 left-6',
-    'top-right': 'top-6 right-6',
-    'top-center': 'top-6 left-1/2 -translate-x-1/2',
+    'top-left': 'top-0 left-0',
+    'top-right': 'top-0 right-0',
+    'top-center': 'top-0 left-1/2 -translate-x-1/2',
   }[position];
 
   return (

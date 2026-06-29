@@ -74,15 +74,25 @@ const STYLES: { id: OverlayStyle; label: string; desc: string; icon: React.React
   },
 ];
 
-const POSITIONS: { id: OverlayPosition; label: string; styles?: OverlayStyle[] }[] = [
+const POSITIONS: { id: OverlayPosition; label: string; desc?: string; styles?: OverlayStyle[] }[] = [
   { id: 'bottom-right', label: 'Bawah Kanan' },
   { id: 'bottom-left', label: 'Bawah Kiri' },
   { id: 'bottom-center', label: 'Bawah Tengah', styles: ['bwf', 'display-style', 'broadcast'] },
   { id: 'top-right', label: 'Atas Kanan' },
   { id: 'top-left', label: 'Atas Kiri' },
   { id: 'top-center', label: 'Atas Tengah', styles: ['bwf', 'display-style', 'broadcast'] },
-  { id: 'fit', label: 'Fit / Bebas (Sesuai Ukuran OBS Source)', styles: ['broadcast'] },
+  { id: 'fit', label: 'Fit / Bebas', desc: 'Kotak OBS pas ke ukuran overlay — gampang drag & resize' },
 ];
+
+// Recommended OBS Browser Source dimensions for fit mode (per style)
+const FIT_DIMENSIONS: Record<OverlayStyle, { w: number; h: number }> = {
+  'bwf': { w: 620, h: 180 },
+  'broadcast': { w: 560, h: 200 },
+  'corner-bar': { w: 400, h: 180 },
+  'scoreline': { w: 1920, h: 60 },
+  'minimal-card': { w: 360, h: 160 },
+  'display-style': { w: 580, h: 220 },
+};
 
 const BG_OPTIONS: { id: ChromaBg; label: string; color: string }[] = [
   { id: 'transparent', label: 'Transparan', color: 'transparent' },
@@ -100,14 +110,24 @@ const PRESET_COLORS = [
   '#ffffff', // white
 ];
 
-const OBS_STEPS = [
+const OBS_STEPS_POSITIONED = [
   'Buka OBS Studio → klik tombol **"+"** di panel Sources',
   'Pilih **Browser Source** dari menu',
-  'Centang **"Local file"** jika menggunakan server lokal, atau paste URL langsung',
-  'Paste URL overlay di kolom URL',
-  'Set Width: **1920** dan Height: **1080**',
+  'Paste URL overlay di kolom **URL**',
+  'Set Width: **1920** dan Height: **1080** (resolusi canvas)',
+  'Di Custom CSS, pastikan: `body { background-color: rgba(0,0,0,0); margin: 0px auto; overflow: hidden; }`',
   'Centang **"Shutdown source when not visible"** (opsional tapi disarankan)',
-  'Klik **OK** → drag & resize layer overlay sesuai kebutuhan',
+  'Klik **OK** — overlay sudah auto-positioned sesuai pengaturan',
+];
+
+const OBS_STEPS_FIT = [
+  'Buka OBS Studio → klik tombol **"+"** di panel Sources',
+  'Pilih **Browser Source** dari menu',
+  'Paste URL overlay di kolom **URL**',
+  'Set **Width** dan **Height** sesuai tabel ukuran di bawah ⬇️',
+  'Di Custom CSS, pastikan: `body { background-color: rgba(0,0,0,0); margin: 0px auto; overflow: hidden; }`',
+  'Klik **OK** → **drag overlay** ke posisi yang diinginkan di canvas',
+  'Resize dengan **drag handle merah** — overlay akan ikut scale proporsional!',
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -326,6 +346,7 @@ export default function OverlayGeneratorPage() {
               <div className="grid grid-cols-2 gap-2">
                 {POSITIONS
                   .filter((p) => !p.styles || p.styles.includes(config.style))
+                  .filter((p) => p.id !== 'fit')
                   .map((p) => (
                     <button
                       key={p.id}
@@ -341,6 +362,28 @@ export default function OverlayGeneratorPage() {
                     </button>
                   ))}
               </div>
+              {/* Fit mode — full-width special button */}
+              <button
+                onClick={() => setConfig((c) => ({ ...c, position: 'fit' }))}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all mt-2',
+                  config.position === 'fit'
+                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-900/40',
+                )}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn('flex-shrink-0', config.position === 'fit' ? 'text-primary' : 'text-slate-400')}>
+                  <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+                <div>
+                  <p className={cn('text-xs font-bold', config.position === 'fit' ? 'text-primary' : 'text-slate-700 dark:text-slate-300')}>
+                    Fit / Bebas
+                  </p>
+                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                    Bounding box OBS pas ke ukuran overlay — gampang drag & resize posisi
+                  </p>
+                </div>
+              </button>
             </section>
           )}
 
@@ -528,7 +571,7 @@ export default function OverlayGeneratorPage() {
           <section className="space-y-3">
             <SectionLabel step={null} label="Cara Pasang di OBS" />
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
-              {OBS_STEPS.map((step, i) => (
+              {(config.position === 'fit' ? OBS_STEPS_FIT : OBS_STEPS_POSITIONED).map((step, i) => (
                 <div key={i} className="flex items-start gap-3 px-4 py-3">
                   <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
                     {i + 1}
@@ -539,6 +582,9 @@ export default function OverlayGeneratorPage() {
                       __html: step.replace(
                         /\*\*(.+?)\*\*/g,
                         '<strong class="text-slate-800 dark:text-slate-100 font-bold">$1</strong>',
+                      ).replace(
+                        /`(.+?)`/g,
+                        '<code class="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-700 dark:text-slate-300">$1</code>',
                       ),
                     }}
                   />
@@ -546,12 +592,47 @@ export default function OverlayGeneratorPage() {
               ))}
             </div>
 
+            {/* Fit mode: recommended dimensions table */}
+            {config.position === 'fit' && (
+              <div className="rounded-xl border border-amber-200 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-950/10 p-3 space-y-2">
+                <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                  Rekomendasi Ukuran OBS Browser Source
+                </p>
+                <div className="grid grid-cols-3 gap-1 text-[10px]">
+                  <div className="font-bold text-amber-700 dark:text-amber-400">Style</div>
+                  <div className="font-bold text-amber-700 dark:text-amber-400">Width</div>
+                  <div className="font-bold text-amber-700 dark:text-amber-400">Height</div>
+                  {Object.entries(FIT_DIMENSIONS).map(([style, dim]) => {
+                    const isActive = style === config.style;
+                    return [
+                      <div key={`${style}-name`} className={cn('py-0.5', isActive ? 'font-black text-amber-900 dark:text-amber-200' : 'text-amber-600 dark:text-amber-500')}>
+                        {STYLES.find(s => s.id === style)?.label || style}
+                      </div>,
+                      <div key={`${style}-w`} className={cn('py-0.5 font-mono', isActive ? 'font-black text-amber-900 dark:text-amber-200' : 'text-amber-600 dark:text-amber-500')}>
+                        {dim.w}
+                      </div>,
+                      <div key={`${style}-h`} className={cn('py-0.5 font-mono', isActive ? 'font-black text-amber-900 dark:text-amber-200' : 'text-amber-600 dark:text-amber-500')}>
+                        {dim.h}
+                      </div>,
+                    ];
+                  })}
+                </div>
+                <p className="text-[10px] text-amber-600 dark:text-amber-500 italic">
+                  Ukuran di atas adalah rekomendasi. Kamu bisa adjust sedikit sesuai kebutuhan.
+                </p>
+              </div>
+            )}
+
             {/* Tip box */}
             <div className="rounded-xl border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-950/10 p-3 text-[11px] text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
-              💡 <strong>Tips:</strong> Gunakan background{' '}
-              <strong>Transparan</strong> jika OBS mendukung, atau{' '}
-              <strong>Chroma Green</strong> + Color Key filter untuk efek background removal manual.
-              Resolusi browser source disarankan <strong>1920×1080</strong>.
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="inline-block mr-1 -mt-0.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+              <strong>Tips:</strong> Gunakan background{' '}
+              <strong>Transparan</strong> untuk OBS (sudah didukung secara native).{' '}
+              {config.position === 'fit'
+                ? <>Mode <strong>Fit</strong> memungkinkan kamu drag & resize overlay bebas di canvas OBS — cocok untuk layout custom.</>
+                : <>Mode positioned menggunakan canvas <strong>1920×1080</strong> dengan auto-scale — overlay otomatis proporsional di resolusi apapun.</>
+              }
             </div>
           </section>
         </div>

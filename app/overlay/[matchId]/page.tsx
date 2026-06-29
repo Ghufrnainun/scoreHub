@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useSearchParams } from 'next/navigation';
@@ -23,6 +23,26 @@ const BG_MAP: Record<ChromaBg, string> = {
   'chroma-blue': '#0000FF',
 };
 
+// ─── Auto-scale hook ──────────────────────────────────────────────────────────
+// Designs are authored at 1920×1080. This hook calculates a CSS transform scale
+// so the overlay renders identically at any OBS Browser Source resolution.
+const DESIGN_WIDTH = 1920;
+
+function useOverlayScale() {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    function calculate() {
+      setScale(window.innerWidth / DESIGN_WIDTH);
+    }
+    calculate();
+    window.addEventListener('resize', calculate);
+    return () => window.removeEventListener('resize', calculate);
+  }, []);
+
+  return scale;
+}
+
 interface OverlayPageProps {
   params: Promise<{ matchId: string }>;
 }
@@ -30,6 +50,7 @@ interface OverlayPageProps {
 export default function OverlayPage({ params }: OverlayPageProps) {
   const { matchId } = use(params);
   const searchParams = useSearchParams();
+  const scale = useOverlayScale();
 
   const style = (searchParams.get('style') || 'corner-bar') as OverlayStyle;
   const position = (searchParams.get('position') || 'bottom-right') as OverlayPosition;
@@ -75,65 +96,81 @@ export default function OverlayPage({ params }: OverlayPageProps) {
   const standardPosition = position === 'fit' ? 'bottom-right' : position;
   const centeredPosition = position === 'fit' ? 'bottom-center' : position;
 
+  // ─── FIT MODE ───────────────────────────────────────────────────────────────
+  // The OBS Browser Source Width×Height becomes the bounding box.
+  // Set it to match overlay content size (e.g. 550×180 for bwf).
+  // The overlay renders at top-left (0,0) so the bounding box wraps tightly.
+  // Then drag the source anywhere on your OBS canvas — easy to reposition!
+  if (position === 'fit') {
+    return (
+      <div
+        className="w-screen h-screen relative"
+        style={{ background: bgStyle }}
+      >
+        {style === 'corner-bar' && (
+          <CornerBarOverlay match={match} position="top-left" accentColor={accentColor} />
+        )}
+        {style === 'scoreline' && (
+          <ScorelineOverlay match={match} accentColor={accentColor} position="top" />
+        )}
+        {style === 'minimal-card' && (
+          <MinimalCardOverlay match={match} position="top-left" accentColor={accentColor} />
+        )}
+        {style === 'bwf' && (
+          <BwfOverlay match={match} position="top-left" accentColor={accentColor} />
+        )}
+        {style === 'display-style' && (
+          <DisplayStyleOverlay match={match} position="top-center" accentColor={accentColor} />
+        )}
+        {style === 'broadcast' && (
+          <BroadcastOverlay match={match} position="fit" accentColor={accentColor} theme={theme || undefined} />
+        )}
+        {showWinner && <MatchWinnerBanner match={match} accentColor={accentColor} />}
+      </div>
+    );
+  }
+
+  // ─── POSITIONED MODE (default) ─────────────────────────────────────────────
+  // Full 1920×1080 canvas with auto-scale. Overlay is absolute-positioned.
   return (
     <div
       className="w-screen h-screen relative overflow-hidden"
       style={{ background: bgStyle }}
     >
-      {/* Overlay component based on style param */}
-      {style === 'corner-bar' && (
-        <CornerBarOverlay
-          match={match}
-          position={standardPosition}
-          accentColor={accentColor}
-        />
-      )}
-
-      {style === 'scoreline' && (
-        <ScorelineOverlay
-          match={match}
-          accentColor={accentColor}
-          position={
-            position === 'top-left' || position === 'top-right' ? 'top' : 'bottom'
-          }
-        />
-      )}
-
-      {style === 'minimal-card' && (
-        <MinimalCardOverlay
-          match={match}
-          position={standardPosition}
-          accentColor={accentColor}
-        />
-      )}
-
-      {style === 'bwf' && (
-        <BwfOverlay
-          match={match}
-          position={standardPosition}
-          accentColor={accentColor}
-        />
-      )}
-
-      {style === 'display-style' && (
-        <DisplayStyleOverlay
-          match={match}
-          position={centeredPosition}
-          accentColor={accentColor}
-        />
-      )}
-
-      {style === 'broadcast' && (
-        <BroadcastOverlay
-          match={match}
-          position={position}
-          accentColor={accentColor}
-          theme={theme || undefined}
-        />
-      )}
-
-      {/* Winner banner — shown on top of everything */}
-      {showWinner && <MatchWinnerBanner match={match} accentColor={accentColor} />}
+      {/* Auto-scale wrapper: renders at 1920px design width, then CSS-scales to actual viewport */}
+      <div
+        style={{
+          width: DESIGN_WIDTH,
+          height: 1080,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+        }}
+        className="relative"
+      >
+        {style === 'corner-bar' && (
+          <CornerBarOverlay match={match} position={standardPosition} accentColor={accentColor} />
+        )}
+        {style === 'scoreline' && (
+          <ScorelineOverlay
+            match={match}
+            accentColor={accentColor}
+            position={position === 'top-left' || position === 'top-right' ? 'top' : 'bottom'}
+          />
+        )}
+        {style === 'minimal-card' && (
+          <MinimalCardOverlay match={match} position={standardPosition} accentColor={accentColor} />
+        )}
+        {style === 'bwf' && (
+          <BwfOverlay match={match} position={standardPosition} accentColor={accentColor} />
+        )}
+        {style === 'display-style' && (
+          <DisplayStyleOverlay match={match} position={centeredPosition} accentColor={accentColor} />
+        )}
+        {style === 'broadcast' && (
+          <BroadcastOverlay match={match} position={position} accentColor={accentColor} theme={theme || undefined} />
+        )}
+        {showWinner && <MatchWinnerBanner match={match} accentColor={accentColor} />}
+      </div>
     </div>
   );
 }

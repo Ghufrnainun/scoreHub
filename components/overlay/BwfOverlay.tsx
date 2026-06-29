@@ -288,9 +288,9 @@ export function BwfOverlay({ match, position = 'bottom-left', accentColor }: Bwf
     'bottom-left':   { bottom: 32, left: 0 },
     'bottom-right':  { bottom: 32, right: 0 },
     'bottom-center': { bottom: 32, left: '50%', transform: 'translateX(-50%)' },
-    'top-left':      { top: 32, left: 0 },
-    'top-right':     { top: 32, right: 0 },
-    'top-center':    { top: 32, left: '50%', transform: 'translateX(-50%)' },
+    'top-left':      { top: 0, left: 0 },
+    'top-right':     { top: 0, right: 0 },
+    'top-center':    { top: 0, left: '50%', transform: 'translateX(-50%)' },
   };
 
   // Slide in from the correct side
