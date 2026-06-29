@@ -73,7 +73,11 @@ const refereeAuthShape = v.object({
 });
 
 const sportStateShape = v.object({
-  badminton: v.optional(v.object({})),
+  badminton: v.optional(
+    v.object({
+      maxPoints: v.optional(v.number()),
+    })
+  ),
   tennis: v.optional(
     v.object({
       points: v.object({ home: v.number(), away: v.number() }),

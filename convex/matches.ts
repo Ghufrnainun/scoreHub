@@ -328,6 +328,7 @@ export const createMatch = mutation({
     adminSessionToken: v.optional(v.string()),
     createdBy: v.optional(v.string()),
     templateId: v.optional(v.string()),
+    badmintonMaxPoints: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await assertAdminSession(ctx, args.adminSessionToken);
@@ -1106,6 +1107,7 @@ export const updateMatchMetadata = mutation({
     homePlayers: v.optional(v.array(playerInput)),
     awayPlayers: v.optional(v.array(playerInput)),
     teamLineup: v.optional(v.array(teamLineupRowInput)),
+    badmintonMaxPoints: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     try {
@@ -1237,6 +1239,17 @@ export const updateMatchMetadata = mutation({
       }
       if (args.teamLineup !== undefined) {
         patchPayload.teamLineup = nextState.teamLineup;
+      }
+      if (args.badmintonMaxPoints !== undefined) {
+        const nextSportState = {
+          ...match.sportState,
+          badminton: {
+            ...match.sportState?.badminton,
+            maxPoints: args.badmintonMaxPoints,
+          },
+        };
+        patchPayload.sportState = nextSportState;
+        nextState.sportState = nextSportState;
       }
 
       await ctx.db.patch(match._id, patchPayload);

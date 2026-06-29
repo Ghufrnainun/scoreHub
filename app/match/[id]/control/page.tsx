@@ -363,6 +363,7 @@ export default function ControlPage() {
         awayTeamName: matchSettings.awayTeamName,
         homePlayers: matchSettings.homePlayers.map((name) => ({ name })),
         awayPlayers: matchSettings.awayPlayers.map((name) => ({ name })),
+        badmintonMaxPoints: matchSettings.badmintonMaxPoints,
       };
       if (matchSettings.matchFormat === 'beregu') {
         metadataPayload.teamLineup = matchSettings.teamLineup;
@@ -503,6 +504,7 @@ export default function ControlPage() {
           ],
     category: match.category,
     gameMode: match.gameMode,
+    badmintonMaxPoints: match.sportState?.badminton?.maxPoints ?? 21,
   };
   const leftDisplaySide: 'home' | 'away' = match.isFlipped ? 'away' : 'home';
   const rightDisplaySide: 'home' | 'away' = match.isFlipped ? 'home' : 'away';

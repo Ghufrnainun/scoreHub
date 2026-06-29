@@ -10,6 +10,11 @@ export class BadmintonRules implements SportRules {
       serviceCourt: 'right',
       isFlipped: false,
       isFlippedInSet3: false,
+      sportState: {
+        badminton: {
+          maxPoints: config.badmintonMaxPoints ?? 21,
+        },
+      },
     };
   }
 
@@ -22,10 +27,13 @@ export class BadmintonRules implements SportRules {
     newState.teams[winner].score += 1;
     const newScore = newState.teams[winner].score;
 
+    const maxPointsSetting = newState.sportState?.badminton?.maxPoints ?? 21;
+    const changeOfEndsPoint = maxPointsSetting === 15 ? 8 : 11;
+
     if (
       newState.currentSet === 3 &&
-      newScore >= 11 &&
-      oldScore < 11 &&
+      newScore >= changeOfEndsPoint &&
+      oldScore < changeOfEndsPoint &&
       !newState.isFlippedInSet3
     ) {
       newState.isFlipped = !newState.isFlipped;
@@ -69,8 +77,8 @@ export class BadmintonRules implements SportRules {
 
     const homeScore = newState.teams.home.score;
     const awayScore = newState.teams.away.score;
-    const maxScore = 30;
-    const setPoint = 21;
+    const setPoint = maxPointsSetting;
+    const maxScore = maxPointsSetting === 15 ? 21 : 30;
 
     let setWinner: TeamSide | null = null;
     if (

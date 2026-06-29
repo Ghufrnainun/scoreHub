@@ -184,6 +184,7 @@ export default function CreateMatchPage() {
   const [manualDisplayCode, setManualDisplayCode] = useState('');
 
   const [matchFormat, setMatchFormat] = useState<MatchFormat>('perorangan');
+  const [badmintonMaxPoints, setBadmintonMaxPoints] = useState<number>(21);
   const [category, setCategory] = useState<MatchCategory>('MS');
   const [teamMatches, setTeamMatches] = useState<TeamMatchRow[]>([
     { home: '', homeSecond: '', away: '', awaySecond: '', type: 'MS' },
@@ -459,6 +460,7 @@ export default function CreateMatchPage() {
         displayCode: finalDisplayCode,
         tournamentName: tournamentName.trim(),
         assignedReferee: umpireName.trim() || undefined,
+        badmintonMaxPoints: isBadminton ? badmintonMaxPoints : undefined,
         teams: {
           home: {
             name:
@@ -709,7 +711,7 @@ export default function CreateMatchPage() {
                       {fieldErrors.tournamentName || 'Contoh: Kejurkot / Open Tournament / Internal Club League.'}
                     </p>
                   </div>
-                  <div className="mb-6">
+                  <div className="mb-6 flex flex-wrap gap-4 items-center">
                     <div className="bg-black/5 p-1 rounded-xl inline-flex gap-1">
                       {(['perorangan', 'beregu'] as MatchFormat[]).map((format) => (
                         <button
@@ -726,6 +728,25 @@ export default function CreateMatchPage() {
                         </button>
                       ))}
                     </div>
+
+                    {isBadminton && (
+                      <div className="bg-black/5 p-1 rounded-xl inline-flex gap-1">
+                        {([21, 15] as const).map((points) => (
+                          <button
+                            key={points}
+                            type="button"
+                            onClick={() => setBadmintonMaxPoints(points)}
+                            className={`py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
+                              badmintonMaxPoints === points
+                                ? 'bg-black text-white shadow-lg shadow-black/20'
+                                : 'text-black/50 hover:text-black hover:bg-black/5'
+                            }`}
+                          >
+                            {points === 21 ? '3x21 (21 Poin)' : '3x15 (15 Poin)'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-2xl border border-black/10 bg-black/[0.02] p-4">

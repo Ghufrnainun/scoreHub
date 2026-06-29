@@ -270,6 +270,7 @@ export function useMatch({
       homePlayers?: { name: string; country?: string }[];
       awayPlayers?: { name: string; country?: string }[];
       teamLineup?: TeamLineupRow[];
+      badmintonMaxPoints?: number;
     }) => {
       runMutation(() =>
         updateMatchMetadataMutation({

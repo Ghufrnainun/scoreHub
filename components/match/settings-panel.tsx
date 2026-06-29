@@ -79,6 +79,7 @@ export interface MatchSettingsDraft {
   teamLineup: TeamLineupRow[];
   category?: 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
   gameMode?: 'single' | 'double';
+  badmintonMaxPoints?: number;
 }
 
 export interface SettingsSavePayload {
@@ -445,6 +446,29 @@ export function SettingsPanel({
                     ))}
                   </div>
                 </div>
+
+                {sportId === 'badminton' && (
+                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Sistem Poin</Label>
+                    <div className="inline-flex rounded-full bg-slate-200 dark:bg-slate-800 p-1">
+                      {([21, 15] as const).map((points) => (
+                        <button
+                          key={points}
+                          type="button"
+                          onClick={() => updateMatch({ badmintonMaxPoints: points })}
+                          className={cn(
+                            'h-7 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors',
+                            (matchDraft.badmintonMaxPoints ?? 21) === points
+                              ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm'
+                              : 'text-slate-500 dark:text-slate-300',
+                          )}
+                        >
+                          {points === 21 ? '3x21 (21 Poin)' : '3x15 (15 Poin)'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
