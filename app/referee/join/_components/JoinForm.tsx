@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ export default function JoinForm({
   initialMatchId = '',
   initialPin = '',
 }: JoinFormProps) {
-  const router = useRouter();
   const joinAsReferee = useMutation(api.matches.joinAsReferee);
 
   const [displayCode, setDisplayCode] = useState(initialCode);
@@ -105,10 +103,16 @@ export default function JoinForm({
 
       // Go directly to control page via absolute navigation for absolute reliability
       window.location.assign(`/match/${result.matchId}/control?role=referee&token=${result.token}`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Gagal masuk sebagai wasit',
-      );
+    } catch (err: any) {
+      const msg =
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error')
+              ? 'PIN wasit tidak valid atau pertandingan tidak ditemukan.'
+              : err.message.replace(/^ConvexError:\s*/i, '')
+            : 'Gagal masuk sebagai wasit';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -238,4 +242,3 @@ export default function JoinForm({
     </div>
   );
 }
-

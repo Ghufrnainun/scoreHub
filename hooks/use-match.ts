@@ -88,9 +88,15 @@ export function useMatch({
     try {
       await fn();
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       const message =
-        err instanceof Error ? err.message : 'Action failed. Please try again.';
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error')
+              ? 'Aksi gagal. Silakan coba lagi.'
+              : err.message.replace(/^ConvexError:\s*/i, '')
+            : 'Aksi gagal. Silakan coba lagi.';
       setError(message);
       setTimeout(() => setError(null), 5000);
     }

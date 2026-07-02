@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
-import { ConvexError } from 'convex/values';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -514,10 +513,12 @@ export default function CreateMatchPage() {
       
       let userFriendlyMsg = 'Gagal membuat pertandingan. Terjadi kesalahan sistem.';
       
-      // Extract detailed message if it's a ConvexError
-      const rawMessage = err instanceof ConvexError 
-        ? (err.data as string) 
-        : err.message || '';
+      // Extract clean message from ConvexError or raw error
+      const rawMessage = err?.data && typeof err.data === 'string'
+        ? err.data
+        : err?.message && typeof err.message === 'string' && !err.message.includes('Server Error')
+          ? err.message.replace(/^ConvexError:\s*/i, '')
+          : '';
 
       if (rawMessage.includes('Display code already exists')) {
         userFriendlyMsg = 'Kode Display sudah digunakan untuk match lain. Silakan pilih kode lain.';

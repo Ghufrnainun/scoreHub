@@ -10,6 +10,8 @@ import type { MatchRole } from '@/lib/match-types';
 import { cn } from '@/lib/utils';
 import { loadRefereeSession, saveRefereeSession } from '@/lib/auth';
 import { loadValidAdminSession } from '@/lib/admin-session';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,118 +30,48 @@ import {
   defaultSettings,
 } from '@/components/match/settings-panel';
 
-// --- ICONS (Material Icons equivalent using SVG) ---
-const AddIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-  </svg>
-);
+// --- MINIMALIST ICONS (Clean SVG) ---
 const UndoIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
-  </svg>
-);
-const ReportIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 7v6h6" />
+    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
   </svg>
 );
 const SettingsIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.08-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-  </svg>
-);
-const HistoryIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
-  </svg>
-);
-const NorthEastIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z" />
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const SunIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM12 4V1h-2v3h2zm5.24.84l1.42 1.42 1.79-1.8-1.41-1.41-1.8 1.79zM21 11h-3v2h3v-2zM6 12a6 6 0 1112 0 6 6 0 01-12 0zm-3 1H0v-2h3v2zm3.76 7.16l-1.42 1.42 1.8 1.79 1.41-1.41-1.79-1.8zm10.48 0l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM12 23v-3h-2v3h2z" />
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
   </svg>
 );
 const MoonIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
   </svg>
 );
 const SwapIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z" />
+  <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16" />
   </svg>
 );
-const HelpIcon = ({ className }: { className?: string }) => (
-  <svg
-    aria-hidden="true"
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
-  </svg>
-);
-
 const ShuttlecockIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 -0.42 42.356 42.356"
-    fill="currentColor"
-  >
-    <path
-      d="M157.288,169.268l2.295,5.865s-8.735,11.6-9.88,13.583-4.124,3.328-4.124,3.328l-1.666,3.2,2.738,2.738,1.709-1.709a49.942,49.942,0,0,1,2.636-5.656c1.212-2.013,9.826-13.669,9.826-13.669L167.7,178.3l1.354,6.882s-11.6,8.556-13.669,9.826a46.424,46.424,0,0,1-5.656,2.636l-1.709,1.709,2.693,2.693,3.363-1.745s1.327-2.963,3.3-4.1,13.5-9.8,13.5-9.8l5.852,2.307-1.6,5.511s-13.267,5.661-15.275,6.735a48.208,48.208,0,0,1-5.477,1.733l-6.765,3.887.711.711-2.45,2.45-.092-.092a6.523,6.523,0,0,1-8.253-.714l-1.83-1.83c-2.214-2.214-1.388-4.625.6-6.938l-.034-.034.942-.942h0l1.508-1.508.665.665,3.8-6.589a21.029,21.029,0,0,1,1.759-5.5c1.146-1.986,6.814-15.355,6.814-15.355l5.536-1.63M142.993,197l-1.7,3.259,2.223,2.223-.686-.686,2.479-2.479Zm3.689,3.689L144.2,203.17l1.483,1.483,3.265-1.694Z"
-      transform="translate(-134.376 -169.268)"
-    />
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    {/* Base Cork at the bottom */}
+    <path d="M10 17a2 2 0 0 0 4 0v-2h-4v2z" fill="currentColor" />
+    {/* Feathers body outline */}
+    <path d="M5 4c0 0 1.5 8 5 11h4c3.5-3 5-11 5-11" />
+    {/* Internal feather ribs */}
+    <path d="M9 4v11" />
+    <path d="M12 4v11" />
+    <path d="M15 4v11" />
+    {/* Horizontal bands */}
+    <path d="M6.5 8h11" />
+    <path d="M8 12h8" />
   </svg>
 );
 
@@ -148,17 +80,14 @@ export default function ControlPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [displaySettings, setDisplaySettings] =
-    useState<DisplaySettings>(defaultSettings);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(defaultSettings);
   const [pendingAction, setPendingAction] = useState<{
     title: string;
     description: string;
     confirmLabel: string;
     action: () => void;
   } | null>(null);
-  const [autoStartTimerOnFirstPoint, setAutoStartTimerOnFirstPoint] =
-    useState(false);
+  const [autoStartTimerOnFirstPoint, setAutoStartTimerOnFirstPoint] = useState(false);
   const [pendingPointAward, setPendingPointAward] = useState<{
     winner: 'home' | 'away';
     value?: number;
@@ -177,9 +106,7 @@ export default function ControlPage() {
   const queryToken = searchParams.get('token') || undefined;
   const [sessionReady, setSessionReady] = useState(false);
   const [token, setToken] = useState<string | undefined>(queryToken);
-  const [adminSessionToken, setAdminSessionToken] = useState<string | undefined>(
-    undefined,
-  );
+  const [adminSessionToken, setAdminSessionToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -229,7 +156,8 @@ export default function ControlPage() {
     adminSessionToken,
   });
 
-  // Auto-persist referee session once match is successfully loaded and token is verified
+  const { toast } = useToast();
+
   useEffect(() => {
     if (role === 'referee' && token && match?.displayCode) {
       saveRefereeSession({
@@ -241,9 +169,7 @@ export default function ControlPage() {
     }
   }, [role, token, match?.displayCode, matchId]);
 
-  const isTimerRunning = Boolean(
-    match?.timer?.startedAt && !match?.timer?.pausedAt,
-  );
+  const isTimerRunning = Boolean(match?.timer?.startedAt && !match?.timer?.pausedAt);
   const isReferee = role === 'referee';
   const canOperateActions = role === 'admin' || role === 'referee';
 
@@ -272,16 +198,12 @@ export default function ControlPage() {
     startTimer();
   };
 
-  const handleChangeServe = (
-    team: 'home' | 'away',
-    position?: 'left' | 'right',
-  ) => {
+  const handleChangeServe = (team: 'home' | 'away', position?: 'left' | 'right') => {
     if (!canOperateActions) return;
     runRiskyAction(
       {
         title: 'Ubah Server?',
-        description:
-          'Perubahan server dilakukan manual dan dapat memengaruhi alur servis pertandingan.',
+        description: 'Perubahan server dilakukan manual dan dapat memengaruhi alur servis pertandingan.',
         confirmLabel: 'Ubah Server',
       },
       () => changeServe(team, position),
@@ -293,8 +215,7 @@ export default function ControlPage() {
     runRiskyAction(
       {
         title: 'Tukar Sisi Lapangan?',
-        description:
-          'Aksi ini menukar posisi tim pada tampilan dan control. Pastikan ini memang diperlukan.',
+        description: 'Aksi ini menukar posisi tim pada tampilan dan control. Pastikan ini memang diperlukan.',
         confirmLabel: 'Tukar Sisi',
       },
       () => toggleSides(),
@@ -306,8 +227,7 @@ export default function ControlPage() {
     runRiskyAction(
       {
         title: 'Reset Match?',
-        description:
-          'Ini akan menghapus semua skor, set, dan riwayat pertandingan secara permanen.',
+        description: 'Ini akan menghapus semua skor, set, dan riwayat pertandingan secara permanen.',
         confirmLabel: 'Reset Match',
       },
       () => resetMatch(),
@@ -320,8 +240,7 @@ export default function ControlPage() {
     runRiskyAction(
       {
         title: 'Akhiri Match?',
-        description:
-          'Match akan ditandai selesai dan input poin tidak bisa dilanjutkan kecuali dilakukan reset.',
+        description: 'Match akan ditandai selesai dan input poin tidak bisa dilanjutkan kecuali dilakukan reset.',
         confirmLabel: 'Akhiri Match',
       },
       () => finishMatch(),
@@ -330,8 +249,11 @@ export default function ControlPage() {
   };
 
   const pushCopyFeedback = (message: string) => {
-    setCopyFeedback(message);
-    window.setTimeout(() => setCopyFeedback(null), 2200);
+    toast({
+      title: 'Tautan Berhasil Disalin',
+      description: message,
+      duration: 2500,
+    });
   };
 
   useEffect(() => {
@@ -375,8 +297,7 @@ export default function ControlPage() {
       runRiskyAction(
         {
           title: 'Simpan Pengaturan Match?',
-          description:
-            'Perubahan display dan data pertandingan akan tersinkron ke semua client aktif.',
+          description: 'Perubahan display dan data pertandingan akan tersinkron ke semua client aktif.',
           confirmLabel: 'Simpan Pengaturan',
         },
         applySettings,
@@ -404,41 +325,47 @@ export default function ControlPage() {
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
+  const handleAwardPoint = (winner: 'home' | 'away', value?: number) => {
+    if (!canOperateActions || match?.status === 'finished') return;
+
+    if (isBeforeFirstRally && !isTimerRunning) {
+      if (autoStartTimerOnFirstPoint) {
+        startTimer();
+        awardPoint(winner, value);
+        return;
+      }
+      setPendingPointAward({ winner, value });
+      return;
+    }
+
+    awardPoint(winner, value);
+  };
+
   if (role === 'referee' && !sessionReady) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p className="text-sm font-mono text-muted-foreground">
-          Menyiapkan sesi wasit...
-        </p>
+      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center font-mono text-sm">
+        Menyiapkan sesi wasit...
       </div>
     );
   }
 
   if (role === 'admin' && !sessionReady) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p className="text-sm font-mono text-muted-foreground">
-          Menyiapkan sesi admin...
-        </p>
+      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center font-mono text-sm">
+        Menyiapkan sesi admin...
       </div>
     );
   }
 
   if (role === 'admin' && !adminSessionToken) {
     return (
-      <div className="min-h-screen bg-background text-foreground px-4 py-16">
-        <div className="max-w-xl mx-auto rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-            Sesi Admin Tidak Ditemukan
-          </p>
-          <h1 className="mt-3 text-3xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
-            Masuk Admin Dulu
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Login dari halaman admin untuk membuka kontrol pertandingan.
-          </p>
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#070b16] dark:text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0f19] p-8 text-center shadow-2xl">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">Sesi Admin Tidak Ditemukan</p>
+          <h1 className="mt-4 text-3xl font-[family-name:var(--font-bebas)] tracking-wider uppercase">Masuk Admin Dulu</h1>
+          <p className="mt-2 text-sm text-slate-400">Login dari halaman admin untuk membuka kontrol pertandingan.</p>
           <Link href="/admin" className="inline-block mt-6">
-            <Button className="rounded-full text-xs uppercase tracking-widest font-bold">
+            <Button className="rounded-full bg-blue-600 hover:bg-blue-500 px-8 py-2 text-xs uppercase tracking-widest font-bold">
               Ke Halaman Admin
             </Button>
           </Link>
@@ -449,22 +376,13 @@ export default function ControlPage() {
 
   if (role === 'referee' && !token) {
     return (
-      <div className="min-h-screen bg-background text-foreground px-4 py-16">
-        <div className="max-w-xl mx-auto rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-            Sesi Wasit Tidak Ditemukan
-          </p>
-          <h1 className="mt-3 text-3xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
-            Masuk Terlebih Dahulu
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Masuk lagi melalui halaman join menggunakan display code + PIN.
-          </p>
-          <Link
-            href={`/referee/join?matchId=${matchId}`}
-            className="inline-block mt-6"
-          >
-            <Button className="rounded-full text-xs uppercase tracking-widest font-bold">
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#070b16] dark:text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0f19] p-8 text-center shadow-2xl">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-bold">Sesi Wasit Tidak Ditemukan</p>
+          <h1 className="mt-4 text-3xl font-[family-name:var(--font-bebas)] tracking-wider uppercase">Masuk Terlebih Dahulu</h1>
+          <p className="mt-2 text-sm text-slate-400">Masuk lagi melalui halaman join menggunakan kode pertandingan & PIN.</p>
+          <Link href={`/referee/join?matchId=${matchId}`} className="inline-block mt-6">
+            <Button className="rounded-full bg-blue-600 hover:bg-blue-500 px-8 py-2 text-xs uppercase tracking-widest font-bold">
               Ke Halaman Masuk Wasit
             </Button>
           </Link>
@@ -473,12 +391,13 @@ export default function ControlPage() {
     );
   }
 
-  if (isLoading || !match)
+  if (isLoading || !match) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center text-center p-10 font-bold">
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#070b16] dark:text-slate-100 flex items-center justify-center font-mono text-sm">
         Memuat data pertandingan...
       </div>
     );
+  }
 
   const home = match.teams.home;
   const away = match.teams.away;
@@ -506,18 +425,18 @@ export default function ControlPage() {
     gameMode: match.gameMode,
     badmintonMaxPoints: match.sportState?.badminton?.maxPoints ?? 21,
   };
+
   const leftDisplaySide: 'home' | 'away' = match.isFlipped ? 'away' : 'home';
   const rightDisplaySide: 'home' | 'away' = match.isFlipped ? 'home' : 'away';
   const leftDisplayTeam = match.teams[leftDisplaySide];
   const rightDisplayTeam = match.teams[rightDisplaySide];
-  const displayPath = match.displayCode
-    ? `/display/${match.displayCode}`
-    : `/match/${matchId}/display`;
+  const displayPath = match.displayCode ? `/display/${match.displayCode}` : `/match/${matchId}/display`;
   const isBeforeFirstRally =
     home.score === 0 &&
     away.score === 0 &&
     (match.currentSet ?? 1) === 1 &&
     (match.sets?.length ?? 0) === 0;
+
   const homeServing = match.server === 'home';
   const awayServing = match.server === 'away';
   const isTeamMatch = match.matchFormat === 'beregu';
@@ -563,61 +482,31 @@ export default function ControlPage() {
     localStorage.setItem(AUTO_TIMER_KEY, String(nextValue));
   };
 
-  const handleAwardPoint = (winner: 'home' | 'away', value?: number) => {
-    if (!canOperateActions || match.status === 'finished') return;
-
-    if (isBeforeFirstRally && !isTimerRunning) {
-      if (autoStartTimerOnFirstPoint) {
-        startTimer();
-        awardPoint(winner, value);
-        return;
-      }
-      setPendingPointAward({ winner, value });
-      return;
-    }
-
-    awardPoint(winner, value);
-  };
-
   const renderScoringControls = () => {
     const homeSide = resolveTeamSide('home');
     const awaySide = resolveTeamSide('away');
 
     if (match.sport === 'basketball') {
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {[
-            { side: homeSide, label: home.name, tone: 'blue' },
-            { side: awaySide, label: away.name, tone: 'red' },
+            { side: homeSide, label: home.name, colorClass: 'text-blue-500 border-blue-500/20 bg-blue-500/5' },
+            { side: awaySide, label: away.name, colorClass: 'text-red-500 border-red-500/20 bg-red-500/5' },
           ].map((team) => (
-            <div
-              key={team.side}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-4"
-            >
+            <div key={team.side} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0f19]/50 p-6 flex flex-col justify-between gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 text-pretty">
-                  {team.label}
-                </span>
-                <span className="text-sm font-mono font-bold tabular-nums text-slate-500 dark:text-slate-400">
-                  {team.side === 'home' ? home.score : away.score}
-                </span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 tracking-tight">{team.label}</span>
+                <span className="font-mono text-3xl font-black tabular-nums">{team.side === 'home' ? home.score : away.score}</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[1, 2, 3].map((value) => (
-                  <Button
+                  <button
                     key={value}
-                    variant="secondary"
-                    className={cn(
-                      'h-12 text-sm font-bold tabular-nums',
-                      team.tone === 'blue'
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-red-600 dark:text-red-400',
-                    )}
+                    className={cn('h-12 rounded-xl border font-mono font-black text-lg transition-transform active:scale-95', team.colorClass)}
                     onClick={() => handleAwardPoint(team.side, value)}
-                    aria-label={`Add ${value} point for ${team.label}`}
                   >
                     +{value}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
@@ -638,38 +527,27 @@ export default function ControlPage() {
       };
 
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {[
             { side: homeSide, label: home.name },
             { side: awaySide, label: away.name },
           ].map((team) => (
-            <div
-              key={team.side}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-4"
-            >
+            <div key={team.side} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0f19]/50 p-6 flex flex-col justify-between gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 text-pretty">
-                  {team.label}
-                </span>
-                <span className="text-sm font-mono font-bold tabular-nums text-slate-500 dark:text-slate-400">
-                  Games: {team.side === 'home' ? home.score : away.score}
-                </span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 tracking-tight">{team.label}</span>
+                <span className="font-mono text-lg font-bold text-slate-500 dark:text-slate-400">Games: {team.side === 'home' ? home.score : away.score}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="secondary"
-                  className="h-12 text-sm font-bold"
+                <button
+                  className="h-12 rounded-xl bg-slate-100 hover:bg-slate-250 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm text-slate-800 dark:text-white transition-transform active:scale-95 border border-slate-200 dark:border-white/5"
                   onClick={() => handleAwardPoint(team.side)}
-                  aria-label={`Add point for ${team.label}`}
                 >
                   Point
-                </Button>
-                <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-xs text-slate-500 dark:text-slate-400 text-pretty">
+                </button>
+                <div className="rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950 px-4 py-3 flex items-center justify-center font-mono font-black text-blue-600 dark:text-blue-400">
                   {tennis?.tiebreak
-                    ? `TB: ${pointLabel(
-                        tennis.tiebreakPoints?.[team.side] || 0,
-                      )}`
-                    : `Point: ${pointLabel(tennis?.points?.[team.side] || 0)}`}
+                    ? `TB: ${pointLabel(tennis.tiebreakPoints?.[team.side] || 0)}`
+                    : `PT: ${pointLabel(tennis?.points?.[team.side] || 0)}`}
                 </div>
               </div>
             </div>
@@ -678,76 +556,25 @@ export default function ControlPage() {
       );
     }
 
-    if (match.sport === 'volleyball') {
+    if (match.sport === 'volleyball' || isSoccerLike) {
+      const isVolley = match.sport === 'volleyball';
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {[
-            { side: homeSide, label: home.name, tone: 'blue' },
-            { side: awaySide, label: away.name, tone: 'red' },
+            { side: homeSide, label: home.name, themeClass: 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/30' },
+            { side: awaySide, label: away.name, themeClass: 'bg-red-600 hover:bg-red-500 shadow-red-900/30' },
           ].map((team) => (
-            <div
-              key={team.side}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-4"
-            >
+            <div key={team.side} className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#0b0f19]/50 p-6 flex flex-col justify-between gap-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 text-pretty">
-                  {team.label}
-                </span>
-                <span className="text-sm font-mono font-bold tabular-nums text-slate-500 dark:text-slate-400">
-                  {team.side === 'home' ? home.score : away.score}
-                </span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 tracking-tight truncate max-w-[160px]">{team.label}</span>
+                <span className="font-mono text-3xl font-black text-slate-900 dark:text-white">{team.side === 'home' ? home.score : away.score}</span>
               </div>
-              <Button
-                variant="secondary"
-                className={cn(
-                  'h-12 text-sm font-bold',
-                  team.tone === 'blue'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-red-600 dark:text-red-400',
-                )}
+              <button
+                className={cn('h-14 rounded-xl font-bold uppercase tracking-widest text-xs text-white shadow-lg transition-transform active:scale-95', team.themeClass)}
                 onClick={() => handleAwardPoint(team.side)}
-                aria-label={`Add point for ${team.label}`}
               >
-                +1 Point
-              </Button>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (match.sport === 'soccer' || match.sport === 'futsal') {
-      return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[
-            { side: homeSide, label: home.name, tone: 'blue' },
-            { side: awaySide, label: away.name, tone: 'red' },
-          ].map((team) => (
-            <div
-              key={team.side}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 text-pretty">
-                  {team.label}
-                </span>
-                <span className="text-sm font-mono font-bold tabular-nums text-slate-500 dark:text-slate-400">
-                  {team.side === 'home' ? home.score : away.score}
-                </span>
-              </div>
-              <Button
-                variant="secondary"
-                className={cn(
-                  'h-12 text-sm font-bold',
-                  team.tone === 'blue'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-red-600 dark:text-red-400',
-                )}
-                onClick={() => handleAwardPoint(team.side)}
-                aria-label={`Add goal for ${team.label}`}
-              >
-                +1 Goal
-              </Button>
+                +{isVolley ? '1 Point' : '1 Goal'}
+              </button>
             </div>
           ))}
         </div>
@@ -795,18 +622,12 @@ export default function ControlPage() {
     }
 
     if (isSetBased) {
-      const maxSets = isVolleyball
-        ? (match.sportState?.volleyball?.maxSets ?? 5)
-        : 3;
+      const maxSets = isVolleyball ? (match.sportState?.volleyball?.maxSets ?? 5) : 3;
       const columns = Array.from({ length: maxSets }, (_, index) => ({
         key: `set-${index + 1}`,
         label: `Set ${index + 1}`,
-        home:
-          match.sets[index]?.home ??
-          (match.currentSet === index + 1 ? home.score : '-'),
-        away:
-          match.sets[index]?.away ??
-          (match.currentSet === index + 1 ? away.score : '-'),
+        home: match.sets[index]?.home ?? (match.currentSet === index + 1 ? home.score : '-'),
+        away: match.sets[index]?.away ?? (match.currentSet === index + 1 ? away.score : '-'),
       }));
       return { columns, showServe: isBadminton };
     }
@@ -814,97 +635,142 @@ export default function ControlPage() {
     return null;
   })();
 
-  return (
-    <div className="font-display bg-slate-50 dark:bg-background text-slate-900 dark:text-foreground min-h-screen flex flex-col font-sans transition-colors duration-200">
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-xs focus:font-bold focus:text-white"
+  const renderQuadrantCell = (quadrant: 'TL' | 'TR' | 'BL' | 'BR', className?: string) => {
+    const { side, courtIdx } = getQuadrantInfo(quadrant);
+    const isServer = isServerQuadrant(quadrant);
+    const isReceiver = isReceiverQuadrant(quadrant);
+    const serverColor = getServerColor(quadrant);
+    const content = getQuadrantContent(quadrant);
+
+    return (
+      <div
+        className={cn(
+          'flex flex-col items-center justify-center p-2 transition-all duration-300 rounded-2xl relative border border-transparent',
+          className,
+        )}
+        style={
+          isServer
+            ? {
+                backgroundColor: `${serverColor}20`,
+                borderColor: `${serverColor}50`,
+                boxShadow: `0 0 15px ${serverColor}20`,
+              }
+            : isReceiver
+              ? { backgroundColor: `${serverColor}08` }
+              : {}
+        }
       >
+        <div className="flex flex-col items-center gap-1.5">
+          {isServer && (
+            <ShuttlecockIcon className="w-7 h-7 text-white drop-shadow-[0_0_15px_rgba(255,255,255,1)] animate-bounce" />
+          )}
+          <span
+            className={cn(
+              'text-[10px] sm:text-xs text-center leading-tight tracking-wider uppercase px-2.5 py-1 rounded-lg transition-all',
+              isServer
+                ? 'text-slate-950 bg-yellow-300 border border-yellow-400 font-black shadow-md'
+                : 'text-white bg-slate-950/60 border border-white/15 font-bold',
+            )}
+          >
+            {content || '-'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const getQuadrantInfo = (quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
+    const leftTeamSide = match.isFlipped ? 'away' : 'home';
+    const rightTeamSide = match.isFlipped ? 'home' : 'away';
+    const leftTeam = match.teams[leftTeamSide];
+    const rightTeam = match.teams[rightTeamSide];
+
+    if (quadrant === 'TL') return { side: leftTeamSide, team: leftTeam, courtIdx: 1 };
+    if (quadrant === 'BL') return { side: leftTeamSide, team: leftTeam, courtIdx: 0 };
+    if (quadrant === 'TR') return { side: rightTeamSide, team: rightTeam, courtIdx: 0 };
+    return { side: rightTeamSide, team: rightTeam, courtIdx: 1 };
+  };
+
+  const getQuadrantContent = (quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
+    const { team, courtIdx } = getQuadrantInfo(quadrant);
+    if (!team || !match.server) return '';
+
+    if (isSingles) {
+      const servingTeam = match.server === 'home' ? home : away;
+      const activeCourtIdx = servingTeam.score % 2 === 0 ? 0 : 1;
+      if (courtIdx !== activeCourtIdx) return '';
+      return team.players[0]?.name || team.name;
+    }
+
+    const pPositions = team.playerPositions || [0, 1];
+    const playerIdx = pPositions[courtIdx];
+    return team.players[playerIdx]?.name || (courtIdx === 0 ? team.name : '');
+  };
+
+  const isServerQuadrant = (quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
+    const { side, team, courtIdx } = getQuadrantInfo(quadrant);
+    if (!match.server || side !== match.server) return false;
+    if (isSingles) {
+      const expectedCourtIdx = team.score % 2 === 0 ? 0 : 1;
+      return courtIdx === expectedCourtIdx;
+    } else {
+      if (match.servingPlayerIndex === undefined) return false;
+      const pPositions = team.playerPositions || [0, 1];
+      return pPositions[courtIdx] === match.servingPlayerIndex;
+    }
+  };
+
+  const isReceiverQuadrant = (quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
+    const { side } = getQuadrantInfo(quadrant);
+    const isServerSide = side === match.server;
+    if (isServerSide) return false;
+
+    const servingTeam = match.server === 'home' ? home : away;
+    const activeCourtIdx = servingTeam.score % 2 === 0 ? 0 : 1;
+
+    const { courtIdx } = getQuadrantInfo(quadrant);
+    return courtIdx === activeCourtIdx;
+  };
+
+  const getServerColor = (quadrant: 'TL' | 'TR' | 'BL' | 'BR') => {
+    const { side } = getQuadrantInfo(quadrant);
+    return side === 'home' ? displaySettings.teamColors.home : displaySettings.teamColors.away;
+  };
+
+  return (
+    <div className="bg-slate-50 text-slate-900 dark:bg-[#070b16] dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200 antialiased">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-blue-600 focus:px-4 focus:py-2 text-xs font-bold text-white">
         Skip to content
       </a>
-      {/* Header */}
-      <header className="p-3 px-4 sm:px-6 flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-center bg-white dark:bg-card/80 dark:backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm z-30">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 sm:gap-4">
-          <Link href="/admin" className="group flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Image
-                src="/logo-pb.png"
-                alt="Scorehub logo"
-                width={18}
-                height={18}
-                className="h-4 w-4"
-              />
+
+      {/* --- HEADER (Minimalist, Unified) --- */}
+      <header className="px-6 py-3 flex flex-col gap-4 landscape:flex-row landscape:justify-between landscape:items-center bg-white dark:bg-[#0b0f19] border-b border-slate-200 dark:border-white/[0.03] shadow-sm dark:shadow-md z-30">
+        <div className="flex items-center justify-between landscape:justify-start gap-4">
+          <Link href="/admin" className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
+              <ShuttlecockIcon className="h-5.5 w-5.5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black tracking-tighter uppercase leading-none">
-                ScoreHub
-              </span>
-              <span className="text-[11px] font-bold text-blue-500 tracking-[0.2em] leading-none mt-1">
-                CONTROL
-              </span>
+              <span className="text-sm font-black tracking-wider uppercase leading-none text-slate-800 dark:text-white">scoreHub</span>
+              <span className="text-[10px] font-black text-blue-500 tracking-[0.2em] leading-none mt-1">CTRL</span>
             </div>
           </Link>
-          <div className="hidden xl:block h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
-          <div className="min-w-0 flex-1">
-            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-card px-3 py-1.5 shadow-sm">
-              <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
-                Match ID
-              </span>
-              <span className="text-sm font-mono font-black text-slate-900 dark:text-foreground leading-none tracking-tight truncate max-w-[160px] sm:max-w-none">
-                {matchId}
-              </span>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Link
-                href={displayPath}
-                target="_blank"
-                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-md transition-colors hover:bg-blue-500 active:scale-95"
-              >
-                <NorthEastIcon className="w-3.5 h-3.5" /> OPEN DISPLAY
-              </Link>
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}${displayPath}`;
-                  navigator.clipboard.writeText(url);
-                  pushCopyFeedback('Display link copied');
-                }}
-                className="inline-flex items-center rounded-full border border-slate-200 dark:border-white/5 bg-slate-100/90 dark:bg-white/5 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95"
-              >
-                COPY LINK
-              </button>
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}/overlay/${encodeURIComponent(matchId)}?style=bwf`;
-                  navigator.clipboard.writeText(url);
-                  pushCopyFeedback('OBS overlay link copied');
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-md transition-colors hover:bg-green-500 active:scale-95"
-              >
-                <div className="w-2 h-2 rounded-full bg-white animate-pulse motion-reduce:animate-none"></div>
-                OBS LINK
-              </button>
-            </div>
-            {copyFeedback ? (
-              <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                {copyFeedback}
-              </p>
-            ) : null}
+          <div className="h-6 w-px bg-slate-200 dark:bg-white/[0.08] hidden lg:block landscape:hidden xl:landscape:block"></div>
+          <div className="hidden sm:flex landscape:hidden xl:landscape:flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/5 bg-slate-200/50 dark:bg-slate-900/60 px-3 py-1">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">ID</span>
+            <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{matchId}</span>
           </div>
         </div>
 
-        {/* Central Match Status & Timer */}
-        <div className="flex items-center gap-3 sm:gap-4 bg-slate-100 dark:bg-card/50 dark:backdrop-blur-md px-3 py-2 rounded-2xl border border-slate-200 dark:border-white/5 shadow-inner w-full sm:w-auto justify-between sm:justify-start">
-          <div className="flex flex-col items-center min-w-[42px] sm:min-w-[50px]">
-            <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase leading-none mb-1.5">
-              {phaseLabel}
-            </span>
-            <span className="text-xl sm:text-2xl font-black leading-none dark:text-foreground">
-              {phaseValue}
-            </span>
+        {/* Central Timer Readout */}
+        <div className="flex items-center justify-center gap-4 bg-slate-100 dark:bg-slate-950/40 px-4 py-1.5 rounded-2xl border border-slate-200 dark:border-white/5 shadow-inner self-center landscape:self-auto">
+          <div className="text-center px-1">
+            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">{phaseLabel}</span>
+            <span className="text-sm font-black text-slate-750 dark:text-slate-200 leading-none">{phaseValue}</span>
           </div>
-          <div className="h-8 w-px bg-slate-300 dark:bg-slate-600"></div>
+          <div className="h-6 w-px bg-slate-200 dark:bg-white/[0.08]"></div>
           <button
-            className="flex flex-col items-center select-none group px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg min-w-[64px]"
+            className="flex items-center gap-3 focus:outline-none group px-2 rounded-lg"
             onClick={toggleTimer}
             disabled={!canOperateActions}
             onContextMenu={(e) => {
@@ -912,52 +778,80 @@ export default function ControlPage() {
               e.preventDefault();
               resetTimer();
             }}
-            aria-label={`Match timer. Currently ${formatTime(remainingTime)}. ${isTimerRunning ? 'Click to pause' : 'Click to start'}. Right click to reset.`}
           >
-            <span
-              className={cn(
-                'text-xl sm:text-2xl font-mono font-black tabular-nums transition-[color,transform] duration-300',
-                isTimerRunning
-                  ? 'text-blue-600 dark:text-blue-400 scale-110'
-                  : 'text-slate-400',
-              )}
-            >
+            <span className={cn('text-2xl font-mono font-black tracking-tight tabular-nums transition-colors', isTimerRunning ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500')}>
               {formatTime(remainingTime)}
             </span>
-            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 group-hover:text-blue-500 transition-colors">
-              {isTimerRunning ? 'PAUSE' : 'START'}
-            </span>
-            {!isTimerRunning ? (
-              <span className="mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-700 animate-pulse motion-reduce:animate-none dark:bg-amber-500/20 dark:text-amber-300">
-                Timer Belum Jalan
+            <div className="flex flex-col items-start">
+              <span className="text-[9px] font-black tracking-wider text-slate-500 group-hover:text-blue-600 dark:text-slate-400 dark:group-hover:text-blue-400 transition-colors uppercase leading-none">
+                {isTimerRunning ? 'PAUSE' : 'START'}
               </span>
-            ) : null}
+              {!isTimerRunning ? (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-655 dark:text-amber-400">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                  </span>
+                  STANDBY
+                </span>
+              ) : null}
+            </div>
           </button>
-          <div className="hidden sm:block h-8 w-px bg-slate-300 dark:bg-slate-600"></div>
+          <div className="h-6 w-px bg-slate-200 dark:bg-white/[0.08]"></div>
           <button
             onClick={toggleAutoStartTimer}
             className={cn(
-              'rounded-xl border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-colors whitespace-nowrap',
+              'rounded-lg border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] transition-colors',
               autoStartTimerOnFirstPoint
-                ? 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/20 dark:text-emerald-300'
-                : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-800',
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : 'border-slate-200 bg-slate-100 dark:border-white/5 dark:bg-slate-900/60 text-slate-500 hover:text-slate-700 dark:hover:text-slate-400',
             )}
-            title="Auto-start timer saat poin pertama"
-            aria-label="Toggle auto-start timer on first point"
           >
             Auto 1st {autoStartTimerOnFirstPoint ? 'On' : 'Off'}
           </button>
         </div>
 
-        <div className="flex items-center gap-2 justify-end flex-wrap lg:flex-nowrap">
+        {/* Header Action Controls */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="hidden xl:flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-900/40 p-1 border border-slate-200 dark:border-white/5">
+            <Link
+              href={displayPath}
+              target="_blank"
+              className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase text-slate-600 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
+            >
+              Live Display
+            </Link>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}${displayPath}`;
+                navigator.clipboard.writeText(url);
+                pushCopyFeedback('Tautan layar display berhasil disalin ke clipboard.');
+              }}
+              className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase text-slate-600 hover:text-slate-950 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
+            >
+              Salin Link
+            </button>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/overlay/${encodeURIComponent(matchId)}?style=bwf`;
+                navigator.clipboard.writeText(url);
+                pushCopyFeedback('Tautan overlay OBS berhasil disalin ke clipboard.');
+              }}
+              className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase text-green-600 hover:text-green-800 hover:bg-green-500/10 dark:text-green-500 dark:hover:text-green-400 dark:hover:bg-green-500/10 transition-colors"
+            >
+              OBS Overlay
+            </button>
+          </div>
+
+          <div className="h-6 w-px bg-slate-200 dark:bg-white/[0.08] hidden xl:block"></div>
+
           <button
             onClick={handleToggleSides}
             title="Tukar Sisi"
-            aria-label="Tukar sisi di lapangan"
             disabled={!canOperateActions}
-            className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 group active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
+            className="p-2 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/40 text-slate-655 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white active:scale-95 transition-all"
           >
-            <SwapIcon className="w-6 h-6 group-active:rotate-180 transition-transform duration-500" />
+            <SwapIcon className="w-5 h-5" />
           </button>
 
           <SettingsPanel
@@ -965,908 +859,462 @@ export default function ControlPage() {
             matchSettings={matchSettingsDraft}
             onSave={handleSettingsSave}
             sportId={match.sport}
+            matchId={matchId}
             trigger={
               <button
                 title="Pengaturan Display"
-                aria-label="Buka pengaturan display"
-                className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 group active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
+                className="p-2 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/40 text-slate-655 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white active:scale-95 transition-all"
               >
-                <SettingsIcon className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
+                <SettingsIcon className="w-5 h-5" />
               </button>
             }
           />
 
-          <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
-
           <button
             onClick={toggleTheme}
             title="Ubah Tema"
-            aria-label="Ubah mode gelap"
-            className="p-3.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-400 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-sm"
+            className="p-2 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/40 text-slate-655 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white active:scale-95 transition-all"
           >
-            {theme === 'light' ? (
-              <MoonIcon className="w-6 h-6" />
-            ) : (
-              <SunIcon className="w-6 h-6" />
-            )}
+            {theme === 'light' ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main
-        id="main-content"
-        className="flex-1 p-2 sm:p-4 flex flex-col gap-3 max-w-7xl mx-auto w-full overflow-x-hidden"
-      >
-        {error ? (
-          <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+      {/* --- MAIN CONTENT AREA --- */}
+      <main id="main-content" className="flex-1 p-4 max-w-7xl mx-auto w-full flex flex-col gap-4 overflow-hidden">
+        {error && (
+          <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-xs font-bold uppercase tracking-wider text-red-400">
             {error}
           </div>
-        ) : null}
-        {/* Score Strip */}
-        <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900 shadow-sm">
-          <button
-            onClick={undo}
-            aria-label="Undo last point"
-            className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-sky-400 transition-[background-color,transform] hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900"
-          >
-            <UndoIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+        )}
 
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-10 py-1.5 sm:px-12 sm:py-2">
-            <div className="min-w-0 flex items-end gap-2">
-              <p className="truncate text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
-                {leftDisplayTeam.name}
-              </p>
-              <span className="block text-2xl sm:text-3xl lg:text-4xl font-mono font-black text-blue-600 dark:text-blue-400 tracking-tighter tabular-nums leading-none">
+        {/* --- BROADCAST SCOREBOARD MONITOR (Sleek Minimalist Panel) --- */}
+        <section className="rounded-2xl border border-slate-200 dark:border-white/[0.03] bg-white dark:bg-[#0b0f19] shadow-md dark:shadow-2xl relative overflow-hidden">
+          <div className="absolute top-1/2 left-2 -translate-y-1/2 z-10">
+            <button
+              onClick={undo}
+              aria-label="Undo last point"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900/50 text-sky-600 dark:text-sky-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all active:scale-90"
+            >
+              <UndoIcon className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-12 py-6 sm:py-8">
+            {/* Left Side (Home) */}
+            <div className="min-w-0 flex items-center gap-6 justify-start pl-4">
+              <span className="font-mono text-6xl sm:text-7xl lg:text-8xl font-black text-blue-500 tracking-tighter tabular-nums leading-none drop-shadow-[0_0_30px_rgba(59,130,246,0.15)]">
                 {leftDisplayTeam.score}
               </span>
+              <div className="min-w-0">
+                <span className="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-1">
+                  {leftDisplaySide === 'home' ? 'Home' : 'Away'}
+                </span>
+                <p className="truncate text-base sm:text-lg lg:text-xl font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                  {leftDisplayTeam.name}
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-col items-center gap-0">
-              <span className="text-lg sm:text-xl font-black text-slate-300 dark:text-slate-600 leading-none">
-                -
-              </span>
-              <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 px-2 py-0 text-[9px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+            {/* Central Badge */}
+            <div className="flex flex-col items-center gap-1.5 px-4">
+              <span className="text-xl sm:text-2xl font-black text-slate-300 dark:text-slate-700 leading-none">-</span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-950/80 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
                 {phaseLabel} {phaseValue}
               </span>
             </div>
 
-            <div className="min-w-0 flex items-end justify-end gap-2 text-right">
-              <p className="truncate text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
-                {rightDisplayTeam.name}
-              </p>
-              <span className="block text-2xl sm:text-3xl lg:text-4xl font-mono font-black text-red-600 dark:text-red-400 tracking-tighter tabular-nums leading-none">
+            {/* Right Side (Away) */}
+            <div className="min-w-0 flex items-center gap-6 justify-end text-right pr-4">
+              <div className="min-w-0 order-2 sm:order-1">
+                <span className="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-1">
+                  {rightDisplaySide === 'home' ? 'Home' : 'Away'}
+                </span>
+                <p className="truncate text-base sm:text-lg lg:text-xl font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                  {rightDisplayTeam.name}
+                </p>
+              </div>
+              <span className="font-mono text-6xl sm:text-7xl lg:text-8xl font-black text-red-500 tracking-tighter tabular-nums leading-none order-1 sm:order-2 drop-shadow-[0_0_30px_rgba(239,68,68,0.15)]">
                 {rightDisplayTeam.score}
               </span>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Main Game Area */}
-        <div className="flex flex-col landscape:flex-row items-center gap-2 sm:gap-3 flex-1 min-h-0">
-          {/* Left Controls */}
+        {/* --- DYNAMIC MATCH LAYOUT --- */}
+        <section className="flex flex-col landscape:flex-row items-stretch gap-4 flex-1 min-h-0">
           {isBadminton ? (
-            <div className="hidden landscape:flex flex-col gap-2 items-center">
-              {/* Manual Service Selectors Left */}
-              <div className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5 min-w-[92px] lg:min-w-[128px]">
-                {(() => {
-                  const side = match.isFlipped ? 'away' : 'home';
-                  const team = match.teams[side];
-                  const positions = isSingles
-                    ? (['left'] as const)
-                    : (['left', 'right'] as const);
-                  return positions.map((pos) => {
-                    const isActive =
-                      match.server === side &&
-                      (isSingles || match.serviceCourt === pos);
-                    const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
-                    const playerName =
-                      team.players[
-                        team.playerPositions?.[playerIdx] ?? playerIdx
-                      ]?.name || team.name;
+            <>
+              {/* Landscape Mode: Home controls (Left Panel) */}
+              <div className="hidden landscape:flex flex-col justify-between w-36 sm:w-44 lg:w-56 xl:w-64 rounded-2xl border border-slate-200 dark:border-white/[0.03] bg-white dark:bg-slate-900/30 p-4 gap-4">
+                <div className="space-y-3">
+                  <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pilih Server (Servis)</span>
+                  <div className="flex flex-col gap-1.5 bg-slate-50 dark:bg-slate-950/60 p-1.5 rounded-xl border border-slate-200 dark:border-white/5">
+                    {(() => {
+                      const side = match.isFlipped ? 'away' : 'home';
+                      const team = match.teams[side];
+                      const positions = isSingles ? (['left'] as const) : (['left', 'right'] as const);
+                      return positions.map((pos) => {
+                        const isActive = match.server === side && (isSingles || match.serviceCourt === pos);
+                        const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
+                        const playerName = team.players[team.playerPositions?.[playerIdx] ?? playerIdx]?.name || team.name;
 
-                    return (
-                      <button
-                        key={pos}
-                        onClick={() =>
-                          handleChangeServe(side, isSingles ? undefined : pos)
-                        }
-                        disabled={!canOperateActions}
-                        className={cn(
-                          'w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden border-2',
-                          isActive
-                            ? 'bg-gradient-to-br from-amber-300 via-amber-500 to-orange-600 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-200/50'
-                            : 'bg-slate-800/40 backdrop-blur-md text-slate-400 border-white/5 hover:bg-white/10 hover:border-white/20',
-                        )}
-                        title={`Set ${playerName} as server`}
-                      >
-                        <ShuttlecockIcon
-                          className={cn(
-                            'w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 transition-transform duration-500',
-                            isActive
-                              ? 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] scale-110'
-                              : 'group-hover:translate-x-1',
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            'text-xs lg:text-[11px] font-black truncate uppercase tracking-widest leading-none',
-                            isActive ? 'text-slate-900' : 'text-slate-400',
-                          )}
-                        >
-                          {isSingles ? 'SERVE' : playerName.split(' ')[0]}
-                        </span>
-                        {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
+                        return (
+                          <button
+                            key={pos}
+                            onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                            disabled={!canOperateActions}
+                            className={cn(
+                              'w-full px-3 py-2.5 rounded-lg flex items-center gap-2.5 transition-all text-left border relative overflow-hidden',
+                              isActive
+                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold'
+                                : 'bg-transparent text-slate-700 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/[0.02]',
+                            )}
+                          >
+                            <ShuttlecockIcon className={cn('w-4.5 h-4.5 flex-shrink-0', isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')} />
+                            <span className="text-[10px] font-bold truncate uppercase tracking-wider leading-none">
+                              {isSingles ? 'Servis' : playerName.split(' ')[0]}
+                            </span>
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                {match.status === 'finished' ? (
+                  <div className="w-full rounded-xl bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/5 py-8 flex flex-col items-center justify-center opacity-40">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ended</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleAwardPoint(match.isFlipped ? 'away' : 'home')}
+                    className="w-full py-8 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-900/20 border border-blue-500/20 active:scale-98 transition-all flex flex-col items-center justify-center gap-2 group"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Poin Home (+1)</span>
+                    <span className="text-xs font-black truncate max-w-full px-4 uppercase">{match.isFlipped ? away.name : home.name}</span>
+                  </button>
+                )}
               </div>
 
-              {/* Award Point Button */}
-              {match.status === 'finished' ? (
-                <div className="flex-shrink-0 w-28 sm:w-32 lg:w-40 flex-col items-center justify-center opacity-50 cursor-not-allowed border-2 border-white/5 rounded-xl lg:rounded-3xl bg-slate-900/50 flex py-6 lg:py-9">
-                  <span className="text-xs font-black uppercase text-slate-500 tracking-widest text-center">
-                    ENDED
-                  </span>
-                </div>
-              ) : (
-                <button
-                  onClick={() =>
-                    handleAwardPoint(match.isFlipped ? 'away' : 'home')
-                  }
-                  className="flex-shrink-0 w-28 sm:w-32 lg:w-40 bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white rounded-2xl lg:rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(37,99,235,0.5)] active:scale-90 transition-all duration-300 flex flex-col items-center justify-center py-6 lg:py-9 border-2 border-white/20 group overflow-hidden relative"
-                >
-                  <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="text-xs font-black opacity-60 mb-1 lg:mb-2 uppercase tracking-[0.2em] leading-none">
-                    AWARD POINT
-                  </span>
-                  <span className="text-xs lg:text-base font-black text-center leading-tight px-3 mb-2 lg:mb-4 uppercase tracking-tighter drop-shadow-md">
-                    {match.isFlipped ? away.name : home.name}
-                  </span>
-                  <AddIcon className="w-8 h-8 lg:w-12 lg:h-12 drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
-                </button>
-              )}
-            </div>
-          ) : null}
+              {/* Central Matte Green Court */}
+              <div className="flex-1 w-full landscape:w-auto min-w-0 aspect-[2/1] max-h-[30vh] landscape:max-h-[50vh] lg:max-h-[42vh] bg-[#15803d] rounded-2xl relative overflow-hidden shadow-[inset_0_0_60px_rgba(0,0,0,0.3)] border border-white/10 select-none flex items-center justify-center">
+                {/* Visual SVG Lines */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-85" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <rect x="1" y="1" width="98" height="98" fill="none" stroke="white" strokeWidth="0.4" />
+                  <line x1="50" y1="0" x2="50" y2="100" stroke="white" strokeWidth="0.6" strokeDasharray="1.5,1" />
+                  <line x1="0" y1="8" x2="100" y2="8" stroke="white" strokeWidth="0.35" />
+                  <line x1="0" y1="92" x2="100" y2="92" stroke="white" strokeWidth="0.35" />
+                  <line x1="33" y1="0" x2="33" y2="100" stroke="white" strokeWidth="0.4" />
+                  <line x1="67" y1="0" x2="67" y2="100" stroke="white" strokeWidth="0.4" />
+                  <line x1="6" y1="0" x2="6" y2="100" stroke="white" strokeWidth="0.3" />
+                  <line x1="94" y1="0" x2="94" y2="100" stroke="white" strokeWidth="0.3" />
+                  <line x1="0" y1="50" x2="33" y2="50" stroke="white" strokeWidth="0.4" />
+                  <line x1="67" y1="50" x2="100" y2="50" stroke="white" strokeWidth="0.4" />
+                </svg>
 
-          {/* Court Visual */}
-          {isBadminton ? (
-            <div className="flex-1 w-full landscape:w-auto min-w-0 aspect-[2/1] max-h-[35vh] landscape:max-h-[50vh] lg:max-h-[40vh] bg-[#00a651] rounded-xl relative overflow-hidden shadow-[inset_0_0_100px_rgba(0,0,0,0.2)] border border-white/20 select-none">
-              {/* Badminton Court Markings (SVG) */}
-              <svg
-                className="absolute inset-x-0 inset-y-0 w-full h-full pointer-events-none opacity-80"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-              >
-                {/* Outer boundary (Doubles) */}
-                <rect
-                  x="1"
-                  y="1"
-                  width="98"
-                  height="98"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="0.6"
-                />
+                {/* Court Grid Layout */}
+                <div className="absolute inset-0 grid grid-cols-[33%_34%_33%] grid-rows-2 p-1.5 z-10">
+                  {renderQuadrantCell('TL', 'col-start-1 row-start-1 m-1 pointer-events-auto')}
+                  {renderQuadrantCell('BL', 'col-start-1 row-start-2 m-1 pointer-events-auto')}
 
-                {/* Net line (Center dashed) */}
-                <line
-                  x1="50"
-                  y1="0"
-                  x2="50"
-                  y2="100"
-                  stroke="white"
-                  strokeWidth="0.8"
-                  strokeDasharray="2,1"
-                />
-
-                {/* Singles side lines (inner horizontal lines in landscape view) */}
-                <line
-                  x1="0"
-                  y1="7.5"
-                  x2="100"
-                  y2="7.5"
-                  stroke="white"
-                  strokeWidth="0.5"
-                />
-                <line
-                  x1="0"
-                  y1="92.5"
-                  x2="100"
-                  y2="92.5"
-                  stroke="white"
-                  strokeWidth="0.5"
-                />
-
-                {/* Short service lines (vertical lines near net) */}
-                <line
-                  x1="35"
-                  y1="0"
-                  x2="35"
-                  y2="100"
-                  stroke="white"
-                  strokeWidth="0.6"
-                />
-                <line
-                  x1="65"
-                  y1="0"
-                  x2="65"
-                  y2="100"
-                  stroke="white"
-                  strokeWidth="0.6"
-                />
-
-                {/* Long service lines for doubles (inner vertical lines near baselines) */}
-                <line
-                  x1="6.5"
-                  y1="0"
-                  x2="6.5"
-                  y2="100"
-                  stroke="white"
-                  strokeWidth="0.4"
-                />
-                <line
-                  x1="93.5"
-                  y1="0"
-                  x2="93.5"
-                  y2="100"
-                  stroke="white"
-                  strokeWidth="0.4"
-                />
-
-                {/* Center lines (horizontal lines dividing sub-courts) */}
-                <line
-                  x1="0"
-                  y1="50"
-                  x2="35"
-                  y2="50"
-                  stroke="white"
-                  strokeWidth="0.6"
-                />
-                <line
-                  x1="65"
-                  y1="50"
-                  x2="100"
-                  y2="50"
-                  stroke="white"
-                  strokeWidth="0.6"
-                />
-              </svg>
-
-              {/* Court Names layer */}
-              {(() => {
-                const leftTeamSide: 'home' | 'away' = match.isFlipped
-                  ? 'away'
-                  : 'home';
-                const rightTeamSide: 'home' | 'away' = match.isFlipped
-                  ? 'home'
-                  : 'away';
-                const leftTeam = match.teams[leftTeamSide];
-                const rightTeam = match.teams[rightTeamSide];
-
-                const getQuadrantInfo = (
-                  quadrant: 'TL' | 'TR' | 'BL' | 'BR',
-                ) => {
-                  if (quadrant === 'TL')
-                    return { side: leftTeamSide, team: leftTeam, courtIdx: 1 };
-                  if (quadrant === 'BL')
-                    return { side: leftTeamSide, team: leftTeam, courtIdx: 0 };
-                  if (quadrant === 'TR')
-                    return {
-                      side: rightTeamSide,
-                      team: rightTeam,
-                      courtIdx: 0,
-                    };
-                  return { side: rightTeamSide, team: rightTeam, courtIdx: 1 };
-                };
-
-                const getQuadrantContent = (
-                  quadrant: 'TL' | 'TR' | 'BL' | 'BR',
-                ) => {
-                  const { side, team, courtIdx } = getQuadrantInfo(quadrant);
-                  if (!team || !match.server) return '';
-
-                  if (isSingles) {
-                    const servingTeam = match.server === 'home' ? home : away;
-                    const activeCourtIdx = servingTeam.score % 2 === 0 ? 0 : 1;
-                    if (courtIdx !== activeCourtIdx) return '';
-                    return team.players[0]?.name || team.name;
-                  }
-
-                  const pPositions = team.playerPositions || [0, 1];
-                  const playerIdx = pPositions[courtIdx];
-                  return (
-                    team.players[playerIdx]?.name ||
-                    (courtIdx === 0 ? team.name : '')
-                  );
-                };
-
-                const isServerQuadrant = (
-                  quadrant: 'TL' | 'TR' | 'BL' | 'BR',
-                ) => {
-                  const { side, team, courtIdx } = getQuadrantInfo(quadrant);
-                  if (!match.server || side !== match.server) return false;
-                  if (isSingles) {
-                    const expectedCourtIdx = team.score % 2 === 0 ? 0 : 1;
-                    return courtIdx === expectedCourtIdx;
-                  } else {
-                    if (match.servingPlayerIndex === undefined) return false;
-                    const pPositions = team.playerPositions || [0, 1];
-                    return pPositions[courtIdx] === match.servingPlayerIndex;
-                  }
-                };
-
-                const isReceiverQuadrant = (
-                  quadrant: 'TL' | 'TR' | 'BL' | 'BR',
-                ) => {
-                  const { side, team } = getQuadrantInfo(quadrant);
-                  const isServerSide = side === match.server;
-                  if (isServerSide) return false;
-
-                  const servingTeam = match.server === 'home' ? home : away;
-                  const activeCourtIdx = servingTeam.score % 2 === 0 ? 0 : 1;
-
-                  if (isSingles) {
-                    const { courtIdx } = getQuadrantInfo(quadrant);
-                    return courtIdx === activeCourtIdx;
-                  } else {
-                    const { courtIdx } = getQuadrantInfo(quadrant);
-                    const expectedReceiverCourtIdx = activeCourtIdx;
-                    return courtIdx === expectedReceiverCourtIdx;
-                  }
-                };
-
-                const getServerColor = (
-                  quadrant: 'TL' | 'TR' | 'BL' | 'BR',
-                ) => {
-                  const isServer = isServerQuadrant(quadrant);
-                  const isReceiver = isReceiverQuadrant(quadrant);
-                  if (!isServer && !isReceiver) return '';
-                  const { side } = getQuadrantInfo(quadrant);
-                  return side === 'home'
-                    ? displaySettings.teamColors.home
-                    : displaySettings.teamColors.away;
-                };
-
-                const QuadrantCell = ({
-                  quadrant,
-                  className,
-                }: {
-                  quadrant: 'TL' | 'TR' | 'BL' | 'BR';
-                  className?: string;
-                }) => {
-                  const {
-                    side,
-                    quadrant: qName,
-                    courtIdx,
-                  } = (() => {
-                    const info = getQuadrantInfo(quadrant);
-                    const qPos =
-                      quadrant === 'TL' || quadrant === 'BL' ? 'left' : 'right';
-                    return { ...info, quadrant: qPos };
-                  })();
-
-                  const isServer = isServerQuadrant(quadrant);
-                  const isReceiver = isReceiverQuadrant(quadrant);
-                  const serverColor = getServerColor(quadrant);
-                  const content = getQuadrantContent(quadrant);
-
-                  return (
-                    <div
-                      className={cn(
-                        'flex flex-col items-center justify-center p-2 transition-all duration-500 rounded-lg relative',
-                        className,
-                      )}
-                      style={
-                        isServer
-                          ? {
-                              backgroundColor: `${serverColor}60`,
-                              boxShadow: `inset 0 0 20px ${serverColor}40`,
-                            }
-                          : isReceiver
-                            ? { backgroundColor: `${serverColor}20` }
-                            : {}
-                      }
+                  <div className="col-start-2 row-span-2 flex flex-col items-center justify-end pb-3 pointer-events-none">
+                    <button
+                      onClick={handleToggleSides}
+                      disabled={!canOperateActions}
+                      className="pointer-events-auto bg-black/50 backdrop-blur-md border border-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-full px-3 py-1.5 transition-all active:scale-90 flex items-center gap-1.5 group"
                     >
-                      <div className="flex flex-col items-center gap-1">
-                        {isServer && (
-                          <ShuttlecockIcon className="w-5 h-5 lg:w-8 lg:h-8 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] animate-bounce motion-reduce:animate-none" />
-                        )}
-                        <span
-                          className={cn(
-                            'font-black text-xs sm:text-xs lg:text-base text-center shadow-lg leading-tight tracking-tight uppercase px-2 py-1 rounded border border-white/10 bg-black/40 backdrop-blur-md transition-all duration-300',
-                            isServer
-                              ? 'text-yellow-200 border-yellow-400/30 scale-110 shadow-yellow-500/20'
-                              : 'text-white',
-                          )}
-                        >
-                          {content}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                };
-
-                return (
-                  <div className="absolute inset-0 text-white z-10 pointer-events-none">
-                    <div className="absolute inset-0 grid grid-cols-[35%_30%_35%] grid-rows-2">
-                      <QuadrantCell
-                        quadrant="TL"
-                        className="col-start-1 row-start-1 m-2 pointer-events-auto"
-                      />
-                      <QuadrantCell
-                        quadrant="BL"
-                        className="col-start-1 row-start-2 m-2 pointer-events-auto"
-                      />
-
-                      <div className="col-start-2 row-span-2 flex flex-col items-center justify-end pb-4 pointer-events-none">
-                        <button
-                          onClick={handleToggleSides}
-                          disabled={!canOperateActions}
-                          className="pointer-events-auto bg-black/40 backdrop-blur-md border border-white/10 text-white/50 hover:text-white hover:bg-black/60 rounded-full p-2 transition-all active:scale-90 flex items-center gap-2 group mb-2"
-                          title="Tukar sisi"
-                        >
-                          <SwapIcon className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                          <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">
-                            Tukar Sisi
-                          </span>
-                        </button>
-                      </div>
-
-                      <QuadrantCell
-                        quadrant="TR"
-                        className="col-start-3 row-start-1 m-2 pointer-events-auto"
-                      />
-                      <QuadrantCell
-                        quadrant="BR"
-                        className="col-start-3 row-start-2 m-2 pointer-events-auto"
-                      />
-                    </div>
+                      <SwapIcon className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-300" />
+                      <span className="text-[10px] font-black uppercase tracking-wider">Tukar Sisi</span>
+                    </button>
                   </div>
-                );
-              })()}
-            </div>
+
+                  {renderQuadrantCell('TR', 'col-start-3 row-start-1 m-1 pointer-events-auto')}
+                  {renderQuadrantCell('BR', 'col-start-3 row-start-2 m-1 pointer-events-auto')}
+                </div>
+              </div>
+
+              {/* Landscape Mode: Away controls (Right Panel) */}
+              <div className="hidden landscape:flex flex-col justify-between w-36 sm:w-44 lg:w-56 xl:w-64 rounded-2xl border border-slate-200 dark:border-white/[0.03] bg-white dark:bg-slate-900/30 p-4 gap-4">
+                <div className="space-y-3">
+                  <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Pilih Server (Servis)</span>
+                  <div className="flex flex-col gap-1.5 bg-slate-50 dark:bg-slate-950/60 p-1.5 rounded-xl border border-slate-200 dark:border-white/5">
+                    {(() => {
+                      const side = match.isFlipped ? 'home' : 'away';
+                      const team = match.teams[side];
+                      const positions = isSingles ? (['left'] as const) : (['left', 'right'] as const);
+                      return positions.map((pos) => {
+                        const isActive = match.server === side && (isSingles || match.serviceCourt === pos);
+                        const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
+                        const playerName = team.players[team.playerPositions?.[playerIdx] ?? playerIdx]?.name || team.name;
+
+                        return (
+                          <button
+                            key={pos}
+                            onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                            disabled={!canOperateActions}
+                            className={cn(
+                              'w-full px-3 py-2.5 rounded-lg flex items-center gap-2.5 transition-all text-left border relative overflow-hidden',
+                              isActive
+                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold'
+                                : 'bg-transparent text-slate-700 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-white/[0.02]',
+                            )}
+                          >
+                            <ShuttlecockIcon className={cn('w-4.5 h-4.5 flex-shrink-0', isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')} />
+                            <span className="text-[10px] font-bold truncate uppercase tracking-wider leading-none">
+                              {isSingles ? 'Servis' : playerName.split(' ')[0]}
+                            </span>
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                {match.status === 'finished' ? (
+                  <div className="w-full rounded-xl bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/5 py-8 flex flex-col items-center justify-center opacity-40">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ended</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleAwardPoint(match.isFlipped ? 'home' : 'away')}
+                    className="w-full py-8 bg-red-600 hover:bg-red-500 text-white rounded-xl shadow-lg shadow-red-900/20 border border-red-500/20 active:scale-98 transition-all flex flex-col items-center justify-center gap-2 group"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Poin Away (+1)</span>
+                    <span className="text-xs font-black truncate max-w-full px-4 uppercase">{match.isFlipped ? home.name : away.name}</span>
+                  </button>
+                )}
+              </div>
+            </>
           ) : (
-            <div className="flex-1 w-full min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
-              <div className="flex items-center justify-between">
+            /* Non-badminton Fallback controls card */
+            <div className="flex-1 w-full min-w-0 rounded-2xl border border-slate-200 dark:border-white/[0.03] bg-white dark:bg-slate-900/30 p-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4 mb-4">
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 text-pretty">
-                    Sport
-                  </p>
-                  <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 text-balance">
-                    {match.sport}
-                  </h2>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Olahraga</p>
+                  <h2 className="text-lg font-black text-slate-800 dark:text-slate-200 uppercase">{match.sport}</h2>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 text-pretty">
-                    Status
-                  </p>
-                  <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200 tabular-nums">
-                    {match.status}
-                  </p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Status</p>
+                  <p className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400 uppercase">{match.status}</p>
                 </div>
               </div>
-              <div className="mt-4">{renderScoringControls()}</div>
+              <div>{renderScoringControls()}</div>
             </div>
           )}
+        </section>
 
-          {/* Right Controls */}
-          {isBadminton ? (
-            <div className="hidden landscape:flex flex-col gap-2 items-center">
-              {/* Manual Service Selectors Right */}
-              <div className="flex flex-col gap-1 bg-slate-900/40 p-1 rounded-xl border border-white/5 min-w-[92px] lg:min-w-[128px]">
-                {(() => {
-                  const side = match.isFlipped ? 'home' : 'away';
-                  const team = match.teams[side];
-                  const positions = isSingles
-                    ? (['left'] as const)
-                    : (['left', 'right'] as const);
-                  return positions.map((pos) => {
-                    const isActive =
-                      match.server === side &&
-                      (isSingles || match.serviceCourt === pos);
-                    const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
-                    const playerName =
-                      team.players[
-                        team.playerPositions?.[playerIdx] ?? playerIdx
-                      ]?.name || team.name;
-
-                    return (
-                      <button
-                        key={pos}
-                        onClick={() =>
-                          handleChangeServe(side, isSingles ? undefined : pos)
-                        }
-                        disabled={!canOperateActions}
-                        className={cn(
-                          'w-full px-3 py-2 rounded-xl flex items-center gap-3 transition-all duration-300 active:scale-90 group relative overflow-hidden border-2',
-                          isActive
-                            ? 'bg-gradient-to-br from-amber-300 via-amber-500 to-orange-600 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-200/50'
-                            : 'bg-slate-800/40 backdrop-blur-md text-slate-400 border-white/5 hover:bg-white/10 hover:border-white/20',
-                        )}
-                        title={`Set ${playerName} as server`}
-                      >
-                        <ShuttlecockIcon
+        {/* --- PORTRAIT MOBILE CONTROLS (Ergonomic layout for phones) --- */}
+        {isBadminton && (
+          <section className="flex landscape:hidden flex-col gap-3 mt-1 px-1">
+            <div className="grid grid-cols-2 gap-3">
+              {/* Left Side (Home) */}
+              <div className="flex flex-col gap-2 bg-white dark:bg-slate-900/20 p-2 rounded-2xl border border-slate-200 dark:border-white/5">
+                <div className="flex gap-1.5 bg-slate-50 dark:bg-slate-950/60 p-1 rounded-xl">
+                  {(() => {
+                    const side = match.isFlipped ? 'away' : 'home';
+                    const team = match.teams[side];
+                    const positions = isSingles ? (['left'] as const) : (['left', 'right'] as const);
+                    return positions.map((pos) => {
+                      const isActive = match.server === side && (isSingles || match.serviceCourt === pos);
+                      const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
+                      const playerName = team.players[team.playerPositions?.[playerIdx] ?? playerIdx]?.name || team.name;
+                      return (
+                        <button
+                          key={pos}
+                          onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                          disabled={!canOperateActions}
                           className={cn(
-                            'w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 transition-transform duration-500',
+                            'flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 border transition-all text-[9px] font-black uppercase tracking-wider',
                             isActive
-                              ? 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] scale-110'
-                              : 'group-hover:translate-x-1',
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            'text-xs lg:text-[11px] font-black truncate uppercase tracking-widest leading-none',
-                            isActive ? 'text-slate-900' : 'text-slate-400',
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold'
+                              : 'bg-transparent text-slate-700 dark:text-slate-400 border-transparent',
                           )}
                         >
-                          {isSingles ? 'SERVE' : playerName.split(' ')[0]}
-                        </span>
-                        {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-
-              {/* Award Point Button */}
-              {match.status === 'finished' ? (
-                <div className="flex-shrink-0 w-28 sm:w-32 lg:w-40 flex-col items-center justify-center opacity-50 cursor-not-allowed border-2 border-white/5 rounded-xl lg:rounded-3xl bg-slate-900/50 flex py-6 lg:py-9">
-                  <span className="text-xs font-black uppercase text-slate-500 tracking-widest text-center">
-                    ENDED
-                  </span>
+                          <ShuttlecockIcon className={cn('w-3.5 h-3.5', isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')} />
+                          <span className="truncate">{isSingles ? 'Servis' : playerName.split(' ')[0]}</span>
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
-              ) : (
                 <button
-                  onClick={() =>
-                    handleAwardPoint(match.isFlipped ? 'home' : 'away')
-                  }
-                  className="flex-shrink-0 w-28 sm:w-32 lg:w-40 bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white rounded-2xl lg:rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(220,38,38,0.5)] active:scale-90 transition-all duration-300 flex flex-col items-center justify-center py-6 lg:py-9 border-2 border-white/20 group overflow-hidden relative"
+                  onClick={() => handleAwardPoint(match.isFlipped ? 'away' : 'home')}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-6 flex flex-col items-center justify-center border border-blue-500/20 active:scale-95 shadow-lg shadow-blue-900/10"
                 >
-                  <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="text-xs font-black opacity-60 mb-1 lg:mb-2 uppercase tracking-[0.2em] leading-none">
-                    AWARD POINT
-                  </span>
-                  <span className="text-xs lg:text-base font-black text-center leading-tight px-3 mb-2 lg:mb-4 uppercase tracking-tighter drop-shadow-md">
-                    {match.isFlipped ? home.name : away.name}
-                  </span>
-                  <AddIcon className="w-8 h-8 lg:w-12 lg:h-12 drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
+                  <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Home (+1)</span>
                 </button>
-              )}
-            </div>
-          ) : null}
-        </div>
+              </div>
 
-        {/* Portrait Buttons */}
-        {isBadminton ? (
-          <div className="flex landscape:hidden gap-4 px-2 mb-2">
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex gap-2 justify-center bg-slate-900/40 p-1 rounded-2xl border border-white/5">
-                {(() => {
-                  const side = match.isFlipped ? 'away' : 'home';
-                  const team = match.teams[side];
-                  const positions = isSingles
-                    ? (['left'] as const)
-                    : (['left', 'right'] as const);
-                  return positions.map((pos) => {
-                    const isActive =
-                      match.server === side &&
-                      (isSingles || match.serviceCourt === pos);
-                    const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
-                    const playerName =
-                      team.players[
-                        team.playerPositions?.[playerIdx] ?? playerIdx
-                      ]?.name || team.name;
-                    return (
-                      <button
-                        key={pos}
-                        onClick={() =>
-                          handleChangeServe(side, isSingles ? undefined : pos)
-                        }
-                        disabled={!canOperateActions}
-                        className={cn(
-                          'flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-90 px-3 relative overflow-hidden border-2',
-                          isActive
-                            ? 'bg-gradient-to-br from-amber-300 via-amber-500 to-orange-600 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-200/50'
-                            : 'bg-slate-800/40 backdrop-blur-md text-slate-400 border-white/5 hover:bg-white/10',
-                        )}
-                      >
-                        <ShuttlecockIcon
+              {/* Right Side (Away) */}
+              <div className="flex flex-col gap-2 bg-white dark:bg-slate-900/20 p-2 rounded-2xl border border-slate-200 dark:border-white/5">
+                <div className="flex gap-1.5 bg-slate-50 dark:bg-slate-950/60 p-1 rounded-xl">
+                  {(() => {
+                    const side = match.isFlipped ? 'home' : 'away';
+                    const team = match.teams[side];
+                    const positions = isSingles ? (['left'] as const) : (['left', 'right'] as const);
+                    return positions.map((pos) => {
+                      const isActive = match.server === side && (isSingles || match.serviceCourt === pos);
+                      const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
+                      const playerName = team.players[team.playerPositions?.[playerIdx] ?? playerIdx]?.name || team.name;
+                      return (
+                        <button
+                          key={pos}
+                          onClick={() => handleChangeServe(side, isSingles ? undefined : pos)}
+                          disabled={!canOperateActions}
                           className={cn(
-                            'w-6 h-6 transition-transform duration-500',
+                            'flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 border transition-all text-[9px] font-black uppercase tracking-wider',
                             isActive
-                              ? 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] scale-110'
-                              : '',
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            'text-xs font-black truncate uppercase tracking-widest',
-                            isActive ? 'text-slate-900' : 'text-slate-400',
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold'
+                              : 'bg-transparent text-slate-700 dark:text-slate-400 border-transparent',
                           )}
                         >
-                          {isSingles ? 'SERVE' : playerName.split(' ')[0]}
-                        </span>
-                        {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
+                          <ShuttlecockIcon className={cn('w-3.5 h-3.5', isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500')} />
+                          <span className="truncate">{isSingles ? 'Servis' : playerName.split(' ')[0]}</span>
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+                <button
+                  onClick={() => handleAwardPoint(match.isFlipped ? 'home' : 'away')}
+                  className="w-full bg-red-600 hover:bg-red-500 text-white rounded-xl py-6 flex flex-col items-center justify-center border border-red-500/20 active:scale-95 shadow-lg shadow-red-900/10"
+                >
+                  <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Away (+1)</span>
+                </button>
               </div>
-              <button
-                onClick={() =>
-                  handleAwardPoint(match.isFlipped ? 'away' : 'home')
-                }
-                className="w-full bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 active:scale-90 transition-all duration-300 rounded-3xl py-10 flex flex-col items-center justify-center shadow-[0_10px_40px_-10px_rgba(37,99,235,0.5)] border-2 border-white/20 group overflow-hidden relative"
-              >
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <span className="text-xs font-black text-white uppercase mb-2 tracking-[0.2em] opacity-70 group-hover:opacity-100 transition-opacity">
-                  {match.isFlipped ? away.name : home.name}
-                </span>
-                <AddIcon className="w-12 h-12 text-white drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
-              </button>
             </div>
+          </section>
+        )}
 
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex gap-2 justify-center bg-slate-900/40 p-1 rounded-2xl border border-white/5">
-                {(() => {
-                  const side = match.isFlipped ? 'home' : 'away';
-                  const team = match.teams[side];
-                  const positions = isSingles
-                    ? (['left'] as const)
-                    : (['left', 'right'] as const);
-                  return positions.map((pos) => {
-                    const isActive =
-                      match.server === side &&
-                      (isSingles || match.serviceCourt === pos);
-                    const playerIdx = isSingles ? 0 : pos === 'left' ? 1 : 0;
-                    const playerName =
-                      team.players[
-                        team.playerPositions?.[playerIdx] ?? playerIdx
-                      ]?.name || team.name;
-                    return (
-                      <button
-                        key={pos}
-                        onClick={() =>
-                          handleChangeServe(side, isSingles ? undefined : pos)
-                        }
-                        disabled={!canOperateActions}
-                        className={cn(
-                          'flex-1 h-14 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-90 px-3 relative overflow-hidden border-2',
-                          isActive
-                            ? 'bg-gradient-to-br from-amber-300 via-amber-500 to-orange-600 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] border-amber-200/50'
-                            : 'bg-slate-800/40 backdrop-blur-md text-slate-400 border-white/5 hover:bg-white/10',
-                        )}
-                      >
-                        <ShuttlecockIcon
-                          className={cn(
-                            'w-6 h-6 transition-transform duration-500',
-                            isActive
-                              ? 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)] scale-110'
-                              : '',
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            'text-xs font-black truncate uppercase tracking-widest',
-                            isActive ? 'text-slate-900' : 'text-slate-400',
-                          )}
-                        >
-                          {isSingles ? 'SERVE' : playerName.split(' ')[0]}
-                        </span>
-                        {isActive && (
-                          <div className="absolute inset-0 bg-white/20 animate-pulse motion-reduce:animate-none mix-blend-overlay"></div>
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-              <button
-                onClick={() =>
-                  handleAwardPoint(match.isFlipped ? 'home' : 'away')
-                }
-                className="w-full bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 active:scale-90 transition-all duration-300 rounded-3xl py-10 flex flex-col items-center justify-center shadow-[0_10px_40px_-10px_rgba(220,38,38,0.5)] border-2 border-white/20 group overflow-hidden relative"
-              >
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <span className="text-xs font-black text-white uppercase mb-2 tracking-[0.2em] opacity-70 group-hover:opacity-100 transition-opacity">
-                  {match.isFlipped ? home.name : away.name}
-                </span>
-                <AddIcon className="w-12 h-12 text-white drop-shadow-lg group-hover:scale-110 transition-transform duration-500" />
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* History Table */}
-        {scoreTableConfig ? (
-          <div className="flex-shrink-0 w-full mt-auto overflow-x-auto">
-            <div
-              className={cn(
-                'w-full max-w-5xl mx-auto overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all duration-300',
-                isTeamMatch ? 'min-w-[860px]' : 'min-w-[720px]',
-              )}
-            >
-              <table className="w-full text-xs sm:text-sm uppercase font-black tracking-tight">
+        {/* --- SET HISTORY TABLE --- */}
+        {scoreTableConfig && (
+          <section className="w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-white/[0.03] bg-white dark:bg-[#0b0f19]/40 shadow-inner">
+            <div className={cn('w-full max-w-5xl mx-auto', isTeamMatch ? 'min-w-[800px]' : 'min-w-[640px]')}>
+              <table className="w-full text-xs uppercase font-black tracking-wider">
                 <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-800/80 text-left text-slate-500">
-                    <th className="px-6 py-4 w-48 border-r border-slate-200 dark:border-slate-700">
-                      {isTeamMatch ? 'Team' : 'Pemain'}
-                    </th>
-                    {isTeamMatch ? (
-                      <th className="px-6 py-4 w-56 border-r border-slate-200 dark:border-slate-700">
-                        Pemain
-                      </th>
-                    ) : null}
+                  <tr className="bg-slate-100 dark:bg-slate-900/50 text-slate-500 border-b border-slate-200 dark:border-b-white/[0.03]">
+                    <th className="px-6 py-3 w-48 text-left">Pihak</th>
+                    {isTeamMatch && <th className="px-6 py-3 w-56 text-left">Lineup Pemain</th>}
                     {scoreTableConfig.columns.map((column) => (
-                      <th
-                        key={column.key}
-                        className="px-6 py-4 text-center w-24 bg-slate-100/50 dark:bg-white/5"
-                      >
-                        {column.label}
-                      </th>
+                      <th key={column.key} className="px-6 py-3 text-center w-24 bg-white/[0.01]">{column.label}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-100 dark:border-slate-800">
-                    <td className="px-6 py-4 border-r border-slate-100 dark:border-slate-800">
+                  <tr className="border-b border-slate-200 dark:border-b-white/[0.03]">
+                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-300">
                       <div className="flex items-center gap-2">
-                        {scoreTableConfig.showServe ? (
-                          <div
-                            className={`w-2 h-2 rounded-full ${homeServing ? 'bg-blue-500' : 'bg-transparent'}`}
-                          />
-                        ) : null}
+                        {scoreTableConfig.showServe && <div className={cn('w-2 h-2 rounded-full', homeServing ? 'bg-amber-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'bg-transparent')} />}
                         <span>{getPrimaryTableLabel('home')}</span>
                       </div>
                     </td>
-                    {isTeamMatch ? (
-                      <td className="px-6 py-4 border-r border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 normal-case font-semibold">
-                        {formatPlayerNames('home')}
-                      </td>
-                    ) : null}
+                    {isTeamMatch && <td className="px-6 py-4 text-slate-500 dark:text-slate-400 normal-case font-semibold">{formatPlayerNames('home')}</td>}
                     {scoreTableConfig.columns.map((column) => (
-                      <td
-                        key={`home-${column.key}`}
-                        className="px-6 py-4 text-center border-l border-slate-100 dark:border-slate-800"
-                      >
-                        <span className="text-lg font-mono">{column.home}</span>
+                      <td key={`home-${column.key}`} className="px-6 py-4 text-center border-l border-slate-200 dark:border-l-white/[0.02]">
+                        <span className="text-sm font-mono font-black">{column.home}</span>
                       </td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 border-r border-slate-100 dark:border-slate-800">
+                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-300">
                       <div className="flex items-center gap-2">
-                        {scoreTableConfig.showServe ? (
-                          <div
-                            className={`w-2 h-2 rounded-full ${awayServing ? 'bg-blue-500' : 'bg-transparent'}`}
-                          />
-                        ) : null}
+                        {scoreTableConfig.showServe && <div className={cn('w-2 h-2 rounded-full', awayServing ? 'bg-amber-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'bg-transparent')} />}
                         <span>{getPrimaryTableLabel('away')}</span>
                       </div>
                     </td>
-                    {isTeamMatch ? (
-                      <td className="px-6 py-4 border-r border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 normal-case font-semibold">
-                        {formatPlayerNames('away')}
-                      </td>
-                    ) : null}
+                    {isTeamMatch && <td className="px-6 py-4 text-slate-500 dark:text-slate-400 normal-case font-semibold">{formatPlayerNames('away')}</td>}
                     {scoreTableConfig.columns.map((column) => (
-                      <td
-                        key={`away-${column.key}`}
-                        className="px-6 py-4 text-center border-l border-slate-100 dark:border-slate-800"
-                      >
-                        <span className="text-lg font-mono">{column.away}</span>
+                      <td key={`away-${column.key}`} className="px-6 py-4 text-center border-l border-slate-200 dark:border-l-white/[0.02]">
+                        <span className="text-sm font-mono font-black">{column.away}</span>
                       </td>
                     ))}
                   </tr>
                 </tbody>
               </table>
             </div>
-          </div>
-        ) : null}
+          </section>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="p-2 px-4 sm:px-6 flex flex-col gap-2 sm:flex-row sm:justify-between bg-slate-100 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 text-slate-500">
-        <div className="flex flex-wrap gap-3 sm:gap-4">
+      {/* --- FOOTER (Low Profile & Grouped Admin Actions) --- */}
+      <footer className="px-6 py-3 bg-white dark:bg-[#0b0f19] border-t border-slate-200 dark:border-white/[0.03] text-slate-500 text-xs flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+        <div className="flex flex-wrap gap-4 items-center">
           <SettingsPanel
             settings={displaySettings}
             matchSettings={matchSettingsDraft}
             onSave={handleSettingsSave}
             sportId={match.sport}
             trigger={
-              <button className="flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors">
-                <SettingsIcon className="w-4 h-4" /> PENGATURAN
+              <button className="text-[10px] font-black uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-300 transition-colors flex items-center gap-1.5">
+                <SettingsIcon className="w-3.5 h-3.5" /> Display Setting
               </button>
             }
           />
-          <button className="flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors">
-            <HistoryIcon className="w-4 h-4" /> RIWAYAT
-          </button>
-          <Button
-            asChild
-            variant="ghost"
-            className="h-auto p-0 flex items-center gap-2 text-xs font-bold hover:text-blue-500 transition-colors bg-transparent hover:bg-transparent"
-          >
-            <Link href="/guide" target="_blank">
-              <HelpIcon className="w-4 h-4" /> BANTUAN
-            </Link>
+          <span className="text-slate-200 dark:text-white/[0.08] hidden sm:inline">|</span>
+          <Button asChild variant="ghost" className="h-auto p-0 text-[10px] font-black uppercase tracking-wider hover:text-slate-800 dark:hover:text-slate-300 bg-transparent hover:bg-transparent">
+            <Link href="/guide" target="_blank">Panduan Bantuan</Link>
           </Button>
-          {canOperateActions ? (
+
+          {canOperateActions && (
             <>
+              <span className="text-slate-200 dark:text-white/[0.08] hidden sm:inline">|</span>
               <button
                 onClick={handleFinishMatch}
                 disabled={match.status === 'finished'}
-                className="flex items-center gap-2 text-xs font-bold text-amber-600 hover:text-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-500/80 hover:text-amber-700 dark:hover:text-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                FINISH
+                Tandai Selesai
               </button>
               <button
                 onClick={handleResetMatch}
-                className="flex items-center gap-2 text-xs font-bold text-red-500 hover:text-red-400 transition-colors"
+                className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-500/80 hover:text-red-700 dark:hover:text-red-400 transition-colors"
               >
-                <div className="w-4 h-4 border-2 border-current rounded-full flex items-center justify-center font-black text-[8px]">
-                  X
-                </div>{' '}
-                RESET
+                Reset Match
               </button>
             </>
-          ) : null}
+          )}
         </div>
         <div className="flex items-center gap-4 justify-between sm:justify-end">
-          <span className="text-xs font-mono">BUILD: 2.4.0-STABLE</span>
-          <div
-            className={`w-2 h-2 rounded-full animate-pulse motion-reduce:animate-none ${isLoading ? 'bg-yellow-500' : 'bg-green-500'}`}
-          ></div>
+          <span className="font-mono text-[10px]">CTRL-V2.4.0</span>
+          <div className="flex items-center gap-2">
+            <div className={cn('w-2 h-2 rounded-full', isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500')}></div>
+            <span className="text-[10px] font-bold tracking-wide uppercase text-slate-500 dark:text-slate-600">{isLoading ? 'Syncing...' : 'Connected'}</span>
+          </div>
         </div>
       </footer>
-      <AlertDialog
-        open={Boolean(pendingPointAward)}
-        onOpenChange={(open) => {
-          if (!open) setPendingPointAward(null);
-        }}
-      >
-        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-sans">
+
+      {/* --- DIALOGS (Alerts) --- */}
+      <AlertDialog open={Boolean(pendingPointAward)} onOpenChange={(open) => !open && setPendingPointAward(null)}>
+        <AlertDialogContent className="bg-white dark:bg-[#0b0f19] border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 max-w-sm rounded-2xl animate-in fade-in zoom-in-95">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-slate-900 dark:text-slate-100 uppercase tracking-tighter font-black text-xl">
-              Timer Belum Jalan
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 font-medium">
-              Ini poin pertama pertandingan. Mau sekalian mulai timer?
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-slate-900 dark:text-white font-black tracking-tight text-lg uppercase">Timer Belum Jalan</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 text-sm">Ini poin pertama pertandingan. Mau sekalian jalankan timer?</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-tight">
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-4">
+            <AlertDialogCancel className="border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-xs uppercase tracking-wider font-bold">
               Batal
             </AlertDialogCancel>
             <Button
               type="button"
               variant="outline"
-              className="font-bold uppercase tracking-tight"
+              className="border-slate-200 dark:border-white/5 bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-xs uppercase tracking-wider font-bold"
               onClick={() => {
                 if (!pendingPointAward) return;
                 awardPoint(pendingPointAward.winner, pendingPointAward.value);
                 setPendingPointAward(null);
               }}
             >
-              Lanjut Tanpa Timer
+              Tanpa Timer
             </Button>
             <AlertDialogAction
+              className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs uppercase tracking-wider font-black px-6"
               onClick={() => {
                 if (!pendingPointAward) return;
                 startTimer();
                 awardPoint(pendingPointAward.winner, pendingPointAward.value);
                 setPendingPointAward(null);
               }}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-tight transition-transform active:scale-95 px-6"
             >
               Start Timer + Poin
             </AlertDialogAction>
@@ -1874,37 +1322,30 @@ export default function ControlPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={Boolean(pendingAction)}
-        onOpenChange={(open) => {
-          if (!open) setPendingAction(null);
-        }}
-      >
-        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-sans">
+      <AlertDialog open={Boolean(pendingAction)} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <AlertDialogContent className="bg-white dark:bg-[#0b0f19] border-slate-200 dark:border-white/5 text-slate-800 dark:text-slate-200 max-w-sm rounded-2xl animate-in fade-in zoom-in-95">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-slate-900 dark:text-slate-100 uppercase tracking-tighter font-black text-2xl">
-              {pendingAction?.title}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 font-medium">
-              {pendingAction?.description}
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-slate-900 dark:text-white font-black tracking-tight text-lg uppercase">{pendingAction?.title}</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 dark:text-slate-400 text-sm">{pendingAction?.description}</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-tight">
+          <AlertDialogFooter className="gap-2 mt-4">
+            <AlertDialogCancel className="border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-xs uppercase tracking-wider font-bold">
               Batal
             </AlertDialogCancel>
             <AlertDialogAction
+              className="bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-950 rounded-xl text-xs uppercase tracking-wider font-black px-6"
               onClick={() => {
                 pendingAction?.action();
                 setPendingAction(null);
               }}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-tight transition-transform active:scale-95 px-8"
             >
               {pendingAction?.confirmLabel || 'Konfirmasi'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Toaster />
     </div>
   );
 }

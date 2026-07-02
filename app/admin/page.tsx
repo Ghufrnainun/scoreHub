@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { ConvexError } from 'convex/values';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -90,11 +89,17 @@ export default function AdminDashboard() {
       } else {
         setAuthError('Login admin gagal.');
       }
-    } catch (err) {
+    } catch (err: any) {
       const message =
-        err instanceof ConvexError
-          ? String(err.data || 'Gagal verifikasi kredensial admin')
-          : 'Gagal verifikasi kredensial admin';
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error:')
+              ? err.message.split('Server Error:')[1]?.trim().split('\n')[0]
+              : err.message.includes('Server Error')
+                ? 'Gagal verifikasi kredensial admin.'
+                : err.message
+            : 'Gagal verifikasi kredensial admin.';
       setAuthError(message);
     } finally {
       setIsVerifying(false);

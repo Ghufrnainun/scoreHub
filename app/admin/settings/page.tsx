@@ -94,11 +94,17 @@ export default function SettingsPage() {
         type: 'success',
         message: 'Pengaturan warna display berhasil disimpan.',
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      const msg =
+        e?.data && typeof e.data === 'string'
+          ? e.data
+          : e?.message && typeof e.message === 'string' && !e.message.includes('Server Error')
+            ? e.message.replace(/^ConvexError:\s*/i, '')
+            : 'Gagal menyimpan pengaturan. Silakan coba lagi.';
       setFeedback({
         type: 'error',
-        message: 'Gagal menyimpan pengaturan. Silakan coba lagi.',
+        message: msg,
       });
     } finally {
       setIsSaving(false);
@@ -135,15 +141,17 @@ export default function SettingsPage() {
       setOldPin('');
       setNewPin('');
       setConfirmPin('');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setFeedback({
-        type: 'error',
-        message:
-          err instanceof Error
-            ? err.message.replace('ConvexError: ', '')
-            : 'Gagal mengubah PIN.',
-      });
+      const msg =
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error')
+              ? 'Gagal mengubah PIN. Pastikan PIN lama benar.'
+              : err.message.replace(/^ConvexError:\s*/i, '')
+            : 'Gagal mengubah PIN.';
+      setFeedback({ type: 'error', message: msg });
     } finally {
       setIsChangingPin(false);
     }
@@ -178,15 +186,17 @@ export default function SettingsPage() {
         type: 'success',
         message: 'Kode akses sementara berhasil dibuat.',
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setFeedback({
-        type: 'error',
-        message:
-          err instanceof Error
-            ? err.message.replace('ConvexError: ', '')
-            : 'Gagal membuat kode akses.',
-      });
+      const msg =
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error')
+              ? 'Gagal membuat kode akses sementara.'
+              : err.message.replace(/^ConvexError:\s*/i, '')
+            : 'Gagal membuat kode akses.';
+      setFeedback({ type: 'error', message: msg });
     } finally {
       setIsGeneratingCode(false);
     }
@@ -203,15 +213,17 @@ export default function SettingsPage() {
         type: 'success',
         message: 'Kode akses berhasil dimatikan.',
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setFeedback({
-        type: 'error',
-        message:
-          err instanceof Error
-            ? err.message.replace('ConvexError: ', '')
-            : 'Gagal mematikan kode akses.',
-      });
+      const msg =
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error')
+              ? 'Gagal mematikan kode akses.'
+              : err.message.replace(/^ConvexError:\s*/i, '')
+            : 'Gagal mematikan kode akses.';
+      setFeedback({ type: 'error', message: msg });
     }
   };
 

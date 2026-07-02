@@ -122,6 +122,7 @@ interface SettingsPanelProps {
   onSave: (payload: SettingsSavePayload) => void;
   sportId?: string;
   trigger: React.ReactNode;
+  matchId?: string;
 }
 
 const TEMPLATE_OPTIONS: Record<string, { id: DisplaySettings['template']; label: string }[]> = {
@@ -195,11 +196,19 @@ export function SettingsPanel({
   onSave,
   sportId,
   trigger,
+  matchId,
 }: SettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<'data' | 'display'>('data');
   const [displayDraft, setDisplayDraft] = useState<DisplaySettings>(settings);
   const [matchDraft, setMatchDraft] = useState<MatchSettingsDraft>(matchSettings);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopyFeedback(label);
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
 
   const templateOptions =
     TEMPLATE_OPTIONS[sportId || 'badminton'] || TEMPLATE_OPTIONS.badminton;
@@ -447,28 +456,6 @@ export function SettingsPanel({
                   </div>
                 </div>
 
-                {sportId === 'badminton' && (
-                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Sistem Poin</Label>
-                    <div className="inline-flex rounded-full bg-slate-200 dark:bg-slate-800 p-1">
-                      {([21, 15] as const).map((points) => (
-                        <button
-                          key={points}
-                          type="button"
-                          onClick={() => updateMatch({ badmintonMaxPoints: points })}
-                          className={cn(
-                            'h-7 px-3 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors',
-                            (matchDraft.badmintonMaxPoints ?? 21) === points
-                              ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-sm'
-                              : 'text-slate-500 dark:text-slate-300',
-                          )}
-                        >
-                          {points === 21 ? '3x21 (21 Poin)' : '3x15 (15 Poin)'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -720,6 +707,61 @@ export function SettingsPanel({
             </>
           ) : (
             <>
+              {matchId && (
+                <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Tautan Layar & Broadcast
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-700 dark:text-slate-350">Layar Utama (Display)</span>
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const path = `/match/${matchId}/display`;
+                              const url = `${window.location.origin}${path}`;
+                              handleCopy(url, 'Layar Utama');
+                            }}
+                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-wider transition-colors active:scale-95"
+                          >
+                            Salin
+                          </button>
+                          <a
+                            href={`/match/${matchId}/display`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-750 dark:text-slate-300 border border-slate-250 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider transition-colors"
+                          >
+                            Buka
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <span className="font-bold text-slate-700 dark:text-slate-350">OBS Overlay (BWF Style)</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = `${window.location.origin}/overlay/${encodeURIComponent(matchId)}?style=bwf`;
+                            handleCopy(url, 'OBS Overlay');
+                          }}
+                          className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider transition-colors active:scale-95"
+                        >
+                          Salin Link OBS
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {copyFeedback && (
+                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 text-center animate-pulse pt-1">
+                      ✓ Link {copyFeedback} berhasil disalin!
+                    </div>
+                  )}
+                </section>
+              )}
+
               <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-4 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">
                   Template Display

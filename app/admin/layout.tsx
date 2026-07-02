@@ -170,8 +170,18 @@ export default function AdminLayout({
       } else {
         setError('Login admin gagal.');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login admin gagal.');
+    } catch (err: any) {
+      const cleanMessage =
+        err?.data && typeof err.data === 'string'
+          ? err.data
+          : err?.message && typeof err.message === 'string'
+            ? err.message.includes('Server Error:')
+              ? err.message.split('Server Error:')[1]?.trim().split('\n')[0]
+              : err.message.includes('Server Error')
+                ? 'PIN admin tidak valid.'
+                : err.message
+            : 'Login admin gagal.';
+      setError(cleanMessage);
     }
   };
 

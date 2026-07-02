@@ -189,11 +189,17 @@ export default function MediaManager() {
         type: 'success',
         message: 'Media berhasil ditambahkan ke library.',
       });
-    } catch (e) { 
+    } catch (e: any) { 
       console.error(e); 
+      const msg =
+        e?.data && typeof e.data === 'string'
+          ? e.data
+          : e?.message && typeof e.message === 'string' && !e.message.includes('Server Error')
+            ? e.message.replace(/^ConvexError:\s*/i, '')
+            : 'Gagal mengunggah media. Silakan coba lagi.';
       setFeedback({
         type: 'error',
-        message: e instanceof Error ? e.message : 'Gagal mengunggah media. Silakan coba lagi.',
+        message: msg,
       });
     } finally { 
       setIsSubmitting(false); 
