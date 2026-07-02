@@ -5,6 +5,7 @@ import { getRulesForSport, resolveSportId } from './sports/registry';
 import {
   assertAdminAccess,
   assertAdminSession,
+  assertMasterAdminSession,
   assertRefereeOrAdminAccess,
   ADMIN_SESSION_TTL_MS,
   generateToken,
@@ -1555,7 +1556,7 @@ export const updateAdsBroadcast = mutation({
     assetId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await assertAdminSession(ctx, args.adminSessionToken);
+    await assertMasterAdminSession(ctx, args.adminSessionToken);
 
     const matches = await ctx.db.query('matches').collect();
     const activeMatches = matches.filter((m) => m.status !== 'finished');
@@ -1735,7 +1736,7 @@ export const deleteMatch = mutation({
   },
   handler: async (ctx, args) => {
     const match = await ensureMatch(ctx, args.matchId);
-    await assertAdminAccess(ctx, args.adminSessionToken);
+    await assertMasterAdminSession(ctx, args.adminSessionToken);
 
     const events = await ctx.db
       .query('match_events')
@@ -1753,12 +1754,6 @@ export const deleteMatch = mutation({
 export const verifyAdminPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, args) => {
-    const adminSecret = getAdminSecret();
-    if (!adminSecret) {
-      console.error('ADMIN_PASSWORD is not configured in backend');
-      throw new ConvexError('Admin auth is not configured');
-    }
-
     const now = Date.now();
     const authState = await getAdminAuthState(ctx);
     if (authState.lockUntil && authState.lockUntil > now) {
@@ -1768,36 +1763,91 @@ export const verifyAdminPin = mutation({
       );
     }
 
-    const isValid = args.pin === adminSecret;
-    if (!isValid) {
-      const failedAttempts = (authState.failedAttempts || 0) + 1;
-      const shouldLock = failedAttempts >= MAX_ADMIN_LOGIN_ATTEMPTS;
-      const nextAuthState = {
-        key: ADMIN_AUTH_KEY,
-        failedAttempts: shouldLock ? 0 : failedAttempts,
-        lockUntil: shouldLock ? now + ADMIN_LOGIN_LOCK_MS : undefined,
-        lastAttemptAt: now,
-        updatedAt: now,
-      };
+    const inputPin = args.pin.trim();
 
-      const existing = await ctx.db
-        .query('admin_auth_state')
-        .withIndex('by_key', (q) => q.eq('key', ADMIN_AUTH_KEY))
+    // 1. Check if input PIN matches Master PIN stored in DB
+    const existingCred = await ctx.db
+      .query('admin_credentials')
+      .withIndex('by_key', (q) => q.eq('key', 'master_pin'))
+      .unique();
+
+    let isMasterValid = false;
+    if (existingCred) {
+      const pinHash = await hashSecret(inputPin);
+      isMasterValid = pinHash === existingCred.pinHash;
+    } else {
+      // Fallback to env password if no credentials saved yet
+      const fallbackPin = getAdminSecret();
+      if (fallbackPin) {
+        isMasterValid = inputPin === fallbackPin;
+      }
+    }
+
+    let isTemporary = false;
+    let label = 'Master PIN';
+    let sessionExpiresAt = now + ADMIN_SESSION_TTL_MS;
+
+    if (isMasterValid) {
+      isTemporary = false;
+      label = 'Master PIN';
+    } else {
+      // 2. Check if input PIN matches an active Temporary Code
+      const pinHash = await hashSecret(inputPin);
+      const tempCode = await ctx.db
+        .query('temp_access_codes')
+        .withIndex('by_codeHash', (q) => q.eq('codeHash', pinHash))
         .unique();
 
-      if (existing) {
-        await ctx.db.patch(existing._id, nextAuthState);
+      if (tempCode) {
+        const isExpired = tempCode.expiresAt <= now;
+        const isLimitReached =
+          tempCode.maxUses !== undefined && tempCode.usedCount >= tempCode.maxUses;
+
+        if (isExpired) {
+          throw new ConvexError('Kode akses sementara telah kedaluwarsa.');
+        }
+        if (isLimitReached) {
+          throw new ConvexError('Batas penggunaan kode akses telah tercapai.');
+        }
+
+        // Increment usage count of the temp code
+        await ctx.db.patch(tempCode._id, {
+          usedCount: tempCode.usedCount + 1,
+        });
+
+        isTemporary = true;
+        label = tempCode.label;
+        sessionExpiresAt = Math.min(now + ADMIN_SESSION_TTL_MS, tempCode.expiresAt);
       } else {
-        await ctx.db.insert('admin_auth_state', nextAuthState);
-      }
+        const failedAttempts = (authState.failedAttempts || 0) + 1;
+        const shouldLock = failedAttempts >= MAX_ADMIN_LOGIN_ATTEMPTS;
+        const nextAuthState = {
+          key: ADMIN_AUTH_KEY,
+          failedAttempts: shouldLock ? 0 : failedAttempts,
+          lockUntil: shouldLock ? now + ADMIN_LOGIN_LOCK_MS : undefined,
+          lastAttemptAt: now,
+          updatedAt: now,
+        };
 
-      if (shouldLock) {
-        throw new ConvexError(
-          'Too many failed attempts. Access temporarily locked.',
-        );
-      }
+        const existing = await ctx.db
+          .query('admin_auth_state')
+          .withIndex('by_key', (q) => q.eq('key', ADMIN_AUTH_KEY))
+          .unique();
 
-      throw new ConvexError('Invalid administrator password');
+        if (existing) {
+          await ctx.db.patch(existing._id, nextAuthState);
+        } else {
+          await ctx.db.insert('admin_auth_state', nextAuthState);
+        }
+
+        if (shouldLock) {
+          throw new ConvexError(
+            'Too many failed attempts. Access temporarily locked.',
+          );
+        }
+
+        throw new ConvexError('Password atau Kode Akses tidak valid.');
+      }
     }
 
     const existing = await ctx.db
@@ -1815,15 +1865,16 @@ export const verifyAdminPin = mutation({
 
     const token = generateToken(24);
     const tokenHash = await hashSecret(token);
-    const expiresAt = now + ADMIN_SESSION_TTL_MS;
     await ctx.db.insert('admin_sessions', {
       tokenHash,
-      expiresAt,
+      expiresAt: sessionExpiresAt,
       createdAt: now,
       lastUsedAt: now,
+      isTemporary,
+      label,
     });
 
-    return { token, expiresAt };
+    return { token, expiresAt: sessionExpiresAt, isTemporary, label };
   },
 });
 

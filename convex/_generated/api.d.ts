@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as matches from "../matches.js";
 import type * as media from "../media.js";
 import type * as settings from "../settings.js";
@@ -28,6 +30,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
+  crons: typeof crons;
   matches: typeof matches;
   media: typeof media;
   settings: typeof settings;

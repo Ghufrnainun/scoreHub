@@ -19,10 +19,10 @@ export function generateToken(bytes = 4): string {
 }
 
 
-export async function assertAdminSession(
+export async function getAdminSession(
   ctx: any,
   adminSessionToken?: string,
-): Promise<void> {
+) {
   if (!adminSessionToken) {
     throw new ConvexError('Admin session required');
   }
@@ -43,6 +43,31 @@ export async function assertAdminSession(
 
   if (session.expiresAt <= Date.now()) {
     throw new ConvexError('Admin session expired');
+  }
+
+  return session;
+}
+
+export async function assertAdminSession(
+  ctx: any,
+  adminSessionToken?: string,
+): Promise<void> {
+  const session = await getAdminSession(ctx, adminSessionToken);
+
+  // Queries in Convex are read-only; only touch session metadata when writes are available.
+  if (typeof ctx.db.patch === 'function') {
+    await ctx.db.patch(session._id, { lastUsedAt: Date.now() });
+  }
+}
+
+export async function assertMasterAdminSession(
+  ctx: any,
+  adminSessionToken?: string,
+): Promise<void> {
+  const session = await getAdminSession(ctx, adminSessionToken);
+
+  if (session.isTemporary) {
+    throw new ConvexError('Akses ditolak: Diperlukan hak akses PIN Utama.');
   }
 
   // Queries in Convex are read-only; only touch session metadata when writes are available.

@@ -134,12 +134,16 @@ export default function AdminLayout({
   const [isAuthed, setIsAuthed] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [error, setError] = useState('');
+  const [isTemporary, setIsTemporary] = useState(false);
+  const [sessionLabel, setSessionLabel] = useState('');
   const verifyAdminMutation = useMutation(api.matches.verifyAdminPin);
 
   useEffect(() => {
     const session = loadValidAdminSession();
     if (session) {
       setIsAuthed(true);
+      setIsTemporary(!!session.isTemporary);
+      setSessionLabel(session.label || '');
     }
     // Set sidebar open by default on desktop
     if (window.innerWidth >= 768) {
@@ -153,8 +157,15 @@ export default function AdminLayout({
     try {
       const result = await verifyAdminMutation({ pin: pinInput.trim() });
       if (result?.token && result?.expiresAt) {
-        saveAdminSession(result);
+        saveAdminSession({
+          token: result.token,
+          expiresAt: result.expiresAt,
+          isTemporary: result.isTemporary,
+          label: result.label,
+        });
         setIsAuthed(true);
+        setIsTemporary(!!result.isTemporary);
+        setSessionLabel(result.label || '');
         setError('');
       } else {
         setError('Login admin gagal.');
@@ -237,7 +248,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] flex transition-colors duration-300 overflow-x-hidden">
+    <div className="h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] flex transition-colors duration-300 overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
@@ -248,7 +259,7 @@ export default function AdminLayout({
 
       {/* Sidebar */}
       <aside
-        className={`bg-white border-r border-black/10 transition-[width,transform] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:relative ${
+        className={`bg-white border-r border-black/10 transition-[width,transform] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:sticky md:top-0 md:h-dvh ${
           isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-20 md:translate-x-0'
         }`}
       >
@@ -272,7 +283,13 @@ export default function AdminLayout({
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {MENU_ITEMS.map((item) => {
+          {MENU_ITEMS.filter((item) => {
+            if (isTemporary) {
+              // Hide Media, Templates, Settings for temporary sessions
+              return item.path === '/admin' || item.path === '/admin/overlay';
+            }
+            return true;
+          }).map((item) => {
             const isActive = pathname === item.path;
             const Icon = item.icon;
 
@@ -323,7 +340,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-dvh overflow-hidden">
         <header className="h-16 border-b border-black/10 bg-white/80 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-10">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -345,7 +362,12 @@ export default function AdminLayout({
             </svg>
           </button>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {sessionLabel && (
+              <div className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${isTemporary ? 'bg-amber-500/10 text-amber-700 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20'}`}>
+                {isTemporary ? `⚠️ Akses Terbatas: ${sessionLabel}` : `🔒 ${sessionLabel}`}
+              </div>
+            )}
             <div className="text-xs font-mono text-black/60 bg-black/5 px-2 py-1 rounded">
               v1.0-beta
             </div>

@@ -1,7 +1,7 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import type { Id } from './_generated/dataModel';
-import { assertAdminSession } from './utils';
+import { assertMasterAdminSession } from './utils';
 
 export const list = query({
   args: {},
@@ -34,7 +34,7 @@ export const create = mutation({
     adminSessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    await assertAdminSession(ctx, args.adminSessionToken);
+    await assertMasterAdminSession(ctx, args.adminSessionToken);
     return await ctx.db.insert('media_assets', {
       name: args.name,
       url: args.url,
@@ -48,7 +48,7 @@ export const create = mutation({
 export const generateUploadUrl = mutation({
   args: { adminSessionToken: v.string() },
   handler: async (ctx, args) => {
-    await assertAdminSession(ctx, args.adminSessionToken);
+    await assertMasterAdminSession(ctx, args.adminSessionToken);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -59,7 +59,7 @@ export const remove = mutation({
     adminSessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    await assertAdminSession(ctx, args.adminSessionToken);
+    await assertMasterAdminSession(ctx, args.adminSessionToken);
 
     // Hapus file fisik dari storage jika ada
     const asset = await ctx.db.get(args.id);

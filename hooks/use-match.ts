@@ -47,6 +47,7 @@ interface UseMatchReturn {
     homePlayers?: { name: string; country?: string }[];
     awayPlayers?: { name: string; country?: string }[];
     teamLineup?: TeamLineupRow[];
+    badmintonMaxPoints?: number;
   }) => void;
   // Timer computed value
   remainingTime: number;

@@ -121,12 +121,30 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
+  admin_credentials: defineTable({
+    key: v.string(), // "master_pin"
+    pinHash: v.string(),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
+
+  temp_access_codes: defineTable({
+    codeHash: v.string(),
+    label: v.string(),
+    expiresAt: v.number(),
+    maxUses: v.optional(v.number()),
+    usedCount: v.number(),
+    createdAt: v.number(),
+  }).index('by_codeHash', ['codeHash'])
+    .index('by_expiresAt', ['expiresAt']),
+
   admin_sessions: defineTable({
     tokenHash: v.string(),
     expiresAt: v.number(),
     revokedAt: v.optional(v.number()),
     createdAt: v.number(),
     lastUsedAt: v.optional(v.number()),
+    isTemporary: v.optional(v.boolean()),
+    label: v.optional(v.string()),
   }).index('by_tokenHash', ['tokenHash'])
     .index('by_expiresAt', ['expiresAt']),
 

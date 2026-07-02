@@ -4,6 +4,8 @@ export const ADMIN_AUTH_TTL_MS = 1000 * 60 * 60 * 8;
 export interface AdminSession {
   token: string;
   expiresAt: number;
+  isTemporary?: boolean;
+  label?: string;
 }
 
 export const REFEREE_SESSION_STORAGE_PREFIX = 'scorehub:referee:session:';
@@ -39,6 +41,8 @@ export const loadAdminSession = (): AdminSession | null => {
     return {
       token: parsed.token,
       expiresAt: parsed.expiresAt,
+      isTemporary: parsed.isTemporary,
+      label: parsed.label,
     };
   } catch {
     return null;

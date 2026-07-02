@@ -22,32 +22,28 @@ const TEMPLATES: Template[] = [
     name: 'Modern', 
     description: 'Grid broadcast dengan kolom set.', 
     previewColor: 'bg-amber-500',
-    image:
-      'https://images.unsplash.com/photo-1492629766637-82072eb90394?w=800&q=80', // Sleek modern abstract / broadcast feel
+    image: '/templates/modern.png',
   },
   { 
     id: 'classic', 
     name: 'Classic', 
     description: 'Scoreboard lurus dengan baris set.', 
     previewColor: 'bg-emerald-500',
-    image:
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80', // Classic data visualization / scoreboard style
+    image: '/templates/classic.png',
   },
   { 
     id: 'minimal', 
     name: 'Minimal', 
     description: 'Fokus ke skor besar dan tipografi bersih.', 
     previewColor: 'bg-slate-800',
-    image:
-      'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&q=80', // Minimal geometric art
+    image: '/templates/minimal.png',
   },
   { 
     id: 'neon', 
     name: 'Neon', 
     description: 'Kontras tinggi dengan nuansa glow.', 
     previewColor: 'bg-fuchsia-500',
-    image:
-      'https://images.unsplash.com/photo-1563089145-599997674d42?w=800&q=80', // Neon lights (keeping this one or finding a better one)
+    image: '/templates/neon.png',
   },
 ];
 
