@@ -306,26 +306,26 @@ export default function MediaManager() {
   };
 
   return ( 
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 select-none"> 
+    <div className="space-y-7 max-w-6xl mx-auto pb-12 select-none">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">  
-        <div> 
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-1">
+        <div className="max-w-2xl">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <MonitorPlay className="w-6 h-6 text-primary" />
             Media & Iklan
           </h1> 
-          <p className="text-xs text-muted-foreground mt-0.5 font-medium"> 
+          <p className="text-sm text-muted-foreground mt-1 font-medium leading-relaxed">
             Kelola dan siarkan media jeda pertandingan secara langsung ke display lapangan. 
           </p> 
         </div> 
 
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm w-full lg:w-auto">
           <span className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 ml-3"> 
             Match Tujuan: 
           </span> 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 px-3 gap-2 font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+              <Button variant="ghost" size="sm" className="h-10 px-3 gap-2 font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl w-full sm:w-auto justify-between">
                 {selectedMatchId === '' ? (
                   <span className="text-slate-400 dark:text-slate-500">-- Pilih Match Aktif --</span>
                 ) : selectedMatchId === 'ALL' ? (
@@ -398,7 +398,7 @@ export default function MediaManager() {
               variant="ghost"
               size="sm"
               onClick={handleClearDisplay}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-9 rounded-lg font-bold px-3 transition-all"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-10 rounded-xl font-bold px-3 transition-all w-full sm:w-auto"
             > 
               Bersihkan Display 
             </Button> 
@@ -408,19 +408,19 @@ export default function MediaManager() {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+        <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl flex flex-col justify-center min-h-[92px]">
           <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Aset</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-1 leading-none">{assets?.length || 0}</p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+        <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl flex flex-col justify-center min-h-[92px]">
           <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sedang Tayang</p>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 leading-none">
             {authorizedMatches ? authorizedMatches.filter((m: any) => m.ads?.active).length : 0}
           </p>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+        <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl flex flex-col justify-center min-h-[92px]">
           <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Penyimpanan</p>
           <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-1 flex flex-col justify-center leading-normal">
             <span>{assets ? `${assets.filter((a: any) => a.type === 'image').length} Gambar` : '0 Gambar'}</span>
@@ -428,7 +428,7 @@ export default function MediaManager() {
           </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl flex flex-col justify-center min-h-[80px]">
+        <div className="p-5 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl flex flex-col justify-center min-h-[92px]">
           <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Match Aktif</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-1 leading-none">
             {authorizedMatches ? authorizedMatches.filter((m: any) => m.status !== 'finished').length : 0}
@@ -456,9 +456,9 @@ export default function MediaManager() {
       ) : null}
 
       {!selectedMatchId ? (
-        <div className="rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50/50 dark:border-amber-900/30 dark:from-amber-950/15 dark:to-orange-950/5 p-4 flex items-start gap-3.5 shadow-xs">
-          <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl mt-0.5">
-            <AlertCircle className="w-5 h-5 animate-bounce" />
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 dark:border-amber-900/30 dark:bg-amber-950/15 p-4 flex items-start gap-3.5 shadow-sm">
+          <div className="p-2 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-xl mt-0.5">
+            <AlertCircle className="w-5 h-5" />
           </div>
           <div className="space-y-1">
             <h4 className="text-sm font-black text-amber-900 dark:text-amber-400 uppercase tracking-wide">Match Tujuan Belum Dipilih</h4>
@@ -470,11 +470,8 @@ export default function MediaManager() {
       ) : null}
 
       {/* Add New Asset Card */}
-      <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-xs rounded-2xl bg-white dark:bg-slate-900/40 backdrop-blur-xs relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex justify-between items-center mb-6">
+      <Card className="p-6 border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl bg-white dark:bg-slate-900/40 relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
           <div>
             <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <PlusCircle className="w-5 h-5 text-primary" />
@@ -484,14 +481,14 @@ export default function MediaManager() {
           </div>
 
           {/* Tab buttons */}
-          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex gap-1">
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex gap-1 w-full sm:w-auto">
             <button
               onClick={() => {
                 setActiveTab('file');
                 setNewItemUrl('');
               }}
               className={cn(
-                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 flex-1 sm:flex-none",
                 activeTab === 'file'
                   ? "bg-white dark:bg-slate-900 text-slate-950 dark:text-white shadow-xs"
                   : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
@@ -506,7 +503,7 @@ export default function MediaManager() {
                 setSelectedFile(null);
               }}
               className={cn(
-                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+                "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 flex-1 sm:flex-none",
                 activeTab === 'url'
                   ? "bg-white dark:bg-slate-900 text-slate-950 dark:text-white shadow-xs"
                   : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
@@ -519,7 +516,7 @@ export default function MediaManager() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          <div className="md:col-span-4 space-y-4">
+          <div className="md:col-span-4 space-y-5">
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-500 uppercase tracking-wider">
                 Nama Aset
@@ -528,7 +525,7 @@ export default function MediaManager() {
                 placeholder="Contoh: Banner Sponsor Utama"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
-                className="h-10 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus-visible:ring-primary/20"
+                className="h-11 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus-visible:ring-primary/20"
               />
             </div>
 
@@ -537,7 +534,7 @@ export default function MediaManager() {
                 Tipe Media
               </label>
               <select
-                className="flex h-10 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:ring-primary/20 cursor-pointer font-semibold text-slate-800 dark:text-slate-200"
+                className="flex h-11 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm focus-visible:ring-primary/20 cursor-pointer font-semibold text-slate-800 dark:text-slate-200"
                 value={newItemType}
                 onChange={(e) =>
                   setNewItemType(e.target.value as 'image' | 'video')
@@ -563,7 +560,7 @@ export default function MediaManager() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={cn(
-                      "border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 relative group h-36 min-h-[144px]",
+                      "border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 relative group h-40 min-h-[160px]",
                       isDragging
                         ? "border-primary bg-primary/5 shadow-md shadow-primary/5"
                         : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/20"
@@ -585,7 +582,7 @@ export default function MediaManager() {
                   </div>
                 ) : (
                   /* File selected preview box */
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950/40 flex items-center justify-between gap-4 h-36 min-h-[144px]">
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-950/40 flex items-center justify-between gap-4 h-40 min-h-[160px]">
                     <div className="flex items-center gap-4 truncate">
                       <div className="w-20 h-20 rounded-xl bg-slate-200 dark:bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center border border-black/5 relative">
                         {newItemType === 'image' && filePreviewUrl ? (
@@ -643,7 +640,7 @@ export default function MediaManager() {
                   </div>
                 </div>
                 <div className="rounded-xl border border-blue-100 bg-blue-50/50 dark:border-blue-950/30 dark:bg-blue-950/10 p-3 text-[10px] text-blue-700 dark:text-blue-400 font-bold leading-relaxed">
-                  💡 Catatan URL Eksternal: Pastikan link yang disalin langsung menunjuk ke file media (.png, .jpg, .mp4, dll.) dan dapat diakses publik oleh browser.
+                  Catatan URL Eksternal: Pastikan link yang disalin langsung menunjuk ke file media (.png, .jpg, .mp4, dll.) dan dapat diakses publik oleh browser.
                 </div>
               </div>
             )}
@@ -658,7 +655,7 @@ export default function MediaManager() {
                   !newItemName ||
                   !!(selectedFile && !isFileSizeValid(selectedFile))
                 }
-                className="h-10 px-6 rounded-xl font-bold gap-2 text-sm shadow-sm"
+                className="h-11 px-6 rounded-xl font-bold gap-2 text-sm shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 {isSubmitting ? (
                   <>
@@ -687,11 +684,19 @@ export default function MediaManager() {
         </div>
 
         {!assets ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-slate-400" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[0, 1].map((item) => (
+              <div key={item} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden animate-pulse">
+                <div className="aspect-video bg-slate-100 dark:bg-slate-800" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 w-1/2 rounded bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-3 w-2/3 rounded bg-slate-100 dark:bg-slate-800" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : assets.length === 0 ? (
-          <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl py-16 text-center">
+          <div className="border border-dashed border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/30 rounded-3xl py-16 px-4 text-center shadow-sm">
             <ImageIcon className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Belum ada aset media</p>
             <p className="text-xs text-muted-foreground mt-1">Unggah file atau masukkan link URL untuk memulai.</p>
@@ -705,7 +710,7 @@ export default function MediaManager() {
                 <Card
                   key={asset._id}
                   className={cn(
-                    "overflow-hidden group relative transition-all duration-300 rounded-2xl bg-white dark:bg-slate-900 border",
+                    "overflow-hidden group relative transition-all duration-300 rounded-2xl bg-white dark:bg-slate-900 border hover:-translate-y-1",
                     isAssetActive(asset._id)
                       ? "ring-2 ring-emerald-500 dark:ring-emerald-400 shadow-lg shadow-emerald-500/10 border-transparent"
                       : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs hover:shadow-md"

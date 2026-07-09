@@ -124,16 +124,16 @@ export default function JoinForm({
         <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-black/50">
           Akses Wasit
         </p>
-        <h1 className="mt-3 text-4xl font-[family-name:var(--font-bebas)] tracking-[0.08em] uppercase">
+        <h1 className="mt-3 font-[family-name:var(--font-bebas)] text-5xl uppercase tracking-[0.08em] text-balance sm:text-6xl">
           Masuk Kontrol Pertandingan
         </h1>
-        <p className="mt-2 text-sm text-black/60">
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-black/60">
           Masukkan kode display dan PIN wasit dari admin.
         </p>
       </div>
 
-      <Card className="rounded-3xl border border-black/10 bg-white p-6 sm:p-8 shadow-sm">
-        <form className="space-y-5" onSubmit={handleSubmit}>
+      <Card className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-[0_18px_70px_rgba(15,23,42,0.08)] sm:p-8">
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
             <label
               htmlFor="display-code"
@@ -148,7 +148,7 @@ export default function JoinForm({
                 setDisplayCode(normalizeCode(event.target.value))
               }
               placeholder="Contoh: A1B2C3"
-              className="mt-2 h-11 rounded-xl text-center font-mono tracking-[0.3em]"
+              className="mt-2 h-14 rounded-2xl border-black/10 bg-black/[0.025] text-center font-mono text-xl font-bold tracking-[0.3em] focus:bg-white"
               autoComplete="off"
               readOnly={!!matchById?.displayCode}
             />
@@ -168,7 +168,7 @@ export default function JoinForm({
                 setPin(event.target.value.replace(/\D/g, '').slice(0, 6))
               }
               placeholder="PIN (4-6 digit)"
-              className="mt-2 h-11 rounded-xl text-center font-mono tracking-[0.3em]"
+              className="mt-2 h-14 rounded-2xl border-black/10 bg-black/[0.025] text-center font-mono text-xl font-bold tracking-[0.3em] focus:bg-white"
               inputMode="numeric"
               autoComplete="one-time-code"
               type="password"
@@ -188,13 +188,13 @@ export default function JoinForm({
               value={refereeName}
               onChange={(event) => setRefereeName(event.target.value)}
               placeholder="Nama wasit"
-              className="mt-2 h-11 rounded-xl"
+              className="mt-2 h-12 rounded-2xl border-black/10 bg-black/[0.025] focus:bg-white"
               autoComplete="name"
             />
           </div>
 
           {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               {error}
             </div>
           ) : null}
@@ -202,23 +202,23 @@ export default function JoinForm({
           <Button
             type="submit"
             disabled={!canSubmit}
-            className="w-full h-11 rounded-full bg-[#111827] hover:bg-black text-white text-xs uppercase tracking-widest font-bold"
+            className="h-12 w-full rounded-full bg-[#111827] text-xs font-bold uppercase tracking-widest text-white transition-transform hover:-translate-y-0.5 hover:bg-black active:translate-y-0"
           >
             {isSubmitting ? 'Memproses...' : 'Masuk Kontrol Wasit'}
           </Button>
         </form>
       </Card>
 
-      <Card className="mt-6 rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+      <Card className="mt-5 rounded-3xl border border-black/10 bg-white/90 p-5 shadow-sm">
         {canPreview && matchPreview ? (
           <div className="space-y-2">
             <p className="text-xs font-bold uppercase tracking-widest text-black/50">
               Pratinjau Pertandingan
             </p>
-            <p className="text-sm font-semibold">
+            <p className="text-base font-bold text-black">
               {matchPreview.teams.home} vs {matchPreview.teams.away}
             </p>
-            <div className="text-xs text-black/60 flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 text-xs font-medium text-black/60">
               <span>Olahraga: {matchPreview.sport}</span>
               <span>Status: {matchPreview.status}</span>
               <span>ID Match: {matchPreview.matchId}</span>

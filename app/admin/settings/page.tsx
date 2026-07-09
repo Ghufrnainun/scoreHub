@@ -252,7 +252,7 @@ Silakan masuk menggunakan kode di atas.`;
   if (!session.isReady) {
     return (
       <div className="min-h-dvh flex items-center justify-center">
-        <div className="text-sm text-muted-foreground font-mono animate-pulse">
+        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm text-muted-foreground font-mono shadow-sm animate-pulse">
           Memuat pengaturan...
         </div>
       </div>
@@ -262,7 +262,7 @@ Silakan masuk menggunakan kode di atas.`;
   if (session.isTemporary) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <Card className="p-8 text-center border-red-200 bg-red-50 text-red-700 rounded-3xl">
+        <Card className="p-8 text-center border-red-200 bg-red-50/80 text-red-700 rounded-3xl shadow-sm">
           <svg
             className="w-12 h-12 text-red-500 mx-auto mb-4"
             fill="none"
@@ -276,8 +276,8 @@ Silakan masuk menggunakan kode di atas.`;
               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
             />
           </svg>
-          <h2 className="text-xl font-bold mb-2">Akses Ditolak</h2>
-          <p className="text-sm text-red-600">
+          <h2 className="text-2xl font-black mb-2 text-red-800">Akses Ditolak</h2>
+          <p className="text-sm text-red-700 leading-relaxed max-w-xl mx-auto">
             Anda login menggunakan Kode Akses Sementara dan tidak memiliki wewenang untuk mengelola pengaturan sistem atau keamanan.
           </p>
         </Card>
@@ -286,10 +286,10 @@ Silakan masuk menggunakan kode di atas.`;
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pengaturan</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+      <div className="max-w-2xl">
+        <h1 className="text-3xl font-black tracking-tight text-slate-900">Pengaturan</h1>
+        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
           Atur keamanan sistem, buat kode akses sementara, dan ubah pengaturan global.
         </p>
       </div>
@@ -311,8 +311,8 @@ Silakan masuk menggunakan kode di atas.`;
       {/* ACCESS & SECURITY PANEL */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Ubah PIN Utama */}
-        <Card className="p-6 rounded-3xl border border-black/10 bg-white">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+        <Card className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <h3 className="font-black text-lg mb-1 flex items-center gap-2 text-slate-900">
             <svg
               className="w-5 h-5 text-amber-500"
               fill="none"
@@ -328,6 +328,9 @@ Silakan masuk menggunakan kode di atas.`;
             </svg>
             Ubah PIN Utama (Master)
           </h3>
+          <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
+            Ganti PIN utama untuk akses admin penuh.
+          </p>
           <form onSubmit={handleChangePin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="old-pin">PIN Lama</Label>
@@ -337,7 +340,7 @@ Silakan masuk menggunakan kode di atas.`;
                 placeholder="PIN saat ini"
                 value={oldPin}
                 onChange={(e) => setOldPin(e.target.value.replace(/\D/g, ''))}
-                className="font-mono"
+                className="font-mono h-11 rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
             <div className="space-y-2">
@@ -348,7 +351,7 @@ Silakan masuk menggunakan kode di atas.`;
                 placeholder="PIN Baru"
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                className="font-mono"
+                className="font-mono h-11 rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
             <div className="space-y-2">
@@ -359,13 +362,13 @@ Silakan masuk menggunakan kode di atas.`;
                 placeholder="Konfirmasi PIN Baru"
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                className="font-mono"
+                className="font-mono h-11 rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
             <Button
               type="submit"
               disabled={isChangingPin}
-              className="w-full rounded-full"
+              className="w-full rounded-xl h-11 font-bold transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
               {isChangingPin ? 'Mengubah...' : 'Simpan PIN Baru'}
             </Button>
@@ -373,8 +376,8 @@ Silakan masuk menggunakan kode di atas.`;
         </Card>
 
         {/* Buat Kode Akses Sementara */}
-        <Card className="p-6 rounded-3xl border border-black/10 bg-white">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+        <Card className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <h3 className="font-black text-lg mb-1 flex items-center gap-2 text-slate-900">
             <svg
               className="w-5 h-5 text-indigo-500"
               fill="none"
@@ -390,6 +393,9 @@ Silakan masuk menggunakan kode di atas.`;
             </svg>
             Buat Kode Sementara
           </h3>
+          <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
+            Beri akses terbatas untuk panitia tanpa membagikan PIN utama.
+          </p>
           <form onSubmit={handleGenerateCode} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="temp-label">Nama Panitia / Keterangan</Label>
@@ -398,6 +404,7 @@ Silakan masuk menggunakan kode di atas.`;
                 placeholder="Contoh: Panitia GOR A, Wasit Event"
                 value={tempLabel}
                 onChange={(e) => setTempLabel(e.target.value)}
+                className="h-11 rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
             <div className="space-y-2">
@@ -406,7 +413,7 @@ Silakan masuk menggunakan kode di atas.`;
                 id="temp-duration"
                 value={tempDuration}
                 onChange={(e) => setTempDuration(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="flex h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2"
               >
                 <option value="1">1 Jam</option>
                 <option value="4">4 Jam</option>
@@ -424,12 +431,13 @@ Silakan masuk menggunakan kode di atas.`;
                 placeholder="Kosongkan jika bebas"
                 value={tempMaxUses}
                 onChange={(e) => setTempMaxUses(e.target.value.replace(/\D/g, ''))}
+                className="h-11 rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
             <Button
               type="submit"
               disabled={isGeneratingCode}
-              className="w-full rounded-full"
+              className="w-full rounded-xl h-11 font-bold transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
               {isGeneratingCode ? 'Membuat...' : 'Generate Kode Akses'}
             </Button>
@@ -438,33 +446,39 @@ Silakan masuk menggunakan kode di atas.`;
       </div>
 
       {/* DAFTAR KODE AKSES SEMENTARA */}
-      <Card className="p-6 rounded-3xl border border-black/10 bg-white">
-        <h3 className="font-bold text-lg mb-4">Daftar Kode Akses Sementara</h3>
+      <Card className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="mb-5">
+          <h3 className="font-black text-lg text-slate-900">Daftar Kode Akses Sementara</h3>
+          <p className="text-xs text-muted-foreground mt-1">Pantau akses aktif dan matikan kode saat event selesai.</p>
+        </div>
         {tempCodes === undefined ? (
-          <div className="text-center py-6 text-sm text-muted-foreground animate-pulse">
-            Memuat kode akses...
+          <div className="space-y-3 animate-pulse">
+            <div className="h-10 rounded-xl bg-slate-100" />
+            <div className="h-10 rounded-xl bg-slate-100" />
+            <div className="h-10 rounded-xl bg-slate-100" />
           </div>
         ) : tempCodes.length === 0 ? (
-          <div className="text-center py-6 text-sm text-muted-foreground">
-            Belum ada kode akses sementara yang dibuat.
+          <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70">
+            <p className="text-sm font-bold text-slate-700">Belum ada kode akses sementara</p>
+            <p className="text-xs text-muted-foreground mt-1">Buat kode baru untuk membagikan akses admin terbatas.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border border-slate-100">
             <table className="w-full text-sm border-collapse text-left">
-              <thead>
-                <tr className="border-b border-black/5 text-muted-foreground font-semibold">
-                  <th className="pb-3 pr-4">Nama / Label</th>
-                  <th className="pb-3 px-4">Dibuat</th>
-                  <th className="pb-3 px-4">Kedaluwarsa</th>
-                  <th className="pb-3 px-4 text-center">Penggunaan</th>
-                  <th className="pb-3 px-4">Status</th>
-                  <th className="pb-3 pl-4 text-right">Aksi</th>
+              <thead className="bg-slate-50">
+                <tr className="border-b border-slate-100 text-muted-foreground font-semibold">
+                  <th className="py-3 px-4">Nama / Label</th>
+                  <th className="py-3 px-4">Dibuat</th>
+                  <th className="py-3 px-4">Kedaluwarsa</th>
+                  <th className="py-3 px-4 text-center">Penggunaan</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {tempCodes.map((code) => (
-                  <tr key={code._id} className="border-b border-black/5 last:border-0">
-                    <td className="py-4 pr-4 font-bold">{code.label}</td>
+                  <tr key={code._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                    <td className="py-4 px-4 font-bold text-slate-900">{code.label}</td>
                     <td className="py-4 px-4 text-muted-foreground">
                       {new Date(code.createdAt).toLocaleString('id-ID', {
                         dateStyle: 'short',
@@ -494,12 +508,12 @@ Silakan masuk menggunakan kode di atas.`;
                         </span>
                       )}
                     </td>
-                    <td className="py-4 pl-4 text-right">
+                    <td className="py-4 px-4 text-right">
                       {!code.isExpired && code.expiresAt !== 0 ? (
                         <Button
                           variant="ghost"
                           onClick={() => handleRevokeCode(code._id)}
-                          className="text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 h-8 rounded-full px-3"
+                          className="text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 h-8 rounded-xl px-3"
                         >
                           Matikan
                         </Button>
@@ -516,8 +530,9 @@ Silakan masuk menggunakan kode di atas.`;
       </Card>
 
       {/* Nilai Bawaan Display */}
-      <Card className="p-6 rounded-3xl border border-black/10 bg-white">
-        <h3 className="font-bold text-lg mb-4">Nilai Bawaan Display</h3>
+      <Card className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <h3 className="font-black text-lg mb-1 text-slate-900">Nilai Bawaan Display</h3>
+        <p className="text-xs text-muted-foreground mb-5">Pengaturan ini memengaruhi tampilan scoreboard, bukan halaman admin.</p>
         <div className="space-y-4 max-w-md">
           <div className="space-y-2">
             <Label htmlFor="primary-color">Warna Utama</Label>
@@ -527,12 +542,12 @@ Silakan masuk menggunakan kode di atas.`;
                 type="color"
                 value={primaryColor}
                 onChange={(e) => setPrimaryColor(e.target.value)}
-                className="w-12 h-10 p-1 cursor-pointer"
+                className="w-14 h-11 p-1 cursor-pointer rounded-xl"
               />
               <Input
                 value={primaryColor}
                 onChange={(e) => setPrimaryColor(e.target.value)}
-                className="font-mono"
+                className="font-mono h-11 rounded-xl bg-slate-50 border-slate-200"
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -541,7 +556,7 @@ Silakan masuk menggunakan kode di atas.`;
           </div>
 
           <div className="pt-4">
-            <Button onClick={handleSaveColor} disabled={isSaving}>
+            <Button onClick={handleSaveColor} disabled={isSaving} className="h-11 rounded-xl font-bold transition-all hover:-translate-y-0.5 active:translate-y-0">
               {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
             </Button>
           </div>
@@ -549,8 +564,8 @@ Silakan masuk menggunakan kode di atas.`;
       </Card>
 
       {/* Informasi Sistem */}
-      <Card className="p-6 rounded-3xl border border-black/10 bg-white">
-        <h3 className="font-bold text-lg mb-4">Informasi Sistem</h3>
+      <Card className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <h3 className="font-black text-lg mb-4 text-slate-900">Informasi Sistem</h3>
         <div className="text-sm text-muted-foreground space-y-2">
           <div className="flex justify-between border-b pb-2">
             <span>Versi</span>
@@ -579,7 +594,7 @@ Silakan masuk menggunakan kode di atas.`;
       >
         <DialogContent className="sm:max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle>Kode Akses Berhasil Dibuat!</DialogTitle>
+            <DialogTitle>Kode akses berhasil dibuat</DialogTitle>
             <DialogDescription>
               Salin kode di bawah ini dan berikan kepada panitia/wasit. Kode ini hanya akan ditampilkan SEKALI.
             </DialogDescription>

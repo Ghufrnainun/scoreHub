@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { loadValidAdminSession } from '@/lib/admin-session';
 
 interface Template {
@@ -102,21 +102,21 @@ export default function TemplatesPage() {
   }; 
 
   return ( 
-    <div className="space-y-8 max-w-6xl mx-auto"> 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"> 
-        <div> 
-          <h1 className="text-2xl font-bold tracking-tight">Template Tampilan</h1> 
-          <p className="text-muted-foreground"> 
+    <div className="space-y-8 max-w-6xl mx-auto pb-12">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="max-w-2xl">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">Template Tampilan</h1>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
             Pilih gaya visual untuk layar skor utama. 
           </p> 
         </div> 
 
-        <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm">
-          <span className="text-xs font-bold uppercase text-muted-foreground ml-2"> 
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm w-full lg:w-auto">
+          <span className="text-xs font-black uppercase text-muted-foreground ml-2">
             Match Tujuan: 
           </span> 
           <select
-            className="h-8 text-sm border-none bg-transparent focus:ring-0 cursor-pointer min-w-[200px]"
+            className="h-10 text-sm border border-slate-200 bg-slate-50 rounded-xl px-3 focus:ring-2 focus:ring-primary/20 cursor-pointer min-w-[220px] font-semibold"
             value={selectedMatchId}
             onChange={(e) => setSelectedMatchId(e.target.value)}
           >
@@ -131,6 +131,7 @@ export default function TemplatesPage() {
             size="sm"
             onClick={handleApply}
             disabled={!selectedMatchId || isApplying}
+            className="h-10 rounded-xl px-4 font-bold transition-all hover:-translate-y-0.5 active:translate-y-0"
           >
             {isApplying ? ( 
               <Loader2 className="w-4 h-4 animate-spin" /> 
@@ -155,14 +156,14 @@ export default function TemplatesPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {TEMPLATES.map((t) => ( 
           <Card 
             key={t.id} 
-            className={`group cursor-pointer overflow-hidden transition-all hover:scale-105 active:scale-95 ${ 
+            className={`group cursor-pointer overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md active:translate-y-0 ${
               selectedId === t.id 
-                ? 'ring-4 ring-primary ring-offset-2' 
-                : 'hover:border-primary/50' 
+                ? 'border-primary ring-2 ring-primary/25 ring-offset-2'
+                : 'border-slate-200 hover:border-slate-300'
             }`}
             onClick={() => setSelectedId(t.id)}
             role="button"
@@ -183,7 +184,7 @@ export default function TemplatesPage() {
                 alt={t.name}
                 className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
               <span className="relative z-10 text-white/90 font-black text-4xl uppercase tracking-tighter drop-shadow-lg">
                 {t.id.split('-')[0]}
@@ -193,32 +194,25 @@ export default function TemplatesPage() {
 
               {/* Selected Indicator */}
               {selectedId === t.id && (
-                <div className="absolute inset-0 bg-primary/40 flex items-center justify-center backdrop-blur-[1px] z-20">
+                <div className="absolute inset-0 bg-black/20 flex items-center justify-center backdrop-blur-[1px] z-20">
                   <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-xl">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    <CheckCircle2 className="w-6 h-6" strokeWidth={2.5} />
                   </div>
                 </div>
               )}
             </div>
 
             {/* Info Area */}
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-1">
-              <h3 className="font-bold text-lg">{t.name}</h3> 
-            </div> 
-              <p className="text-sm text-muted-foreground">{t.description}</p> 
+            <div className="p-5">
+              <div className="flex justify-between items-start gap-3 mb-1">
+                <h3 className="font-black text-lg text-slate-900">{t.name}</h3>
+                {selectedId === t.id ? (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                    Dipilih
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">{t.description}</p>
             </div> 
           </Card> 
         ))} 

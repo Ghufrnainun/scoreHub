@@ -20,7 +20,7 @@ export default async function RefereeJoinPage(props: Props) {
   const pin = typeof searchParams.pin === 'string' ? searchParams.pin : '';
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#F8FAFC] px-4 py-10 text-[#111827] sm:py-16">
+    <main id="main-content" className="min-h-dvh bg-[#F8FAFC] px-4 py-10 text-[#111827] sm:py-16">
       <JoinForm initialCode={code} initialMatchId={matchId} initialPin={pin} />
     </main>
   );

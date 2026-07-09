@@ -168,9 +168,9 @@ function SectionTitle({
 
 export default function GuidePage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] relative overflow-hidden">
-      <div className="pointer-events-none absolute -top-40 right-[-10%] h-[500px] w-[540px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.35),transparent_70%)] blur-3xl opacity-60" />
-      <div className="pointer-events-none absolute bottom-[-140px] left-[-8%] h-[380px] w-[430px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.16),transparent_70%)] blur-3xl opacity-60" />
+    <div className="relative min-h-dvh overflow-hidden bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)]">
+      <div className="pointer-events-none absolute -top-40 right-[-10%] h-[500px] w-[540px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.16),transparent_70%)] blur-3xl opacity-60" />
+      <div className="pointer-events-none absolute bottom-[-140px] left-[-8%] h-[380px] w-[430px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.08),transparent_70%)] blur-3xl opacity-60" />
 
       <header className="sticky top-0 z-30 h-16 border-b border-black/10 bg-white/80 backdrop-blur">
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4 lg:px-8">
@@ -221,7 +221,7 @@ export default function GuidePage() {
             <p className="inline-flex items-center gap-2 rounded-full border border-amber-400/35 bg-amber-100/70 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-amber-800">
               Panduan Operasional
             </p>
-            <h1 className="mt-6 font-[family-name:var(--font-bebas)] text-5xl uppercase tracking-[0.06em] leading-[0.88] text-balance text-black md:text-7xl">
+            <h1 className="mt-6 font-[family-name:var(--font-bebas)] text-6xl uppercase leading-[0.88] tracking-[0.06em] text-balance text-black md:text-7xl">
               ScoreHub <br />
               End-to-End Guide
             </h1>
@@ -245,7 +245,7 @@ export default function GuidePage() {
             </div>
           </div>
 
-          <aside className="rounded-3xl border border-black/10 bg-white/70 p-5 backdrop-blur">
+          <aside className="rounded-3xl border border-black/10 bg-white/90 p-5 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-black/50">Navigasi Cepat</h2>
             <div className="mt-4 grid gap-2 text-sm">
               {[
@@ -269,7 +269,7 @@ export default function GuidePage() {
 
         <section className="mt-8 grid gap-3 sm:grid-cols-3">
           {quickStats.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-black/10 bg-white/70 px-4 py-4 backdrop-blur">
+            <div key={item.label} className="rounded-2xl border border-black/10 bg-white/95 px-5 py-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-black/45">{item.label}</p>
               <p className="mt-1 text-xl font-black uppercase tracking-wide">{item.value}</p>
             </div>
@@ -285,7 +285,7 @@ export default function GuidePage() {
           />
           <div className="grid gap-4 md:grid-cols-2">
             {quickStartSteps.map((step, index) => (
-              <article key={step.title} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+              <article key={step.title} className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition-[border-color,transform] hover:-translate-y-1 hover:border-black/25">
                 <div className="mb-4 flex items-center justify-between">
                   <span className="grid h-9 w-9 place-items-center rounded-xl bg-black text-sm font-bold text-white">
                     {index + 1}
@@ -311,7 +311,7 @@ export default function GuidePage() {
 
           <div className="grid gap-5 lg:grid-cols-3">
             {roleGuides.map((guide) => (
-              <article key={guide.role} className="rounded-3xl border border-black/10 bg-white/90 p-6">
+              <article key={guide.role} className="flex min-h-80 flex-col rounded-3xl border border-black/10 bg-white/95 p-6 shadow-sm">
                 <h3 className="font-[family-name:var(--font-bebas)] text-3xl uppercase tracking-[0.06em] text-black">
                   {guide.role}
                 </h3>
@@ -326,7 +326,7 @@ export default function GuidePage() {
                 </ul>
                 <Link
                   href={guide.cta.href}
-                  className="mt-5 inline-flex rounded-full border border-black/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black"
+                  className="mt-auto inline-flex w-max rounded-full border border-black/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black"
                 >
                   {guide.cta.label}
                 </Link>
@@ -345,7 +345,7 @@ export default function GuidePage() {
 
           <div className="space-y-4">
             {matchFlow.map((flow) => (
-              <article key={flow.phase} className="rounded-3xl border border-black/10 bg-white p-6 md:p-7">
+              <article key={flow.phase} className="rounded-3xl border border-black/10 bg-white/95 p-6 shadow-sm md:p-7">
                 <h3 className="text-2xl font-bold text-black">{flow.phase}</h3>
                 <ul className="mt-4 space-y-2 text-sm text-black/70 md:text-base">
                   {flow.points.map((point) => (
@@ -370,7 +370,7 @@ export default function GuidePage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {troubleshooting.map((item) => (
-              <article key={item.issue} className="rounded-3xl border border-black/10 bg-white p-6">
+              <article key={item.issue} className="rounded-3xl border border-black/10 bg-white/95 p-6 shadow-sm">
                 <h3 className="text-lg font-bold text-black">{item.issue}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-black/65">{item.fix}</p>
               </article>
@@ -388,7 +388,7 @@ export default function GuidePage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {faqs.map((item) => (
-              <article key={item.q} className="rounded-3xl border border-black/10 bg-white p-6">
+              <article key={item.q} className="rounded-3xl border border-black/10 bg-white/95 p-6 shadow-sm">
                 <h3 className="text-lg font-bold text-black">{item.q}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-black/65">{item.a}</p>
               </article>
@@ -396,7 +396,7 @@ export default function GuidePage() {
           </div>
         </section>
 
-        <section className="mt-16 rounded-3xl border border-black/10 bg-black p-8 text-white md:p-10">
+        <section className="mt-16 rounded-3xl border border-black/10 bg-black p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.16)] md:p-10">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/60">Siap Operasional</p>
           <h2 className="mt-3 font-[family-name:var(--font-bebas)] text-4xl uppercase tracking-[0.06em] md:text-5xl">
             Jalankan Match Pertama Kamu

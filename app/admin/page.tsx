@@ -75,7 +75,10 @@ export default function AdminDashboard() {
 
   const handleAdminAuth = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!localPinInput) return;
+    if (!localPinInput.trim()) {
+      setAuthError('PIN admin wajib diisi.');
+      return;
+    }
     setIsVerifying(true);
     try {
       const authResult = await verifyAdminMutation({ pin: localPinInput });
@@ -108,8 +111,8 @@ export default function AdminDashboard() {
 
   if (isSessionReady && !adminSessionToken) {
     return (
-      <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-black/10 shadow-2xl overflow-hidden p-8 sm:p-10 text-center space-y-8">
+      <main className="flex min-h-dvh items-center justify-center bg-[#F8FAFC] p-4">
+        <div className="w-full max-w-md space-y-8 overflow-hidden rounded-[2rem] border border-black/10 bg-white p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-10">
           <div className="space-y-3">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-black flex items-center justify-center shadow-xl shadow-black/20">
               <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +130,7 @@ export default function AdminDashboard() {
                 placeholder="••••" 
                 value={localPinInput} 
                 onChange={(e) => setLocalPinInput(e.target.value)} 
-                className="h-16 text-center text-3xl tracking-[0.5em] font-bold rounded-2xl border-black/10 bg-black/5 focus:bg-white focus:border-black/20 transition-all" 
+                className="h-16 rounded-2xl border-black/10 bg-black/[0.035] text-center text-3xl font-bold tracking-[0.5em] transition-all focus:border-black/25 focus:bg-white" 
                 autoFocus
               />
               {authError && (
@@ -136,11 +139,11 @@ export default function AdminDashboard() {
             </div>
             
             <div className="flex gap-3">
-              <Link href="/" className="flex-1 h-14 inline-flex items-center justify-center rounded-full border border-black/10 text-[11px] font-black uppercase tracking-[0.2em] text-black/60 hover:border-black/30 transition-all">Kembali</Link>
+              <Link href="/" className="inline-flex h-14 flex-1 items-center justify-center rounded-full border border-black/10 text-[11px] font-black uppercase tracking-[0.2em] text-black/60 transition-all hover:border-black/30 hover:text-black">Kembali</Link>
               <Button 
                 type="submit"
                 disabled={isVerifying} 
-                className="flex-[2] h-14 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold uppercase tracking-[0.3em] shadow-lg shadow-black/20 transition-all"
+                className="h-14 flex-[2] rounded-full bg-black text-[11px] font-bold uppercase tracking-[0.3em] text-white shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:bg-neutral-800 active:translate-y-0"
               >
                 {isVerifying ? "Memverifikasi..." : "Masuk"}
               </Button>
@@ -262,18 +265,18 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-7">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-bebas)] tracking-wide uppercase text-black text-balance">
+          <h1 className="font-[family-name:var(--font-bebas)] text-3xl uppercase tracking-wide text-black text-balance sm:text-4xl">
             Dashboard Pertandingan
           </h1>
           <p className="text-xs sm:text-sm text-black/60 font-medium text-pretty">
-            Buat di /create, lalu kelola dan bagikan dari sini.
+            Pantau match aktif, buka kontrol, dan bagikan akses wasit dari satu tempat.
           </p>
         </div>
         <Link href="/create">
-          <Button className="rounded-full bg-[#111827] text-white hover:bg-black shadow-lg shadow-black/20 tracking-wide uppercase font-bold text-xs h-10 px-6">
+          <Button className="h-11 rounded-full bg-[#111827] px-6 text-xs font-bold uppercase tracking-wide text-white shadow-lg shadow-black/15 transition-transform hover:-translate-y-0.5 hover:bg-black active:translate-y-0">
             <svg
               aria-hidden="true"
               className="w-4 h-4 mr-2"
@@ -307,50 +310,50 @@ export default function AdminDashboard() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card className="rounded-2xl border border-black/10 bg-white/95 p-5 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Total
           </div>
-          <div className="mt-2 text-2xl font-black text-foreground">
+          <div className="mt-2 text-3xl font-black tabular-nums text-foreground">
             {statusCounts.all}
           </div>
         </Card>
-        <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
+        <Card className="rounded-2xl border border-black/10 bg-white/95 p-5 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Riwayat
+            Aktif
           </div>
-          <div className="mt-2 text-2xl font-black text-foreground">
+          <div className="mt-2 text-3xl font-black tabular-nums text-foreground">
             {statusCounts.history}
           </div>
         </Card>
-        <Card className="p-4 rounded-2xl border border-black/10 bg-white/90">
+        <Card className="rounded-2xl border border-black/10 bg-white/95 p-5 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Hasil
           </div>
-          <div className="mt-2 text-2xl font-black text-foreground">
+          <div className="mt-2 text-3xl font-black tabular-nums text-foreground">
             {statusCounts.result}
           </div>
         </Card>
       </div>
 
-      <Card className="p-4 rounded-3xl border border-black/10 bg-white/90">
+      <Card className="rounded-3xl border border-black/10 bg-white/95 p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           {(['all', 'history', 'result'] as DashboardView[]).map((view) => (
             <button
               key={view}
               type="button"
               onClick={() => setViewFilter(view)}
-              className={`h-11 px-5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+              className={`h-11 rounded-full px-5 text-xs font-bold uppercase tracking-widest transition-colors ${
                 viewFilter === view
                   ? 'bg-black text-white'
                   : 'bg-black/5 text-black/50 hover:bg-black/10'
               }`}
             >
               {view === 'all'
-                ? 'total'
+                ? 'semua'
                 : view === 'history'
-                  ? 'riwayat'
+                  ? 'aktif'
                   : 'hasil'}
             </button>
           ))}
@@ -362,20 +365,24 @@ export default function AdminDashboard() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-40 bg-secondary/50 animate-pulse motion-reduce:animate-none rounded-xl"
+              className="h-44 animate-pulse rounded-3xl bg-secondary/70 motion-reduce:animate-none"
             />
           ))}
         </div>
       ) : filteredMatches.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed rounded-xl">
-          <div className="text-muted-foreground mb-1">Belum ada pertandingan pada kategori ini.</div>
+        <div className="rounded-3xl border border-dashed border-black/15 bg-white/70 py-16 text-center">
+          <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-black/[0.04]" />
+          <div className="mb-1 font-semibold text-black/70">Belum ada pertandingan pada kategori ini.</div>
+          <Link href="/create" className="mt-4 inline-flex rounded-full border border-black/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-black/60 hover:border-black/30 hover:text-black">
+            Buat Match
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filteredMatches.map((match) => (
             <Card
               key={match.id}
-              className="p-5 flex flex-col gap-4 border border-black/10 shadow-sm bg-white hover:border-black/20 rounded-3xl transition-[border-color,box-shadow]"
+              className="flex flex-col gap-4 rounded-3xl border border-black/10 bg-white p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-black/25 hover:shadow-lg hover:shadow-black/5"
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
@@ -403,12 +410,12 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center py-2">
+              <div className="flex items-center justify-between rounded-2xl bg-black/[0.025] px-3 py-4">
                 <div className="text-center flex-1">
                   <div className="font-bold truncate text-sm mb-1">
                     {match.home.name}
                   </div>
-                  <div className="text-3xl font-black">{match.home.score}</div>
+                  <div className="text-5xl font-black tabular-nums leading-none">{match.home.score}</div>
                 </div>
                 <div className="text-xs font-bold text-muted-foreground px-2">
                   VS
@@ -417,22 +424,24 @@ export default function AdminDashboard() {
                   <div className="font-bold truncate text-sm mb-1">
                     {match.away.name}
                   </div>
-                  <div className="text-3xl font-black">{match.away.score}</div>
+                  <div className="text-5xl font-black tabular-nums leading-none">{match.away.score}</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-auto">
+              <div className="grid grid-cols-1 gap-2 mt-auto">
                 <Link
                   href={`/admin/matches/${match.matchId}/control`}
                   className="w-full"
                 >
                   <Button
-                    variant="secondary"
-                    className="w-full text-xs h-11 rounded-full bg-black/5 hover:bg-black/10 text-black shadow-none"
+                    className="h-11 w-full rounded-full bg-[#111827] text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-black"
                   >
-                    Kontrol
+                    Buka Kontrol
                   </Button>
                 </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
                 <Link
                   href={
                     match.displayCode
@@ -444,17 +453,33 @@ export default function AdminDashboard() {
                 >
                   <Button
                     variant="outline"
-                    className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black"
+                    className="h-11 w-full rounded-full border-black/10 text-xs font-bold text-black hover:bg-black/5 hover:text-black"
                   >
-                    Buka Tampilan
+                    Tampilan
                   </Button>
                 </Link>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 mt-auto">
                 <Button
                   variant="outline"
-                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
+                  className="h-11 w-full rounded-full border-black/10 text-xs font-bold text-black hover:bg-black/5 hover:text-black"
+                  onClick={() => {
+                    if (!match.displayCode) return;
+                    const link = `${window.location.origin}/display/${match.displayCode}`;
+                    navigator.clipboard.writeText(link);
+                    setFeedback({
+                      type: 'success',
+                      message: 'Link display berhasil disalin.',
+                    });
+                  }}
+                  disabled={!match.displayCode}
+                >
+                  Salin Link Layar
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-black/[0.025] p-2">
+                <Button
+                  variant="ghost"
+                  className="h-10 w-full rounded-xl px-2 text-[11px] font-bold uppercase tracking-tight text-black/70 hover:bg-white hover:text-black"
                   onClick={async () => {
                     if (!match.displayCode || !adminSessionToken) return;
                     try {
@@ -468,39 +493,23 @@ export default function AdminDashboard() {
                       navigator.clipboard.writeText(link);
                       setFeedback({
                         type: 'success',
-                        message: 'Link kontrol wasit direct berhasil disalin.',
+                        message: 'Link kontrol wasit berhasil disalin.',
                       });
                     } catch (error) {
                       console.error('Failed to issue referee access token:', error);
                       setFeedback({
                         type: 'error',
-                        message: 'Gagal membuat link direct wasit.',
+                        message: 'Gagal membuat link kontrol wasit.',
                       });
                     }
                   }}
                   disabled={!match.displayCode}
                 >
-                  Link Kontrol
+                  Link Wasit
                 </Button>
                 <Button
-                  variant="outline"
-                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
-                  onClick={() => {
-                    if (!match.displayCode) return;
-                    const link = `${window.location.origin}/display/${match.displayCode}`;
-                    navigator.clipboard.writeText(link);
-                    setFeedback({
-                      type: 'success',
-                      message: 'Link display berhasil disalin.',
-                    });
-                  }}
-                  disabled={!match.displayCode}
-                >
-                  Link Layar
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full text-xs h-11 rounded-full border-black/10 text-black hover:bg-black/5 hover:text-black px-1 font-bold uppercase tracking-tight"
+                  variant="ghost"
+                  className="h-10 w-full rounded-xl px-2 text-[11px] font-bold uppercase tracking-tight text-black/70 hover:bg-white hover:text-black"
                   onClick={() => {
                     if (!match.displayCode) return;
                     setSharePin('');
@@ -508,19 +517,19 @@ export default function AdminDashboard() {
                   }}
                   disabled={!match.displayCode}
                 >
-                  WhatsApp
+                  WhatsApp Wasit
                 </Button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3 mt-1">
+              <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs h-11 rounded-full text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-bold"
+                  className="w-full text-xs h-10 rounded-full text-amber-700 hover:bg-amber-50 hover:text-amber-800 font-bold"
                   onClick={() => onFinishMatch(match.matchId)}
                   disabled={match.status === 'finished'}
                 >
-                  AKHIRI MATCH
+                  Akhiri
                 </Button>
 
                 <AlertDialog>
@@ -528,9 +537,9 @@ export default function AdminDashboard() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs h-11 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+                  className="w-full text-xs h-10 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
                 >
-                  HAPUS
+                  Hapus
                 </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>

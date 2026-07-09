@@ -28,32 +28,6 @@ import { api } from '@/convex/_generated/api';
 import { isAdminAuthenticated } from '@/lib/auth';
 import { loadValidAdminSession } from '@/lib/admin-session';
 
-// --- ICONS ---
-const ThemeToggleIcon = ({ mode }: { mode: 'light' | 'dark' }) => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    {mode === 'dark' ? (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-      />
-    ) : (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-      />
-    )}
-  </svg>
-);
-
 const BadmintonIcon = ({ className }: { className?: string }) => (
   <svg
     className={className}
@@ -162,7 +136,6 @@ const DEFAULT_SPORT =
 export default function CreateMatchPage() {
   const router = useRouter();
   const createMatchMutation = useMutation(api.matches.createMatch);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // Protect Route - Admin Auth Check
   useEffect(() => {
@@ -220,23 +193,11 @@ export default function CreateMatchPage() {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldErrorKey, string>>>({});
 
-  // Theme Logic
-  useEffect(() => {
-    const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (saved) setTheme(saved);
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
   useEffect(() => {
     const session = loadValidAdminSession();
     setAdminSessionToken(session?.token || '');
   }, []);
 
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
   const clearFieldError = (key: FieldErrorKey) => {
     setFieldErrors((prev) => {
       if (!prev[key]) return prev;
@@ -533,9 +494,9 @@ export default function CreateMatchPage() {
   }; 
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-[family-name:var(--font-literata)] relative overflow-hidden transition-colors duration-300">
-      <div className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.35),transparent_70%)] blur-3xl opacity-50" />
-      <div className="pointer-events-none absolute bottom-[-120px] left-[-10%] h-[360px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.18),transparent_70%)] blur-3xl opacity-50" />
+    <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] relative overflow-hidden transition-colors duration-300">
+      <div className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_70%)] blur-3xl opacity-50" />
+      <div className="pointer-events-none absolute bottom-[-120px] left-[-10%] h-[360px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.08),transparent_70%)] blur-3xl opacity-50" />
 
       {/* Top Bar */}
       <header className="h-16 border-b border-black/10 bg-white/80 backdrop-blur px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10">
@@ -563,13 +524,10 @@ export default function CreateMatchPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">
-            Workspace
-            <span className="h-1 w-1 rounded-full bg-muted-foreground/60" />
-            Arena Ops
-          </div>
-          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs font-bold uppercase tracking-widest text-foreground/80">
-            Plan: Studio
+          <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-black/45">
+            Builder Match
+            <span className="h-1 w-1 rounded-full bg-black/30" />
+            Admin
           </div>
           <Button
             variant="ghost"
@@ -579,14 +537,6 @@ export default function CreateMatchPage() {
           >
             <Link href="/guide">Panduan</Link>
           </Button>
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className="p-2 rounded-md hover:bg-muted text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            type="button"
-          >
-            <ThemeToggleIcon mode={theme} />
-          </button>
         </div>
       </header>
 
@@ -599,7 +549,7 @@ export default function CreateMatchPage() {
           <div
             role="status"
             aria-live="polite"
-            className="mb-6 p-3 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 text-sm font-bold rounded-lg flex items-center gap-2"
+            className="mb-6 flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700"
           >
             <svg
               className="w-4 h-4"
@@ -619,72 +569,55 @@ export default function CreateMatchPage() {
         )}
 
         <section className="mb-8">
-          <div className="relative overflow-hidden rounded-2xl border bg-card/80 p-6 lg:p-8">
-            <div
-              className="pointer-events-none absolute -top-24 right-0 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.15),transparent_65%)]"
-              aria-hidden="true"
-            />
+          <div className="relative overflow-hidden rounded-[2rem] border border-black/10 bg-white p-6 shadow-sm lg:p-8">
             <div className="relative">
               <div className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
-                Ruang Kerja Arena Anda
+                Match Builder
               </div>
               <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="font-display text-3xl lg:text-4xl font-black tracking-tight text-foreground">
-                    Pusat Kontrol Pertandingan
+                  <h2 className="font-display text-4xl font-black tracking-tight text-foreground lg:text-5xl">
+                    Buat pertandingan baru
                   </h2>
                   <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Mulai pertandingan baru dengan cepat, sinkronkan wasit, dan tayangkan skor standar broadcast dari satu konsol.
+                    Isi detail utama, tentukan format, lalu buat akses wasit. Display code bisa otomatis jika tidak perlu kode khusus.
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      Aktif
+                <div className="grid min-w-full grid-cols-3 gap-2 rounded-2xl border border-black/10 bg-[#F8FAFC] p-2 lg:min-w-[360px]">
+                  {['Detail', 'Pemain', 'Akses'].map((step, index) => (
+                    <div key={step} className="rounded-xl bg-white px-3 py-3 text-center shadow-sm">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-black/35">
+                        Step {index + 1}
+                      </div>
+                      <div className="mt-1 text-sm font-black text-black">
+                        {step}
+                      </div>
                     </div>
-                    <div className="mt-1 text-2xl font-black text-foreground">
-                      1
-                    </div>
+                  ))}
                   </div>
-                  <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      Layar
-                    </div>
-                    <div className="mt-1 text-2xl font-black text-foreground">
-                      2
-                    </div>
-                  </div>
-                  <div className="rounded-xl border bg-background/80 px-4 py-3">
-                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      Templat
-                    </div>
-                    <div className="mt-1 text-2xl font-black text-foreground">
-                      4
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section>
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+          <div>
             <div className="mb-6">
               <div className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
-                Match Builder
+                Detail Pertandingan
               </div>
               <h2 className="mt-2 text-4xl font-[family-name:var(--font-bebas)] text-black tracking-wide uppercase">
-                Mulai Pertandingan
+                Data utama
               </h2>
               <p className="text-sm text-black/60 font-medium">
-                Atur detail pertandingan badminton Anda di bawah ini.
+                Mulai dari nama event, format, tim, dan pemain.
               </p>
             </div>
 
-            <Card className="p-6 lg:p-8 border border-black/10 shadow-xl bg-white rounded-[32px]">
+            <Card className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-[0_18px_70px_rgba(15,23,42,0.08)] lg:p-8">
               {isBadminton ? (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="mb-6 rounded-2xl border border-black/10 bg-gradient-to-r from-amber-50 to-white p-4">
+                  <div className="mb-6 rounded-2xl border border-black/10 bg-[#FFFBEB] p-5">
                     <div className="flex items-center justify-between gap-2">
                       <label
                         htmlFor="tournament-name"
@@ -709,11 +642,15 @@ export default function CreateMatchPage() {
                       className="mt-2 h-11 rounded-xl border-black/10 bg-white/90 focus:border-black/30"
                     />
                     <p className={`mt-2 text-xs ${fieldErrors.tournamentName ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
-                      {fieldErrors.tournamentName || 'Contoh: Kejurkot / Open Tournament / Internal Club League.'}
+                      {fieldErrors.tournamentName || 'Contoh: Kejurkot Jakarta 2026 atau Liga Internal Club.'}
                     </p>
                   </div>
-                  <div className="mb-6 flex flex-wrap gap-4 items-center">
-                    <div className="bg-black/5 p-1 rounded-xl inline-flex gap-1">
+                  <div className="mb-6 rounded-2xl border border-black/10 bg-white p-4">
+                    <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-black/45">
+                      Format dan skor
+                    </div>
+                    <div className="flex flex-wrap gap-4 items-center">
+                    <div className="inline-flex gap-1 rounded-xl bg-black/5 p-1">
                       {(['perorangan', 'beregu'] as MatchFormat[]).map((format) => (
                         <button
                           key={format}
@@ -721,7 +658,7 @@ export default function CreateMatchPage() {
                           onClick={() => setMatchFormat(format)}
                           className={`py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
                             matchFormat === format
-                              ? 'bg-black text-white shadow-lg shadow-black/20'
+                              ? 'bg-black text-white shadow-lg shadow-black/15'
                               : 'text-black/50 hover:text-black hover:bg-black/5'
                           }`}
                         >
@@ -731,7 +668,7 @@ export default function CreateMatchPage() {
                     </div>
 
                     {isBadminton && (
-                      <div className="bg-black/5 p-1 rounded-xl inline-flex gap-1">
+                      <div className="inline-flex gap-1 rounded-xl bg-black/5 p-1">
                         {([21, 15] as const).map((points) => (
                           <button
                             key={points}
@@ -739,7 +676,7 @@ export default function CreateMatchPage() {
                             onClick={() => setBadmintonMaxPoints(points)}
                             className={`py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
                               badmintonMaxPoints === points
-                                ? 'bg-black text-white shadow-lg shadow-black/20'
+                                ? 'bg-black text-white shadow-lg shadow-black/15'
                                 : 'text-black/50 hover:text-black hover:bg-black/5'
                             }`}
                           >
@@ -748,9 +685,10 @@ export default function CreateMatchPage() {
                         ))}
                       </div>
                     )}
+                    </div>
                   </div>
 
-                  <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 rounded-2xl border border-black/10 bg-black/[0.02] p-4">
+                  <div className="mb-8 grid grid-cols-1 gap-4 rounded-2xl border border-black/10 bg-[#F8FAFC] p-5 md:grid-cols-2">
                     <div className="md:col-span-2 text-xs font-bold uppercase tracking-[0.2em] text-black/50">
                       Informasi Tim (Ditampilkan di skor)
                     </div>
@@ -1237,7 +1175,7 @@ export default function CreateMatchPage() {
                   </div>
                   )}
 
-                  <div className="mt-8 rounded-3xl border border-black/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.03),rgba(255,255,255,0.9))] p-5 lg:p-6">
+                  <div className="mt-8 rounded-3xl border border-black/10 bg-[#F8FAFC] p-5 lg:p-6">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
@@ -1372,7 +1310,7 @@ export default function CreateMatchPage() {
                       <Button
                         onClick={handleCreateMatch}
                         disabled={isLoading}
-                        className="w-full sm:w-auto h-12 px-8 text-base font-bold bg-[#111827] hover:bg-black text-white shadow-xl shadow-black/20 transition-[box-shadow,background-color,color] rounded-full uppercase tracking-widest"
+                        className="h-12 w-full rounded-full bg-[#111827] px-8 text-base font-bold uppercase tracking-widest text-white shadow-xl shadow-black/15 transition-[box-shadow,background-color,color,transform] hover:-translate-y-0.5 hover:bg-black sm:w-auto"
                       >
                         {isLoading ? (
                           <span className="flex items-center gap-2">
@@ -1529,6 +1467,40 @@ export default function CreateMatchPage() {
                 </div>
               )}
             </Card>
+          </div>
+
+          <aside className="rounded-[2rem] border border-black/10 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+            <div className="text-xs font-black uppercase tracking-[0.24em] text-black/40">
+              Ringkasan
+            </div>
+            <div className="mt-4 space-y-4 text-sm">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-black/35">Turnamen</div>
+                <div className="mt-1 font-bold text-black">{tournamentName || 'Belum diisi'}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-[#F8FAFC] p-3">
+                  <div className="text-xs font-bold uppercase tracking-widest text-black/35">Format</div>
+                  <div className="mt-1 font-black capitalize">{matchFormat}</div>
+                </div>
+                <div className="rounded-2xl bg-[#F8FAFC] p-3">
+                  <div className="text-xs font-bold uppercase tracking-widest text-black/35">Skor</div>
+                  <div className="mt-1 font-black">{badmintonMaxPoints}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-black/35">Kode Display</div>
+                <div className="mt-1 font-mono font-black tracking-widest">{manualDisplayCode || 'OTOMATIS'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-black/35">PIN Wasit</div>
+                <div className="mt-1 font-mono font-black tracking-widest">{createPin ? `${createPin.length} digit` : 'Belum diisi'}</div>
+              </div>
+            </div>
+            <div className="mt-5 rounded-2xl border border-dashed border-black/15 bg-[#F8FAFC] p-4 text-xs leading-relaxed text-black/55">
+              Yang wajib: nama turnamen, pemain atau roster sesuai format, dan PIN wasit.
+            </div>
+          </aside>
         </section>
       </main>
 
@@ -1538,9 +1510,9 @@ export default function CreateMatchPage() {
           if (!open) setCreatedMatch(null);
         }}
       >
-        <DialogContent className="sm:max-w-2xl rounded-3xl border-black/10">
+        <DialogContent className="rounded-3xl border-black/10 sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-[family-name:var(--font-bebas)] uppercase tracking-[0.08em]">
+            <DialogTitle className="font-[family-name:var(--font-bebas)] text-3xl uppercase tracking-[0.08em]">
               Pertandingan Berhasil Dibuat
             </DialogTitle>
             <DialogDescription className="text-black/60">

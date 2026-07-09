@@ -153,7 +153,10 @@ export default function AdminLayout({
   }, []);
 
   const handlePinSubmit = async () => {
-    if (!pinInput.trim()) return;
+    if (!pinInput.trim()) {
+      setError('PIN admin wajib diisi.');
+      return;
+    }
     try {
       const result = await verifyAdminMutation({ pin: pinInput.trim() });
       if (result?.token && result?.expiresAt) {
@@ -187,8 +190,8 @@ export default function AdminLayout({
 
   if (!isReady) {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex items-center justify-center">
-        <div className="text-sm text-muted-foreground font-mono">
+      <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] flex items-center justify-center">
+        <div className="rounded-2xl border border-black/10 bg-white px-6 py-4 text-sm text-black/55 font-mono shadow-sm">
           Memuat akses admin...
         </div>
       </div>
@@ -197,8 +200,8 @@ export default function AdminLayout({
 
   if (!isAuthed) {
     return (
-      <div className="min-h-dvh bg-background text-foreground flex items-center justify-center px-6">
-        <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-sm">
+      <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] flex items-center justify-center px-6">
+        <div className="w-full max-w-sm rounded-[2rem] border border-black/10 bg-white p-7 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="size-10 flex items-center justify-center">
               <Image
@@ -210,16 +213,16 @@ export default function AdminLayout({
               />
             </div>
             <div>
-              <p className="text-sm font-semibold text-pretty">Akses Admin</p>
-              <p className="text-xs text-muted-foreground text-pretty">
-                Masukkan password admin untuk masuk.
+              <p className="text-sm font-black text-pretty">Akses Admin</p>
+              <p className="text-xs text-black/55 text-pretty">
+                Masukkan PIN admin untuk masuk.
               </p>
             </div>
           </div>
 
           <div className="mt-5 space-y-3">
-            <label htmlFor="admin-password" className="text-xs font-semibold">
-              Password
+            <label htmlFor="admin-password" className="text-xs font-bold uppercase tracking-widest text-black/50">
+              PIN Admin
             </label>
               <Input
                 id="admin-password"
@@ -238,17 +241,17 @@ export default function AdminLayout({
                   handlePinSubmit();
                 }
               }}
-              className="h-11 text-center font-mono text-lg tracking-widest"
+              className="h-12 rounded-xl border-black/10 bg-black/[0.035] text-center font-mono text-lg tracking-widest focus:bg-white focus:border-black/30"
             />
             {error ? (
               <p className="text-xs text-destructive text-pretty" role="status" aria-live="polite">
                 {error}
               </p>
             ) : null}
-            <Button className="w-full" onClick={handlePinSubmit}>
+            <Button className="h-11 w-full rounded-xl bg-[#111827] font-bold hover:bg-black" onClick={handlePinSubmit}>
               Masuk Admin
             </Button>
-              <p className="text-[11px] text-muted-foreground text-pretty">
+              <p className="text-[11px] text-black/45 text-pretty">
               Sesi admin disimpan lokal selama 8 jam.
               </p>
             </div>
@@ -269,11 +272,11 @@ export default function AdminLayout({
 
       {/* Sidebar */}
       <aside
-        className={`bg-white border-r border-black/10 transition-[width,transform] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 md:sticky md:top-0 md:h-dvh ${
+        className={`bg-white border-r border-black/10 transition-[width,transform] duration-300 flex flex-col fixed inset-y-0 left-0 z-20 shadow-xl shadow-black/5 md:shadow-none md:sticky md:top-0 md:h-dvh ${
           isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-20 md:translate-x-0'
         }`}
       >
-        <div className="h-16 flex items-center justify-center border-b px-4">
+        <div className="h-16 flex items-center justify-center border-b border-black/10 px-4">
           <div className="flex items-center gap-2 font-black text-xl tracking-tight text-black">
             <div className="w-8 h-8 flex items-center justify-center">
               <Image
@@ -292,7 +295,7 @@ export default function AdminLayout({
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-1.5">
           {MENU_ITEMS.filter((item) => {
             if (isTemporary) {
               // Hide Media, Templates, Settings for temporary sessions
@@ -307,15 +310,15 @@ export default function AdminLayout({
               <Link
                 key={item.path}
                 href={item.path}
-                className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC]"
+                className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8FAFC]"
               >
                 <div
                   onClick={() => {
                     if (window.innerWidth < 768) setIsSidebarOpen(false);
                   }}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group cursor-pointer ${
+                  className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors group cursor-pointer ${
                     isActive
-                      ? 'bg-[#111827] text-white font-bold'
+                      ? 'bg-[#111827] text-white font-black shadow-sm'
                       : 'text-black/60 hover:bg-black/5 hover:text-black'
                   }`}
                 >
@@ -323,7 +326,7 @@ export default function AdminLayout({
                     className={`w-5 h-5 ${isActive ? 'text-[#F59E0B]' : 'group-hover:text-black'}`}
                   />
                   {isSidebarOpen && (
-                    <span className="text-sm">{item.name}</span>
+                    <span className="text-sm font-bold">{item.name}</span>
                   )}
                 </div>
               </Link>
@@ -331,7 +334,7 @@ export default function AdminLayout({
           })}
         </nav>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t border-black/10">
           <Link
             href="/"
             onClick={() => {
@@ -339,7 +342,7 @@ export default function AdminLayout({
               setIsAuthed(false);
             }}
           >
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-black/60 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer group">
+            <div className="flex items-center gap-3 px-3 py-3 rounded-xl text-black/60 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer group">
               <LogoutIcon className="w-5 h-5" />
               {isSidebarOpen && (
                 <span className="text-sm font-bold">Keluar Admin</span>
@@ -351,11 +354,11 @@ export default function AdminLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-dvh overflow-hidden">
-        <header className="h-16 border-b border-black/10 bg-white/80 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-10">
+        <header className="h-16 border-b border-black/10 bg-white px-6 flex items-center justify-between sticky top-0 z-10">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             aria-label="Toggle sidebar"
-            className="p-2 -ml-2 rounded-md hover:bg-muted text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="p-2 -ml-2 rounded-xl hover:bg-black/5 text-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2"
           >
             <svg
               className="w-5 h-5"
@@ -375,7 +378,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-3">
             {sessionLabel && (
               <div className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${isTemporary ? 'bg-amber-500/10 text-amber-700 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20'}`}>
-                {isTemporary ? `⚠️ Akses Terbatas: ${sessionLabel}` : `🔒 ${sessionLabel}`}
+                {isTemporary ? `Akses Terbatas: ${sessionLabel}` : sessionLabel}
               </div>
             )}
             <div className="text-xs font-mono text-black/60 bg-black/5 px-2 py-1 rounded">
