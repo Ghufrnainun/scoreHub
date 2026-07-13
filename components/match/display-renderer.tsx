@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import type { DisplaySettings } from './display-settings';
 
@@ -10,7 +11,7 @@ const ShuttlecockIcon = ({
   isServing = false,
 }: {
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
   isServing?: boolean;
 }) => (
   <svg
@@ -50,6 +51,43 @@ const getCountryCode = (value?: string) => {
     .toUpperCase();
 };
 
+const isUsableImageSrc = (src?: string) => {
+  if (!src) return false;
+  const value = src.trim();
+  if (!value) return false;
+  return (
+    value.startsWith('/') ||
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('data:image/') ||
+    value.startsWith('blob:')
+  );
+};
+
+const SafeTeamLogo = ({
+  src,
+  alt,
+  onFail,
+}: {
+  src?: string;
+  alt: string;
+  onFail: () => void;
+}) => {
+  if (!isUsableImageSrc(src)) return null;
+
+  return (
+    <Image
+      src={src!.trim()}
+      alt={alt}
+      fill
+      sizes="64px"
+      unoptimized
+      className="h-full w-full object-contain bg-black/10"
+      onError={onFail}
+    />
+  );
+};
+
 const TeamMark = ({
   team,
   teamCode,
@@ -63,8 +101,11 @@ const TeamMark = ({
   teamColor?: string;
   size?: 'sm' | 'md' | 'lg';
 }) => {
+  const logoSrc = typeof team.logo === 'string' ? team.logo.trim() : '';
+  const [logoFailed, setLogoFailed] = useState(false);
   const fallbackCode = getCountryCode(team.country) || team.name.slice(0, 3);
   const code = (teamCode || fallbackCode).toUpperCase();
+  const showLogo = isUsableImageSrc(logoSrc) && !logoFailed;
   const sizeClasses =
     size === 'sm'
       ? 'w-10 h-7 rounded-sm'
@@ -73,6 +114,11 @@ const TeamMark = ({
         : 'w-16 h-10 rounded-sm';
   const textClasses =
     size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm';
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoSrc]);
+
   return (
     <div className="flex items-center gap-4">
       <div
@@ -86,21 +132,19 @@ const TeamMark = ({
             : { backgroundColor: '#111' }
         }
       >
-        {team.logo ? (
-          <Image
-            src={team.logo}
+        {showLogo ? (
+          <SafeTeamLogo
+            src={logoSrc}
             alt={`${team.name} logo`}
-            fill
-            sizes="64px"
-            unoptimized
-            className="h-full w-full object-contain bg-black/10"
+            onFail={() => setLogoFailed(true)}
           />
-        ) : (
+        ) : null}
+        {!showLogo ? (
           <div className="absolute inset-0 flex items-center justify-center text-white/80 font-bold tracking-widest uppercase">
             <span className={textClasses}>{code}</span>
           </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-black/20"></div>
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-black/20 pointer-events-none"></div>
       </div>
       {showCode && (
         <span className="font-bold text-3xl tracking-widest text-white font-mono">

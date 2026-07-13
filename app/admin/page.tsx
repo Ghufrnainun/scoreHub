@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery } from 'convex/react';
+import QRCode from 'qrcode';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -61,12 +62,41 @@ export default function AdminDashboard() {
   } | null>(null);
   const [shareMatch, setShareMatch] = useState<MatchSummary | null>(null);
   const [sharePin, setSharePin] = useState('');
+  const [displayQr, setDisplayQr] = useState('');
 
   useEffect(() => {
     const session = loadValidAdminSession();
     setAdminSessionToken(session?.token || '');
     setIsSessionReady(true);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const displayCode = shareMatch?.displayCode;
+    if (!displayCode) {
+      setDisplayQr('');
+      return;
+    }
+
+    QRCode.toDataURL(`${window.location.origin}/display/${displayCode}`, {
+      margin: 1,
+      width: 180,
+      color: {
+        dark: '#111827',
+        light: '#FFFFFF',
+      },
+    })
+      .then((url) => {
+        if (!cancelled) setDisplayQr(url);
+      })
+      .catch(() => {
+        if (!cancelled) setDisplayQr('');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shareMatch?.displayCode]);
 
   const [localPinInput, setLocalPinInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -115,37 +145,58 @@ export default function AdminDashboard() {
         <div className="w-full max-w-md space-y-8 overflow-hidden rounded-[2rem] border border-black/10 bg-white p-8 text-center shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-10">
           <div className="space-y-3">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-black flex items-center justify-center shadow-xl shadow-black/20">
-              <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              <svg
+                className="w-8 h-8 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
               </svg>
             </div>
-            <h1 className="text-3xl uppercase font-black tracking-widest font-[family-name:var(--font-bebas)]">Akses Admin</h1>
-            <p className="text-slate-500 font-medium text-sm">Masukkan password admin untuk mengelola turnamen.</p>
+            <h1 className="text-3xl uppercase font-black tracking-widest font-[family-name:var(--font-bebas)]">
+              Akses Admin
+            </h1>
+            <p className="text-slate-500 font-medium text-sm">
+              Masukkan password admin untuk mengelola turnamen.
+            </p>
           </div>
-          
+
           <form onSubmit={handleAdminAuth} className="space-y-6">
             <div className="space-y-2">
-              <Input 
-                type="password" 
-                placeholder="••••" 
-                value={localPinInput} 
-                onChange={(e) => setLocalPinInput(e.target.value)} 
-                className="h-16 rounded-2xl border-black/10 bg-black/[0.035] text-center text-3xl font-bold tracking-[0.5em] transition-all focus:border-black/25 focus:bg-white" 
+              <Input
+                type="password"
+                placeholder="••••"
+                value={localPinInput}
+                onChange={(e) => setLocalPinInput(e.target.value)}
+                className="h-16 rounded-2xl border-black/10 bg-black/[0.035] text-center text-3xl font-bold tracking-[0.5em] transition-all focus:border-black/25 focus:bg-white"
                 autoFocus
               />
               {authError && (
-                <p className="text-xs font-bold uppercase tracking-widest text-red-500 animate-shake">{authError}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-red-500 animate-shake">
+                  {authError}
+                </p>
               )}
             </div>
-            
+
             <div className="flex gap-3">
-              <Link href="/" className="inline-flex h-14 flex-1 items-center justify-center rounded-full border border-black/10 text-[11px] font-black uppercase tracking-[0.2em] text-black/60 transition-all hover:border-black/30 hover:text-black">Kembali</Link>
-              <Button 
+              <Link
+                href="/"
+                className="inline-flex h-14 flex-1 items-center justify-center rounded-full border border-black/10 text-[11px] font-black uppercase tracking-[0.2em] text-black/60 transition-all hover:border-black/30 hover:text-black"
+              >
+                Kembali
+              </Link>
+              <Button
                 type="submit"
-                disabled={isVerifying} 
+                disabled={isVerifying}
                 className="h-14 flex-[2] rounded-full bg-black text-[11px] font-bold uppercase tracking-[0.3em] text-white shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:bg-neutral-800 active:translate-y-0"
               >
-                {isVerifying ? "Memverifikasi..." : "Masuk"}
+                {isVerifying ? 'Memverifikasi...' : 'Masuk'}
               </Button>
             </div>
           </form>
@@ -156,14 +207,14 @@ export default function AdminDashboard() {
 
   const matchData = useQuery(
     api.matches.listAdmin,
-    isSessionReady && adminSessionToken
-      ? { adminSessionToken }
-      : 'skip',
+    isSessionReady && adminSessionToken ? { adminSessionToken } : 'skip',
   );
 
   const finishMatch = useMutation(api.matches.finishMatch);
   const deleteMatch = useMutation(api.matches.deleteMatch);
-  const issueRefereeAccessToken = useMutation(api.matches.issueRefereeAccessToken);
+  const issueRefereeAccessToken = useMutation(
+    api.matches.issueRefereeAccessToken,
+  );
 
   const onFinishMatch = async (matchId: string) => {
     if (!adminSessionToken) return;
@@ -173,7 +224,10 @@ export default function AdminDashboard() {
         role: 'admin',
         adminSessionToken,
       });
-      setFeedback({ type: 'success', message: 'Pertandingan berhasil diakhiri.' });
+      setFeedback({
+        type: 'success',
+        message: 'Pertandingan berhasil diakhiri.',
+      });
     } catch (error) {
       console.error('Failed to finish match:', error);
       setFeedback({
@@ -187,7 +241,10 @@ export default function AdminDashboard() {
     if (!adminSessionToken) return;
     try {
       await deleteMatch({ matchId, adminSessionToken });
-      setFeedback({ type: 'success', message: 'Pertandingan berhasil dihapus.' });
+      setFeedback({
+        type: 'success',
+        message: 'Pertandingan berhasil dihapus.',
+      });
     } catch (error) {
       console.error('Failed to delete match:', error);
       setFeedback({
@@ -264,6 +321,8 @@ export default function AdminDashboard() {
     finished: 'bg-rose-500/10 text-rose-700',
   };
 
+
+
   return (
     <div className="space-y-7">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -272,7 +331,8 @@ export default function AdminDashboard() {
             Dashboard Pertandingan
           </h1>
           <p className="text-xs sm:text-sm text-black/60 font-medium text-pretty">
-            Pantau match aktif, buka kontrol, dan bagikan akses wasit dari satu tempat.
+            Pantau match aktif, buka kontrol, dan bagikan akses wasit dari satu
+            tempat.
           </p>
         </div>
         <Link href="/create">
@@ -360,6 +420,8 @@ export default function AdminDashboard() {
         </div>
       </Card>
 
+
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
@@ -372,8 +434,13 @@ export default function AdminDashboard() {
       ) : filteredMatches.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-black/15 bg-white/70 py-16 text-center">
           <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-black/[0.04]" />
-          <div className="mb-1 font-semibold text-black/70">Belum ada pertandingan pada kategori ini.</div>
-          <Link href="/create" className="mt-4 inline-flex rounded-full border border-black/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-black/60 hover:border-black/30 hover:text-black">
+          <div className="mb-1 font-semibold text-black/70">
+            Belum ada pertandingan pada kategori ini.
+          </div>
+          <Link
+            href="/create"
+            className="mt-4 inline-flex rounded-full border border-black/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-black/60 hover:border-black/30 hover:text-black"
+          >
             Buat Match
           </Link>
         </div>
@@ -415,7 +482,9 @@ export default function AdminDashboard() {
                   <div className="font-bold truncate text-sm mb-1">
                     {match.home.name}
                   </div>
-                  <div className="text-5xl font-black tabular-nums leading-none">{match.home.score}</div>
+                  <div className="text-5xl font-black tabular-nums leading-none">
+                    {match.home.score}
+                  </div>
                 </div>
                 <div className="text-xs font-bold text-muted-foreground px-2">
                   VS
@@ -424,7 +493,9 @@ export default function AdminDashboard() {
                   <div className="font-bold truncate text-sm mb-1">
                     {match.away.name}
                   </div>
-                  <div className="text-5xl font-black tabular-nums leading-none">{match.away.score}</div>
+                  <div className="text-5xl font-black tabular-nums leading-none">
+                    {match.away.score}
+                  </div>
                 </div>
               </div>
 
@@ -433,9 +504,7 @@ export default function AdminDashboard() {
                   href={`/admin/matches/${match.matchId}/control`}
                   className="w-full"
                 >
-                  <Button
-                    className="h-11 w-full rounded-full bg-[#111827] text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-black"
-                  >
+                  <Button className="h-11 w-full rounded-full bg-[#111827] text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-black">
                     Buka Kontrol
                   </Button>
                 </Link>
@@ -496,7 +565,10 @@ export default function AdminDashboard() {
                         message: 'Link kontrol wasit berhasil disalin.',
                       });
                     } catch (error) {
-                      console.error('Failed to issue referee access token:', error);
+                      console.error(
+                        'Failed to issue referee access token:',
+                        error,
+                      );
                       setFeedback({
                         type: 'error',
                         message: 'Gagal membuat link kontrol wasit.',
@@ -517,7 +589,7 @@ export default function AdminDashboard() {
                   }}
                   disabled={!match.displayCode}
                 >
-                  WhatsApp Wasit
+                  Share Center
                 </Button>
               </div>
 
@@ -534,20 +606,20 @@ export default function AdminDashboard() {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-xs h-10 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
-                >
-                  Hapus
-                </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs h-10 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+                    >
+                      Hapus
+                    </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Hapus Pertandingan?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Tindakan ini tidak dapat dibatalkan. Ini akan secara permanen
-                        menghapus pertandingan{' '}
+                        Tindakan ini tidak dapat dibatalkan. Ini akan secara
+                        permanen menghapus pertandingan{' '}
                         <strong>
                           {match.home.name} vs {match.away.name}
                         </strong>{' '}
@@ -577,40 +649,168 @@ export default function AdminDashboard() {
           if (!open) {
             setShareMatch(null);
             setSharePin('');
+            setDisplayQr('');
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Bagikan Akses Wasit</DialogTitle>
+            <DialogTitle>Share Center</DialogTitle>
             <DialogDescription>
-              Masukkan PIN wasit (opsional) sebelum kirim ke WhatsApp.
+              Siapkan link display, akses wasit, dan pesan WhatsApp dari satu
+              panel.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Kode tampilan: <span className="font-mono font-bold">{shareMatch?.displayCode || '-'}</span>
-            </p>
-            <Input
-              value={sharePin}
-              onChange={(event) =>
-                setSharePin(event.target.value.replace(/\D/g, '').slice(0, 6))
-              }
-              placeholder="PIN wasit (opsional)"
-              inputMode="numeric"
-              className="h-11"
-            />
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-black/10 bg-[#F8FAFC] p-4">
+              <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+                <div>
+                  <div className="mt-1 text-lg font-black text-black">
+                    {shareMatch
+                      ? `${shareMatch.home.name} vs ${shareMatch.away.name}`
+                      : '-'}
+                  </div>
+                  <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+                    <div className="rounded-xl bg-white p-3">
+                      <div className="font-bold uppercase tracking-widest text-black/35">
+                        Kode Display
+                      </div>
+                      <div className="mt-1 font-mono text-base font-black">
+                        {shareMatch?.displayCode || '-'}
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-white p-3">
+                      <div className="font-bold uppercase tracking-widest text-black/35">
+                        Status
+                      </div>
+                      <div className="mt-1 font-black uppercase">
+                        {shareMatch?.status || '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="w-fit rounded-2xl border border-black/10 bg-white p-3">
+                  {displayQr ? (
+                    <img
+                      src={displayQr}
+                      alt="QR link display"
+                      className="h-32 w-32"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-32 items-center justify-center text-center text-[10px] font-black uppercase tracking-widest text-black/35">
+                      QR belum siap
+                    </div>
+                  )}
+                  <div className="mt-2 text-center text-[10px] font-black uppercase tracking-widest text-black/40">
+                    QR Display
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl border-black/10 font-bold text-black hover:bg-black/5 hover:text-black"
+                disabled={!shareMatch?.displayCode}
+                onClick={() => {
+                  if (!shareMatch?.displayCode) return;
+                  navigator.clipboard.writeText(
+                    `${window.location.origin}/display/${shareMatch.displayCode}`,
+                  );
+                  setFeedback({
+                    type: 'success',
+                    message: 'Link display disalin.',
+                  });
+                }}
+              >
+                Salin Link Display
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-xl border-black/10 font-bold text-black hover:bg-black/5 hover:text-black"
+                disabled={!shareMatch?.displayCode || !sharePin}
+                onClick={() => {
+                  if (!shareMatch?.displayCode || !sharePin) return;
+                  navigator.clipboard.writeText(
+                    `${window.location.origin}/referee/join?code=${shareMatch.displayCode}&pin=${sharePin}`,
+                  );
+                  setFeedback({
+                    type: 'success',
+                    message: 'Link join wasit disalin.',
+                  });
+                }}
+              >
+                Salin Link Join Wasit
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="share-pin"
+                className="text-xs font-black uppercase tracking-widest text-black/45"
+              >
+                PIN wasit untuk auto-join
+              </label>
+              <Input
+                id="share-pin"
+                value={sharePin}
+                onChange={(event) =>
+                  setSharePin(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                placeholder="PIN wasit (opsional)"
+                inputMode="numeric"
+                className="h-11 rounded-xl"
+              />
+              <p className="text-xs text-black/45">
+                Direct token tetap bisa dibuat tanpa PIN. Auto-join butuh PIN
+                wasit.
+              </p>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
             <Button
               type="button"
               variant="outline"
               onClick={() => {
                 setShareMatch(null);
                 setSharePin('');
+                setDisplayQr('');
               }}
             >
               Batal
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-black/10 font-bold text-black hover:bg-black/5 hover:text-black"
+              onClick={async () => {
+                if (!shareMatch?.displayCode || !adminSessionToken) return;
+                try {
+                  const access = await issueRefereeAccessToken({
+                    matchId: shareMatch.matchId,
+                    role: 'admin',
+                    adminSessionToken,
+                    refereeName: shareMatch.assignedReferee || undefined,
+                  });
+                  const controlLink = `${window.location.origin}/match/${access.matchId}/control?role=referee&token=${encodeURIComponent(access.token)}`;
+                  navigator.clipboard.writeText(controlLink);
+                  setFeedback({
+                    type: 'success',
+                    message: 'Direct link wasit disalin.',
+                  });
+                } catch (error) {
+                  console.error('Failed to issue referee access token:', error);
+                  setFeedback({
+                    type: 'error',
+                    message: 'Gagal membuat direct link wasit.',
+                  });
+                }
+              }}
+            >
+              Salin Direct Wasit
             </Button>
             <Button
               type="button"
@@ -640,7 +840,10 @@ ${window.location.origin}/display/${shareMatch.displayCode}`;
                   setShareMatch(null);
                   setSharePin('');
                 } catch (error) {
-                  console.error('Failed to issue referee access token for WhatsApp:', error);
+                  console.error(
+                    'Failed to issue referee access token for WhatsApp:',
+                    error,
+                  );
                   setFeedback({
                     type: 'error',
                     message: 'Gagal membuat link direct wasit untuk WhatsApp.',

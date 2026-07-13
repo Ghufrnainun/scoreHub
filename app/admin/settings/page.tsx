@@ -569,7 +569,7 @@ Silakan masuk menggunakan kode di atas.`;
         <div className="text-sm text-muted-foreground space-y-2">
           <div className="flex justify-between border-b pb-2">
             <span>Versi</span>
-            <span className="font-mono">v1.0.0-beta</span>
+            <span className="font-mono">v1.1.0-beta</span>
           </div>
           <div className="flex justify-between border-b pb-2">
             <span>Lingkungan</span>

@@ -133,6 +133,24 @@ const TEMPLATE_DEFAULTS: Record<SportType, string> = {
 const DEFAULT_SPORT =
   (SPORTS.find((sport) => sport.available)?.id as SportType) || 'badminton';
 
+const EVENT_PRESETS_STORAGE_KEY = 'scorehub:event-presets:v1';
+
+type EventPreset = {
+  id: string;
+  name: string;
+  tournamentName: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeCountry: string;
+  awayCountry: string;
+  homeLogo: string;
+  awayLogo: string;
+  matchFormat: MatchFormat;
+  badmintonMaxPoints: number;
+  category: MatchCategory;
+  templateId: string;
+};
+
 export default function CreateMatchPage() {
   const router = useRouter();
   const createMatchMutation = useMutation(api.matches.createMatch);
@@ -192,11 +210,68 @@ export default function CreateMatchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldErrorKey, string>>>({});
+  const [eventPresets, setEventPresets] = useState<EventPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState('');
 
   useEffect(() => {
     const session = loadValidAdminSession();
     setAdminSessionToken(session?.token || '');
+    try {
+      const raw = window.localStorage.getItem(EVENT_PRESETS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as EventPreset[];
+        if (Array.isArray(parsed)) setEventPresets(parsed);
+      }
+    } catch {
+      setEventPresets([]);
+    }
   }, []);
+
+  const persistEventPresets = (nextPresets: EventPreset[]) => {
+    setEventPresets(nextPresets);
+    window.localStorage.setItem(EVENT_PRESETS_STORAGE_KEY, JSON.stringify(nextPresets));
+  };
+
+  const saveCurrentAsPreset = () => {
+    const name = tournamentName.trim() || `Preset ${eventPresets.length + 1}`;
+    const preset: EventPreset = {
+      id: `preset-${Date.now()}`,
+      name,
+      tournamentName: tournamentName.trim(),
+      homeTeam: homeTeam.trim(),
+      awayTeam: awayTeam.trim(),
+      homeCountry: homeCountry.trim(),
+      awayCountry: awayCountry.trim(),
+      homeLogo: homeLogo.trim(),
+      awayLogo: awayLogo.trim(),
+      matchFormat,
+      badmintonMaxPoints,
+      category,
+      templateId: selectedTemplate || TEMPLATE_DEFAULTS[selectedSport],
+    };
+    const nextPresets = [preset, ...eventPresets].slice(0, 12);
+    persistEventPresets(nextPresets);
+    setSelectedPresetId(preset.id);
+  };
+
+  const applyPreset = (presetId: string) => {
+    setSelectedPresetId(presetId);
+    const preset = eventPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+    setTournamentName(preset.tournamentName);
+    setHomeTeam(preset.homeTeam);
+    setAwayTeam(preset.awayTeam);
+    setHomeCountry(preset.homeCountry);
+    setAwayCountry(preset.awayCountry);
+    setHomeLogo(preset.homeLogo);
+    setAwayLogo(preset.awayLogo);
+    setMatchFormat(preset.matchFormat);
+    setBadmintonMaxPoints(preset.badmintonMaxPoints);
+    setCategory(preset.category);
+    setSelectedTemplate(preset.templateId);
+    setFieldErrors({});
+    setError('');
+  };
 
   const clearFieldError = (key: FieldErrorKey) => {
     setFieldErrors((prev) => {
@@ -494,10 +569,7 @@ export default function CreateMatchPage() {
   }; 
 
   return (
-    <div className="min-h-dvh bg-[#F8FAFC] text-[#111827] font-[family-name:var(--font-literata)] relative overflow-hidden transition-colors duration-300">
-      <div className="pointer-events-none absolute -top-40 right-[-10%] h-[480px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_70%)] blur-3xl opacity-50" />
-      <div className="pointer-events-none absolute bottom-[-120px] left-[-10%] h-[360px] w-[420px] rounded-full bg-[radial-gradient(circle_at_center,rgba(17,24,39,0.08),transparent_70%)] blur-3xl opacity-50" />
-
+    <div className="min-h-dvh bg-[#F4F6F8] text-[#111827] font-[family-name:var(--font-literata)] transition-colors duration-300">
       {/* Top Bar */}
       <header className="h-16 border-b border-black/10 bg-white/80 backdrop-blur px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -542,7 +614,7 @@ export default function CreateMatchPage() {
 
       <main
         id="main-content"
-        className="container mx-auto max-w-6xl p-4 lg:p-8"
+        className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8"
       >
         {/* Error Banner */}
         {error && (
@@ -568,56 +640,88 @@ export default function CreateMatchPage() {
           </div>
         )}
 
-        <section className="mb-8">
-          <div className="relative overflow-hidden rounded-[2rem] border border-black/10 bg-white p-6 shadow-sm lg:p-8">
-            <div className="relative">
-              <div className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
+        <section className="mb-6">
+          <div className="grid gap-5 rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.07)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:p-7">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.28em] text-black/45">
                 Match Builder
               </div>
-              <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h2 className="font-display text-4xl font-black tracking-tight text-foreground lg:text-5xl">
-                    Buat pertandingan baru
-                  </h2>
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Isi detail utama, tentukan format, lalu buat akses wasit. Display code bisa otomatis jika tidak perlu kode khusus.
-                  </p>
-                </div>
-                <div className="grid min-w-full grid-cols-3 gap-2 rounded-2xl border border-black/10 bg-[#F8FAFC] p-2 lg:min-w-[360px]">
-                  {['Detail', 'Pemain', 'Akses'].map((step, index) => (
-                    <div key={step} className="rounded-xl bg-white px-3 py-3 text-center shadow-sm">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-black/35">
-                        Step {index + 1}
-                      </div>
-                      <div className="mt-1 text-sm font-black text-black">
-                        {step}
-                      </div>
-                    </div>
-                  ))}
+              <h2 className="mt-2 font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+                Buat pertandingan baru
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-black/60">
+                Isi data pertandingan, pilih pemain, lalu buat akses wasit dan kode display.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-[#F4F6F8] p-1.5 text-center">
+              {['Detail', 'Pemain', 'Akses'].map((step, index) => (
+                <div key={step} className="rounded-xl px-3 py-2.5">
+                  <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-black text-[11px] font-black text-white">
+                    {index + 1}
                   </div>
-              </div>
+                  <div className="mt-1 text-xs font-black text-black">
+                    {step}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
           <div>
-            <div className="mb-6">
-              <div className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
-                Detail Pertandingan
+            <Card className="rounded-[1.75rem] border border-black/10 bg-white p-5 shadow-[0_18px_70px_rgba(15,23,42,0.08)] lg:p-7">
+              <div className="mb-6 flex flex-col gap-2 border-b border-black/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.28em] text-black/45">
+                    Detail Pertandingan
+                  </div>
+                  <h3 className="mt-2 font-[family-name:var(--font-bebas)] text-3xl uppercase tracking-wide text-black">
+                    Data utama
+                  </h3>
+                </div>
+                <p className="max-w-sm text-sm leading-6 text-black/55">
+                  Mulai dari nama event, format, tim, dan pemain.
+                </p>
               </div>
-              <h2 className="mt-2 text-4xl font-[family-name:var(--font-bebas)] text-black tracking-wide uppercase">
-                Data utama
-              </h2>
-              <p className="text-sm text-black/60 font-medium">
-                Mulai dari nama event, format, tim, dan pemain.
-              </p>
-            </div>
-
-            <Card className="rounded-[2rem] border border-black/10 bg-white p-6 shadow-[0_18px_70px_rgba(15,23,42,0.08)] lg:p-8">
               {isBadminton ? (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="mb-6 rounded-2xl border border-black/10 bg-[#FFFBEB] p-5">
+                  <div className="mb-5 rounded-2xl bg-[#F4F6F8] p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-xs font-black uppercase tracking-[0.2em] text-black/45">
+                          Preset event
+                        </div>
+                        <p className="mt-1 text-xs text-black/50">
+                          Simpan data event yang sering dipakai agar setup berikutnya lebih cepat.
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <select
+                          value={selectedPresetId}
+                          onChange={(event) => applyPreset(event.target.value)}
+                          className="h-11 min-w-[220px] rounded-xl border border-black/10 bg-white px-3 text-sm font-semibold text-black focus:outline-none focus:ring-2 focus:ring-black/10"
+                        >
+                          <option value="">Pilih preset</option>
+                          {eventPresets.map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.name}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={saveCurrentAsPreset}
+                          className="h-11 rounded-xl border-black/10 font-bold text-black hover:bg-black/5 hover:text-black"
+                        >
+                          Simpan Preset
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-5 rounded-2xl border border-[#D8B35D]/30 bg-[#FFF8E7] p-5">
                     <div className="flex items-center justify-between gap-2">
                       <label
                         htmlFor="tournament-name"
@@ -639,24 +743,24 @@ export default function CreateMatchPage() {
                         setTournamentName(event.target.value);
                         clearFieldError('tournamentName');
                       }}
-                      className="mt-2 h-11 rounded-xl border-black/10 bg-white/90 focus:border-black/30"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-white/95 text-base focus:border-black/30"
                     />
                     <p className={`mt-2 text-xs ${fieldErrors.tournamentName ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
                       {fieldErrors.tournamentName || 'Contoh: Kejurkot Jakarta 2026 atau Liga Internal Club.'}
                     </p>
                   </div>
-                  <div className="mb-6 rounded-2xl border border-black/10 bg-white p-4">
+                  <div className="mb-5 rounded-2xl bg-[#F4F6F8] p-4">
                     <div className="mb-3 text-xs font-black uppercase tracking-[0.2em] text-black/45">
                       Format dan skor
                     </div>
-                    <div className="flex flex-wrap gap-4 items-center">
+                    <div className="flex flex-wrap gap-3 items-center">
                     <div className="inline-flex gap-1 rounded-xl bg-black/5 p-1">
                       {(['perorangan', 'beregu'] as MatchFormat[]).map((format) => (
                         <button
                           key={format}
                           type="button"
                           onClick={() => setMatchFormat(format)}
-                          className={`py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
+                          className={`min-h-11 py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
                             matchFormat === format
                               ? 'bg-black text-white shadow-lg shadow-black/15'
                               : 'text-black/50 hover:text-black hover:bg-black/5'
@@ -674,7 +778,7 @@ export default function CreateMatchPage() {
                             key={points}
                             type="button"
                             onClick={() => setBadmintonMaxPoints(points)}
-                            className={`py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
+                            className={`min-h-11 py-2.5 px-5 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${
                               badmintonMaxPoints === points
                                 ? 'bg-black text-white shadow-lg shadow-black/15'
                                 : 'text-black/50 hover:text-black hover:bg-black/5'
@@ -688,64 +792,96 @@ export default function CreateMatchPage() {
                     </div>
                   </div>
 
-                  <div className="mb-8 grid grid-cols-1 gap-4 rounded-2xl border border-black/10 bg-[#F8FAFC] p-5 md:grid-cols-2">
-                    <div className="md:col-span-2 text-xs font-bold uppercase tracking-[0.2em] text-black/50">
-                      Informasi Tim (Ditampilkan di skor)
+                  <div className="mb-8 rounded-2xl bg-[#F4F6F8] p-5">
+                    <div className="text-xs font-bold uppercase tracking-[0.2em] text-black/50">
+                      Identitas di scoreboard
                     </div>
-                    <Input
-                      id="home-team"
-                      name="homeTeam"
-                      autoComplete="organization"
-                      placeholder="Nama Klub Tuan Rumah (misal, PB Jaya)"
-                      value={homeTeam}
-                      onChange={(e) => setHomeTeam(e.target.value)}
-                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
-                    />
-                    <Input
-                      id="away-team"
-                      name="awayTeam"
-                      autoComplete="organization"
-                      placeholder="Nama Klub Tamu (misal, PB Maju)"
-                      value={awayTeam}
-                      onChange={(e) => setAwayTeam(e.target.value)}
-                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
-                    />
-                    <Input
-                      id="home-country"
-                      name="homeCountry"
-                      autoComplete="off"
-                      placeholder="Negara Home (misal, ID)"
-                      value={homeCountry}
-                      onChange={(e) => setHomeCountry(e.target.value)}
-                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
-                    />
-                    <Input
-                      id="away-country"
-                      name="awayCountry"
-                      autoComplete="off"
-                      placeholder="Negara Away (misal, TH)"
-                      value={awayCountry}
-                      onChange={(e) => setAwayCountry(e.target.value)}
-                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
-                    />
-                    <Input
-                      id="home-logo"
-                      name="homeLogo"
-                      autoComplete="off"
-                      placeholder="URL Logo Home (opsional)"
-                      value={homeLogo}
-                      onChange={(e) => setHomeLogo(e.target.value)}
-                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
-                    />
-                    <Input
-                      id="away-logo"
-                      name="awayLogo"
-                      autoComplete="off"
-                      placeholder="URL Logo Away (opsional)"
-                      value={awayLogo}
-                      onChange={(e) => setAwayLogo(e.target.value)}
-                      className="h-10 text-xs bg-white border-black/10 focus:border-black/30 rounded-lg"
-                    />
+                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label htmlFor="home-team" className="text-xs font-bold uppercase tracking-widest text-black/45">
+                          Nama klub tuan rumah
+                        </label>
+                        <Input
+                          id="home-team"
+                          name="homeTeam"
+                          autoComplete="organization"
+                          placeholder="Contoh: PB Jaya"
+                          value={homeTeam}
+                          onChange={(e) => setHomeTeam(e.target.value)}
+                          className="h-11 rounded-xl border-black/10 bg-white focus:border-black/30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="away-team" className="text-xs font-bold uppercase tracking-widest text-black/45">
+                          Nama klub tamu
+                        </label>
+                        <Input
+                          id="away-team"
+                          name="awayTeam"
+                          autoComplete="organization"
+                          placeholder="Contoh: PB Maju"
+                          value={awayTeam}
+                          onChange={(e) => setAwayTeam(e.target.value)}
+                          className="h-11 rounded-xl border-black/10 bg-white focus:border-black/30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="home-country" className="text-xs font-bold uppercase tracking-widest text-black/45">
+                          Kode negara tuan rumah
+                        </label>
+                        <Input
+                          id="home-country"
+                          name="homeCountry"
+                          autoComplete="off"
+                          placeholder="Contoh: ID"
+                          value={homeCountry}
+                          onChange={(e) => setHomeCountry(e.target.value)}
+                          className="h-11 rounded-xl border-black/10 bg-white focus:border-black/30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="away-country" className="text-xs font-bold uppercase tracking-widest text-black/45">
+                          Kode negara tamu
+                        </label>
+                        <Input
+                          id="away-country"
+                          name="awayCountry"
+                          autoComplete="off"
+                          placeholder="Contoh: TH"
+                          value={awayCountry}
+                          onChange={(e) => setAwayCountry(e.target.value)}
+                          className="h-11 rounded-xl border-black/10 bg-white focus:border-black/30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="home-logo" className="text-xs font-bold uppercase tracking-widest text-black/45">
+                          URL logo tuan rumah
+                        </label>
+                        <Input
+                          id="home-logo"
+                          name="homeLogo"
+                          autoComplete="off"
+                          placeholder="Opsional"
+                          value={homeLogo}
+                          onChange={(e) => setHomeLogo(e.target.value)}
+                          className="h-11 rounded-xl border-black/10 bg-white focus:border-black/30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="away-logo" className="text-xs font-bold uppercase tracking-widest text-black/45">
+                          URL logo tamu
+                        </label>
+                        <Input
+                          id="away-logo"
+                          name="awayLogo"
+                          autoComplete="off"
+                          placeholder="Opsional"
+                          value={awayLogo}
+                          onChange={(e) => setAwayLogo(e.target.value)}
+                          className="h-11 rounded-xl border-black/10 bg-white focus:border-black/30"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {matchFormat === 'perorangan' ? (
@@ -1175,22 +1311,22 @@ export default function CreateMatchPage() {
                   </div>
                   )}
 
-                  <div className="mt-8 rounded-3xl border border-black/10 bg-[#F8FAFC] p-5 lg:p-6">
+                  <div className="mt-8 rounded-3xl bg-[#F4F6F8] p-5 lg:p-6">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="text-xs font-bold uppercase tracking-[0.3em] text-black/50">
                           Akses Wasit & Umpire
                         </div>
-                        <p className="mt-1 text-sm text-black/60">
-                          Link kontrol akan mengarah langsung ke control panel wasit.
+                        <p className="mt-1 text-sm leading-6 text-black/60">
+                          Buat PIN wasit dan atur kode display. Kode bisa otomatis jika tidak perlu kode khusus.
                         </p>
                       </div>
                       <span className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-black/50">
-                        Direct control
+                        Akses langsung
                       </span>
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 xl:gap-8">
+                    <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3 xl:gap-6">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <label
@@ -1242,7 +1378,7 @@ export default function CreateMatchPage() {
                           }`}
                         />
                         <p className={`text-xs ${fieldErrors.displayCode ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
-                          {fieldErrors.displayCode || `Kosongkan untuk generate otomatis. Saat ini: ${manualDisplayCode.length}/6`}
+                          {fieldErrors.displayCode || `Kosongkan untuk kode otomatis. Terisi ${manualDisplayCode.length}/6 karakter.`}
                         </p>
                       </div>
                       <div className="space-y-2">
@@ -1277,31 +1413,13 @@ export default function CreateMatchPage() {
                           }}
                         />
                         <p className={`text-xs ${fieldErrors.createPin ? 'text-red-600 font-semibold' : 'text-black/45'}`}>
-                          {fieldErrors.createPin || `PIN 4-6 digit. Saat ini: ${createPin.length} digit`}
+                          {fieldErrors.createPin || `Gunakan 4-6 digit. Terisi ${createPin.length} digit.`}
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-black/10 bg-white/90 p-4 text-xs text-black/60">
-                        <div className="font-bold uppercase tracking-widest text-black/50">
-                          Yang wajib diisi
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-black px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-white">
-                            Turnamen
-                          </span>
-                          <span className="rounded-full border border-black/20 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-black/60"> 
-                            Kode Tampilan (Opsional) 
-                          </span> 
-                          <span className="rounded-full bg-black px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-white">
-                            PIN Wasit
-                          </span>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-dashed border-black/15 bg-black/[0.02] p-4 text-xs text-black/55">
-                        Setelah dibuat, klik link kontrol wasit untuk masuk tanpa input ulang.
-                      </div>
+                    <div className="mt-6 rounded-2xl border border-dashed border-black/15 bg-white/70 p-4 text-xs leading-6 text-black/55">
+                      Setelah dibuat, sistem menampilkan link kontrol wasit dan link display yang siap dibagikan.
                     </div>
                   </div>
 
@@ -1469,36 +1587,52 @@ export default function CreateMatchPage() {
             </Card>
           </div>
 
-          <aside className="rounded-[2rem] border border-black/10 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+          <aside className="rounded-[1.75rem] border border-black/10 bg-white p-5 text-black shadow-[0_18px_60px_rgba(15,23,42,0.08)] lg:sticky lg:top-24">
             <div className="text-xs font-black uppercase tracking-[0.24em] text-black/40">
-              Ringkasan
+              Ringkasan Setup
             </div>
-            <div className="mt-4 space-y-4 text-sm">
+            <div className="mt-5 space-y-5 text-sm">
               <div>
                 <div className="text-xs font-bold uppercase tracking-widest text-black/35">Turnamen</div>
-                <div className="mt-1 font-bold text-black">{tournamentName || 'Belum diisi'}</div>
+                <div className="mt-1 text-base font-bold text-black">{tournamentName || 'Belum diisi'}</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-[#F8FAFC] p-3">
+                <div className="rounded-2xl bg-[#F4F6F8] p-3">
                   <div className="text-xs font-bold uppercase tracking-widest text-black/35">Format</div>
                   <div className="mt-1 font-black capitalize">{matchFormat}</div>
                 </div>
-                <div className="rounded-2xl bg-[#F8FAFC] p-3">
+                <div className="rounded-2xl bg-[#F4F6F8] p-3">
                   <div className="text-xs font-bold uppercase tracking-widest text-black/35">Skor</div>
                   <div className="mt-1 font-black">{badmintonMaxPoints}</div>
                 </div>
               </div>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-widest text-black/35">Kode Display</div>
-                <div className="mt-1 font-mono font-black tracking-widest">{manualDisplayCode || 'OTOMATIS'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-widest text-black/35">PIN Wasit</div>
-                <div className="mt-1 font-mono font-black tracking-widest">{createPin ? `${createPin.length} digit` : 'Belum diisi'}</div>
+              <div className="grid gap-3">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-black/35">Kode Display</div>
+                  <div className="mt-1 font-mono font-black tracking-widest">{manualDisplayCode || 'OTOMATIS'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-black/35">PIN Wasit</div>
+                  <div className="mt-1 font-mono font-black tracking-widest">{createPin ? `${createPin.length} digit` : 'Belum diisi'}</div>
+                </div>
               </div>
             </div>
-            <div className="mt-5 rounded-2xl border border-dashed border-black/15 bg-[#F8FAFC] p-4 text-xs leading-relaxed text-black/55">
-              Yang wajib: nama turnamen, pemain atau roster sesuai format, dan PIN wasit.
+            <div className="mt-6 space-y-3 rounded-2xl border border-black/10 bg-[#F4F6F8] p-4 text-xs leading-6 text-black/55">
+              <div className="font-bold uppercase tracking-widest text-black/40">
+                Wajib sebelum mulai
+              </div>
+              <div className="space-y-2">
+                {([
+                  ['Nama turnamen', Boolean(tournamentName.trim())],
+                  ['Pemain atau roster', matchFormat === 'perorangan' ? Boolean(homePlayers[0].trim() && awayPlayers[0].trim()) : Boolean(cleanHomeRosterOptions.length && cleanAwayRosterOptions.length)],
+                  ['PIN wasit', createPin.length >= 4],
+                ] as Array<[string, boolean]>).map(([label, done]) => (
+                  <div key={label} className="flex items-center justify-between gap-3">
+                    <span>{label}</span>
+                    <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-[#D8B35D]' : 'bg-black/20'}`} />
+                  </div>
+                ))}
+              </div>
             </div>
           </aside>
         </section>

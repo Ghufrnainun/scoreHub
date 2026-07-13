@@ -225,15 +225,15 @@ export default function BwfScoreboard() {
           </div>
 
           <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button
-              onClick={toggleFullscreen}
-              className="px-5 py-2 text-xs font-black uppercase tracking-widest text-black bg-[#fbbf24] rounded-full hover:bg-[#fcd34d] shadow-lg active:scale-95 transition-[transform,background-color,box-shadow]"
-              aria-label={
-                isFullscreen ? 'Keluar dari layar penuh' : 'Masuk layar penuh'
-              }
-            >
-              {isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
-            </button>
+            {!isFullscreen && (
+              <button
+                onClick={toggleFullscreen}
+                className="px-5 py-2 text-xs font-black uppercase tracking-widest text-black bg-[#fbbf24] rounded-full hover:bg-[#fcd34d] shadow-lg active:scale-95 transition-[transform,background-color,box-shadow]"
+                aria-label="Masuk layar penuh"
+              >
+                Layar Penuh
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -290,23 +290,19 @@ export default function BwfScoreboard() {
               </span>
               <span>{CATEGORY_NAMES[match.category || 'MS']}</span>
             </div>
-            <div className="w-px h-3 bg-white/10"></div>
-            <span>{displaySettings.courtName}</span>
           </div>
           
         </div>
       )}
 
-      {!isOverlay && (
+      {!isOverlay && !isFullscreen && (
         <button
           type="button"
           onClick={toggleFullscreen}
           className="absolute bottom-12 right-4 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest text-black bg-[#fbbf24] hover:bg-[#fcd34d] shadow-lg transition-[transform,background-color] active:scale-95"
-          aria-label={
-            isFullscreen ? 'Keluar dari layar penuh' : 'Masuk layar penuh'
-          }
+          aria-label="Masuk layar penuh"
         >
-          {isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+          Fullscreen
         </button>
       )}
     </div>

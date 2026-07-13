@@ -3,75 +3,75 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Panduan Lengkap | ScoreHub',
+  title: 'Panduan Operasional | ScoreHub',
   description:
-    'Panduan lengkap penggunaan ScoreHub: setup pertandingan, kontrol wasit, tampilan display, troubleshooting, dan FAQ.',
+    'Panduan operasional ScoreHub untuk menyiapkan match, mengatur akses wasit, menayangkan skor, dan menangani masalah umum di venue.',
 };
 
 const quickStats = [
-  { label: 'Latensi Update', value: '< 1 detik' },
-  { label: 'Undo Aman', value: 'Sampai 50 aksi' },
-  { label: 'Mode Jaringan', value: 'LAN / WiFi Lokal' },
+  { label: 'Update Skor', value: '< 1 detik' },
+  { label: 'Riwayat Undo', value: '50 aksi' },
+  { label: 'Koneksi Venue', value: 'LAN / WiFi' },
 ];
 
 const quickStartSteps = [
   {
-    title: 'Buka Pusat Kontrol',
+    title: 'Masuk ke admin',
     description:
-      'Masuk ke halaman Match Builder untuk membuat pertandingan baru dan menyiapkan kebutuhan layar.',
-    action: 'Buka /create',
+      'Buka dashboard admin dengan PIN admin. Dari sana kamu bisa membuat match baru atau membuka match aktif.',
+    action: 'Buka /admin',
   },
   {
-    title: 'Isi Data Pertandingan',
+    title: 'Buat dan lengkapi match',
     description:
-      'Pilih olahraga, kategori (MS/WS/MD/WD/XD), nama pemain atau tim, lalu atur PIN wasit minimal 4 digit.',
+      'Isi nama turnamen, format pertandingan, pemain atau roster, template display, kode tampilan, dan PIN wasit.',
     action: 'Klik Buat Pertandingan',
   },
   {
-    title: 'Bagikan Akses Wasit',
+    title: 'Bagikan akses petugas',
     description:
-      'Bagikan kode pertandingan dan PIN wasit. Wasit masuk lewat halaman join agar bisa input rally secara realtime.',
-    action: 'Buka /referee/join',
+      'Salin link kontrol wasit atau kirim kode tampilan + PIN. Simpan PIN di kanal internal panitia.',
+    action: 'Pakai Share Center',
   },
   {
-    title: 'Tampilkan ke Penonton',
+    title: 'Tayangkan ke layar venue',
     description:
-      'Buka halaman display di TV/videotron dengan kode pertandingan. Halaman display bersifat read-only.',
-    action: 'Buka /display/[code]',
+      'Buka link display atau masukkan 6 karakter kode tampilan di portal display. Layar ini read-only.',
+    action: 'Buka /display',
   },
 ];
 
 const roleGuides = [
   {
     role: 'Admin / Operator',
-    objective: 'Membuat match, menyiapkan layar, dan menjaga kelancaran pertandingan.',
+    objective: 'Menyiapkan match, layar utama, dan akses petugas sebelum pertandingan dimulai.',
     tasks: [
-      'Buat match dari Pusat Kontrol dan simpan PIN wasit.',
-      'Pilih template display sesuai venue (modern/classic/minimal/neon).',
-      'Pastikan layar display aktif sebelum pertandingan dimulai.',
-      'Bantu wasit kalau perlu reset atau perbaikan alur.',
+      'Login ke dashboard admin, lalu buat match dari tombol Buat Pertandingan.',
+      'Pilih template display yang paling terbaca untuk jarak penonton.',
+      'Catat Kode Tampilan untuk layar dan halaman join wasit.',
+      'Bagikan link kontrol wasit dari dialog sukses atau Share Center.',
     ],
-    cta: { href: '/create', label: 'Ke Pusat Kontrol' },
+    cta: { href: '/admin', label: 'Ke Dashboard Admin' },
   },
   {
     role: 'Wasit',
-    objective: 'Mengontrol rally dengan input cepat dan minim kesalahan.',
+    objective: 'Menginput reli dengan cepat tanpa menghitung skor manual.',
     tasks: [
-      'Masuk dengan kode match + PIN wasit.',
-      'Tap pemenang rally (Home/Away), bukan input angka manual.',
-      'Gunakan Undo jika terjadi salah input.',
-      'Kelola timer jika dipakai dalam format pertandingan.',
+      'Masuk lewat link kontrol wasit, atau isi Kode Tampilan dan PIN di halaman join.',
+      'Tap tim yang memenangkan reli: Home atau Away.',
+      'Cek indikator servis setelah poin masuk.',
+      'Gunakan Undo segera kalau terjadi salah tap; aksi berisiko akan meminta konfirmasi.',
     ],
     cta: { href: '/referee/join', label: 'Masuk Sebagai Wasit' },
   },
   {
     role: 'Display / Penonton',
-    objective: 'Menampilkan skor realtime tanpa kontrol input.',
+    objective: 'Menampilkan skor realtime di layar besar tanpa membuka akses kontrol.',
     tasks: [
-      'Buka halaman display dengan kode pertandingan.',
-      'Aktifkan fullscreen pada TV/videotron.',
-      'Jaga koneksi jaringan agar update tetap stabil.',
-      'Display tidak membutuhkan PIN dan tidak bisa mengubah skor.',
+      'Buka link display atau masukkan Kode Tampilan di portal display.',
+      'Aktifkan fullscreen browser di TV atau videotron.',
+      'Pastikan perangkat tetap tersambung ke jaringan venue.',
+      'Biarkan halaman display terbuka sampai match selesai.',
     ],
     cta: { href: '/', label: 'Kembali ke Beranda' },
   },
@@ -81,25 +81,25 @@ const matchFlow = [
   {
     phase: 'Pra-Match',
     points: [
-      'Verifikasi nama pemain/tim dan kategori pertandingan.',
-      'Cek PIN wasit sudah aman dan tidak dibagikan ke penonton.',
-      'Uji display di layar utama sebelum game pertama dimulai.',
+      'Cek ulang nama pemain atau tim sebelum match dibuat.',
+      'Pastikan Kode Tampilan dan PIN wasit hanya diterima petugas yang bertugas.',
+      'Buka display lebih awal dan pastikan match yang tampil sesuai lapangan.',
     ],
   },
   {
     phase: 'Saat Match Berjalan',
     points: [
-      'Input berdasarkan pemenang rally agar serve dan set tetap sinkron.',
-      'Pantau indikator serve untuk memastikan alur rally tepat.',
-      'Gunakan Undo segera setelah salah input agar history tetap rapi.',
+      'Input berdasarkan pemenang reli agar skor, set, dan servis tetap sinkron.',
+      'Pantau indikator servis setelah reli penting atau setelah Undo.',
+      'Koreksi salah input secepat mungkin agar riwayat tetap mudah diaudit.',
     ],
   },
   {
     phase: 'Akhir Match',
     points: [
-      'Pastikan skor akhir sesuai hasil lapangan.',
-      'Simpan kode match jika butuh referensi hasil.',
-      'Siapkan match berikutnya dari Pusat Kontrol untuk percepat transisi.',
+      'Cocokkan skor akhir dengan hasil lapangan sebelum layar ditutup.',
+      'Simpan Match ID atau Kode Tampilan kalau hasil perlu dicek ulang.',
+      'Siapkan match berikutnya dari dashboard admin agar transisi lapangan cepat.',
     ],
   },
 ];
@@ -107,38 +107,42 @@ const matchFlow = [
 const troubleshooting = [
   {
     issue: 'Skor di display tidak berubah',
-    fix: 'Cek apakah wasit masuk ke kode match yang benar dan pastikan perangkat wasit + display berada di jaringan yang sama.',
+    fix: 'Pastikan wasit dan layar membuka pertandingan yang sama. Cocokkan Kode Tampilan di dashboard, halaman join, dan display.',
   },
   {
     issue: 'Wasit gagal masuk',
-    fix: 'Validasi kode pertandingan dan PIN. PIN bersifat case-sensitive angka, pastikan tidak ada salah ketik.',
+    fix: 'Periksa ulang Kode Tampilan dan PIN. Ketik manual bila hasil salin-tempel membawa spasi atau karakter tambahan.',
   },
   {
     issue: 'Input poin salah',
-    fix: 'Gunakan tombol Undo secepatnya untuk membatalkan aksi terakhir (hingga 50 riwayat).',
+    fix: 'Tekan Undo segera. ScoreHub menyimpan hingga 50 aksi terakhir untuk koreksi cepat.',
   },
   {
     issue: 'Tampilan TV kurang optimal',
-    fix: 'Gunakan mode fullscreen browser dan nonaktifkan overlay atau sleep mode pada perangkat display.',
+    fix: 'Aktifkan fullscreen browser, naikkan brightness layar, dan matikan sleep mode selama pertandingan berjalan.',
   },
 ];
 
 const faqs = [
   {
     q: 'Apakah ScoreHub bisa dipakai tanpa internet?',
-    a: 'Bisa. Untuk event lokal, cukup gunakan LAN atau WiFi lokal selama perangkat saling terhubung.',
+    a: 'Bisa untuk kebutuhan venue lokal selama perangkat kontrol dan display saling terhubung melalui LAN atau WiFi yang sama.',
   },
   {
     q: 'Siapa yang boleh mengubah skor?',
-    a: 'Hanya Admin dan Wasit. Halaman display bersifat read-only.',
+    a: 'Admin dan Wasit. Halaman display bersifat read-only, jadi aman dibuka di layar penonton.',
   },
   {
-    q: 'Apakah pergantian set dan akhir match otomatis?',
-    a: 'Ya. Badminton mengikuti rule bawaan: 21 poin, win by 2, cap 30, best of 3.',
+    q: 'Apa bedanya Match ID dan Kode Tampilan?',
+    a: 'Match ID dipakai sistem untuk kontrol internal. Kode Tampilan adalah 6 karakter yang dibagikan ke wasit dan layar display.',
   },
   {
-    q: 'Kalau koneksi sempat putus, apakah state hilang?',
-    a: 'Tidak. State pertandingan disimpan persistent dan akan tersinkron kembali saat koneksi pulih.',
+    q: 'Apakah pergantian set otomatis?',
+    a: 'Ya. Untuk badminton, ScoreHub mengikuti aturan 21 poin, win by 2, cap 30, dan best of 3.',
+  },
+  {
+    q: 'Kalau koneksi putus sebentar, apakah skor hilang?',
+    a: 'Tidak. State match disimpan dan akan tersinkron lagi saat perangkat kembali terhubung.',
   },
 ];
 
@@ -193,14 +197,14 @@ export default function GuidePage() {
                 Scorehub
               </p>
               <span className="text-xs font-bold uppercase tracking-[0.22em] text-black/50">
-                Complete Guide
+                Panduan Venue
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Link
-              href="/create"
+              href="/admin"
               className="hidden rounded-full border border-black/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-black/70 transition-colors hover:border-black/40 hover:text-black sm:inline-flex"
             >
               Pusat Kontrol
@@ -223,10 +227,10 @@ export default function GuidePage() {
             </p>
             <h1 className="mt-6 font-[family-name:var(--font-bebas)] text-6xl uppercase leading-[0.88] tracking-[0.06em] text-balance text-black md:text-7xl">
               ScoreHub <br />
-              End-to-End Guide
+              Panduan Lapangan
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-black/65 md:text-lg">
-              Halaman ini jadi pusat panduan operasional ScoreHub: dari setup match, alur wasit, sampai troubleshooting cepat saat event sedang berjalan.
+              Satu halaman untuk menjalankan ScoreHub di venue: siapkan match, hubungkan wasit, tayangkan skor, lalu tangani masalah umum tanpa mengganggu ritme pertandingan.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -240,20 +244,20 @@ export default function GuidePage() {
                 href="#troubleshooting"
                 className="inline-flex items-center rounded-full border border-black/15 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.24em] text-black/70 transition-colors hover:border-black/40 hover:text-black"
               >
-                Lihat Solusi Cepat
+                Solusi Saat Live
               </a>
             </div>
           </div>
 
           <aside className="rounded-3xl border border-black/10 bg-white/90 p-5 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-black/50">Navigasi Cepat</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-black/50">Langsung ke bagian</h2>
             <div className="mt-4 grid gap-2 text-sm">
               {[
-                { href: '#quick-start', label: 'Quick Start 2 Menit' },
-                { href: '#role-guide', label: 'Panduan per Role' },
+                { href: '#quick-start', label: 'Mulai dalam 2 Menit' },
+                { href: '#role-guide', label: 'Panduan per Peran' },
                 { href: '#flow-guide', label: 'Alur Pertandingan' },
-                { href: '#troubleshooting', label: 'Troubleshooting' },
-                { href: '#faq', label: 'FAQ' },
+                { href: '#troubleshooting', label: 'Solusi Cepat' },
+                { href: '#faq', label: 'Pertanyaan Umum' },
               ].map((item) => (
                 <a
                   key={item.href}
@@ -280,8 +284,8 @@ export default function GuidePage() {
           <SectionTitle
             id="quick-start-title"
             kicker="2 Menit"
-            title="Quick Start"
-            description="Ikuti urutan ini untuk jalankan pertandingan pertama dengan cepat dan aman."
+            title="Mulai Cepat"
+            description="Pakai urutan ini saat setup match pertama atau saat venue butuh transisi cepat."
           />
           <div className="grid gap-4 md:grid-cols-2">
             {quickStartSteps.map((step, index) => (
@@ -304,9 +308,9 @@ export default function GuidePage() {
         <section className="mt-16 space-y-8" id="role-guide">
           <SectionTitle
             id="role-guide-title"
-            kicker="Role Based"
+            kicker="Tim Lapangan"
             title="Panduan per Peran"
-            description="Beda role, beda fokus. Pakai checklist di bawah sesuai peran tim event kamu."
+            description="Setiap petugas punya fokus berbeda. Bagikan bagian ini agar semua orang tahu apa yang perlu dijaga."
           />
 
           <div className="grid gap-5 lg:grid-cols-3">
@@ -338,9 +342,9 @@ export default function GuidePage() {
         <section className="mt-16 space-y-8" id="flow-guide">
           <SectionTitle
             id="flow-guide-title"
-            kicker="Match Operations"
+            kicker="Operasional Match"
             title="Alur Pertandingan"
-            description="Ritme operasional dari sebelum match, saat match, sampai penutupan."
+            description="Ritme kerja dari sebelum match, saat skor berjalan, sampai hasil akhir dikunci."
           />
 
           <div className="space-y-4">
@@ -363,9 +367,9 @@ export default function GuidePage() {
         <section className="mt-16 space-y-8" id="troubleshooting">
           <SectionTitle
             id="troubleshooting-title"
-            kicker="When Things Go Wrong"
-            title="Troubleshooting Cepat"
-            description="Masalah umum di venue dan solusi singkat yang bisa langsung dipraktikkan."
+            kicker="Saat Live"
+            title="Solusi Cepat"
+            description="Masalah yang paling sering muncul di venue, plus tindakan pertama yang bisa langsung dicoba."
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -382,8 +386,8 @@ export default function GuidePage() {
           <SectionTitle
             id="faq-title"
             kicker="FAQ"
-            title="Pertanyaan yang Sering Muncul"
-            description="Jawaban ringkas untuk pertanyaan operasional paling umum."
+            title="Pertanyaan Umum"
+            description="Jawaban singkat untuk hal yang biasanya ditanyakan operator, wasit, dan panitia."
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -397,16 +401,16 @@ export default function GuidePage() {
         </section>
 
         <section className="mt-16 rounded-3xl border border-black/10 bg-black p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.16)] md:p-10">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/60">Siap Operasional</p>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/60">Siap Dipakai</p>
           <h2 className="mt-3 font-[family-name:var(--font-bebas)] text-4xl uppercase tracking-[0.06em] md:text-5xl">
-            Jalankan Match Pertama Kamu
+            Buat Match Pertama
           </h2>
           <p className="mt-3 max-w-2xl text-sm text-white/70 md:text-base">
-            Kalau kamu baru mulai, langsung ke Pusat Kontrol. Kalau tim butuh pemahaman cepat, share halaman guide ini ke operator dan wasit.
+            Mulai dari dashboard admin untuk membuat match. Bagikan halaman ini ke operator dan wasit agar semua petugas memakai alur yang sama.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              href="/create"
+              href="/admin"
               className="inline-flex rounded-full bg-[#F59E0B] px-6 py-3 text-[11px] font-bold uppercase tracking-[0.24em] text-black transition-transform hover:-translate-y-0.5"
             >
               Buka Pusat Kontrol

@@ -375,8 +375,6 @@ const renderLegacyPage = (matchId: string) => {
           <span class="footer-bold" id="footerCatCode">MS</span>
           <span id="footerCatName">TUNGGAL PUTRA</span>
         </div>
-        <div class="footer-divider"></div>
-        <span id="footerCourtName">LAPANGAN 1</span>
       </div>
       <span class="conn-error" id="errorStatusEl"></span>
     </div>
@@ -556,10 +554,6 @@ const renderLegacyPage = (matchId: string) => {
         setText('footerCatCode', catCode);
         setText('footerCatName', catName.toUpperCase());
         
-        var conf = data.displayConfig || {};
-        var court = conf.courtName || 'LAPANGAN 1';
-        setText('footerCourtName', court.toUpperCase());
-        
         setText('errorStatusEl', '');
       }
 
@@ -618,6 +612,17 @@ const renderLegacyPage = (matchId: string) => {
             console.error('Fullscreen failed', e);
           }
         };
+
+        function updateFsBtnVisibility() {
+          var doc = window.document;
+          var isFs = doc.fullscreenElement || doc.mozFullScreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement;
+          fsBtn.style.display = isFs ? 'none' : 'block';
+        }
+        document.addEventListener('fullscreenchange', updateFsBtnVisibility);
+        document.addEventListener('webkitfullscreenchange', updateFsBtnVisibility);
+        document.addEventListener('mozfullscreenchange', updateFsBtnVisibility);
+        document.addEventListener('MSFullscreenChange', updateFsBtnVisibility);
+        updateFsBtnVisibility();
       }
 
       fetchMatch();

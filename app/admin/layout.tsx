@@ -382,7 +382,7 @@ export default function AdminLayout({
               </div>
             )}
             <div className="text-xs font-mono text-black/60 bg-black/5 px-2 py-1 rounded">
-              v1.0-beta
+              v1.1.0-beta
             </div>
           </div>
         </header>
