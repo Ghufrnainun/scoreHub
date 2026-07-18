@@ -222,6 +222,12 @@ export default defineSchema({
   pb_registrations: defineTable({
     fullName: v.string(), dob: v.string(), gender: v.union(v.literal('putra'), v.literal('putri')),
     club: v.string(), kabupaten: v.string(), whatsapp: v.string(), email: v.optional(v.string()),
+    provinceCode: v.optional(v.string()), provinceName: v.optional(v.string()),
+    regencyCode: v.optional(v.string()), regencyName: v.optional(v.string()),
+    districtCode: v.optional(v.string()), districtName: v.optional(v.string()),
+    villageCode: v.optional(v.string()), villageName: v.optional(v.string()),
+    postalCode: v.optional(v.string()), addressDetail: v.optional(v.string()),
+    finalizedAt: v.optional(v.number()),
     category: v.union(v.literal('anak'), v.literal('taruna'), v.literal('dewasa')),
     status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi'), v.literal('ditolak')),
     reviewNote: v.optional(v.string()), createdAt: v.number(), updatedAt: v.number(),
