@@ -106,6 +106,25 @@ Atur CORS bucket untuk `PUT` dari origin aplikasi, header `Content-Type`, dan or
 
 Atur R2 lifecycle cleanup prefix `pb/` sesuai retensi organisasi (contoh 90 hari). Lifecycle berdasar umur object; hapus per-status perlu job admin terpisah.
 
+## Data wilayah lokal
+
+Dropdown alamat membaca tabel Convex `regions`, bukan API eksternal. Buat file impor dari snapshot dataset yang dipin:
+
+```bash
+python3 scripts/build-regions-import.py
+npx convex dev --once
+npx convex import --table regions --replace scripts/generated/regions.jsonl
+```
+
+Untuk produksi:
+
+```bash
+npx convex deploy
+npx convex import --prod --table regions --replace scripts/generated/regions.jsonl
+```
+
+`--replace` hanya mengganti tabel `regions`. Review SHA dataset di script sebelum update.
+
 ### 1. Build Next.js
 
 Lakukan audit tipe data (_TypeScript check_) dan kompilasi bundle produksi:

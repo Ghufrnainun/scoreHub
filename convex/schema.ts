@@ -235,4 +235,12 @@ export default defineSchema({
     registrationId: v.id('pb_registrations'), status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi'), v.literal('ditolak')),
     note: v.optional(v.string()), createdAt: v.number(),
   }).index('by_registration', ['registrationId']),
+  regions: defineTable({
+    code: v.string(),
+    parentCode: v.optional(v.string()),
+    level: v.union(v.literal('province'), v.literal('regency'), v.literal('district'), v.literal('village')),
+    name: v.string(),
+    postalCode: v.optional(v.string()),
+    sourceVersion: v.string(),
+  }).index('by_code', ['code']).index('by_parent_name', ['parentCode', 'name']),
 });
