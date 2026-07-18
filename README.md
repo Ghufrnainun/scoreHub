@@ -91,6 +91,21 @@ Buka browser Anda di `http://localhost:3000`.
 
 ## 📦 Panduan Build & Deploy Produksi
 
+## Pendaftaran PB: R2 privat
+
+Dokumen tersimpan hanya pada bucket Cloudflare R2 privat. Set env berikut pada Convex; jangan commit nilai rahasia:
+
+```text
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+```
+
+Atur CORS bucket untuk `PUT` dari origin aplikasi, header `Content-Type`, dan origin produksi/lokal diperlukan. Jangan aktifkan public bucket atau public domain. Signed upload/download berlaku 5 menit; download hanya master admin.
+
+Atur R2 lifecycle cleanup prefix `pb/` sesuai retensi organisasi (contoh 90 hari). Lifecycle berdasar umur object; hapus per-status perlu job admin terpisah.
+
 ### 1. Build Next.js
 
 Lakukan audit tipe data (_TypeScript check_) dan kompilasi bundle produksi:

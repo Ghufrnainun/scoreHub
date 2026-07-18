@@ -218,4 +218,21 @@ export default defineSchema({
     key: v.string(), // e.g. "global_config" (singleton for now)
     value: v.any(),
   }).index('by_key', ['key']),
+
+  pb_registrations: defineTable({
+    fullName: v.string(), dob: v.string(), gender: v.union(v.literal('putra'), v.literal('putri')),
+    club: v.string(), kabupaten: v.string(), whatsapp: v.string(), email: v.optional(v.string()),
+    category: v.union(v.literal('anak'), v.literal('taruna'), v.literal('dewasa')),
+    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi'), v.literal('ditolak')),
+    reviewNote: v.optional(v.string()), createdAt: v.number(), updatedAt: v.number(),
+  }).index('by_status', ['status']).index('by_category', ['category']).index('by_kabupaten', ['kabupaten']),
+  pb_registration_files: defineTable({
+    registrationId: v.id('pb_registrations'), category: v.union(v.literal('anak'), v.literal('taruna'), v.literal('dewasa')),
+    docType: v.union(v.literal('foto_profil'), v.literal('dokumen_identitas')), objectKey: v.string(), filename: v.string(),
+    contentType: v.string(), size: v.number(), createdAt: v.number(),
+  }).index('by_registration', ['registrationId']),
+  pb_registration_history: defineTable({
+    registrationId: v.id('pb_registrations'), status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi'), v.literal('ditolak')),
+    note: v.optional(v.string()), createdAt: v.number(),
+  }).index('by_registration', ['registrationId']),
 });

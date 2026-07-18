@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as matches from "../matches.js";
 import type * as media from "../media.js";
+import type * as pbRegistration from "../pbRegistration.js";
 import type * as settings from "../settings.js";
 import type * as sports_badminton from "../sports/badminton.js";
 import type * as sports_basketball from "../sports/basketball.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   matches: typeof matches;
   media: typeof media;
+  pbRegistration: typeof pbRegistration;
   settings: typeof settings;
   "sports/badminton": typeof sports_badminton;
   "sports/basketball": typeof sports_basketball;
