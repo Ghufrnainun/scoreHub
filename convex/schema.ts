@@ -248,5 +248,8 @@ export default defineSchema({
     name: v.string(),
     postalCode: v.optional(v.string()),
     sourceVersion: v.string(),
-  }).index('by_code', ['code']).index('by_parent_name', ['parentCode', 'name']),
+  })
+    .index('by_code', ['code'])
+    .index('by_parent_name', ['parentCode', 'name'])
+    .index('by_level_name', ['level', 'name']),
 });

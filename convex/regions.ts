@@ -3,7 +3,18 @@ import { v } from 'convex/values';
 
 export const children = query({
   args: { parentCode: v.optional(v.string()) },
-  handler: (ctx, { parentCode }) => ctx.db.query('regions').withIndex('by_parent_name', (q) => q.eq('parentCode', parentCode)).collect(),
+  handler: (ctx, { parentCode }) => {
+    if (parentCode !== undefined) {
+      return ctx.db
+        .query('regions')
+        .withIndex('by_parent_name', (q) => q.eq('parentCode', parentCode))
+        .collect();
+    }
+    return ctx.db
+      .query('regions')
+      .withIndex('by_level_name', (q) => q.eq('level', 'province'))
+      .collect();
+  },
 });
 
 export const byCode = query({

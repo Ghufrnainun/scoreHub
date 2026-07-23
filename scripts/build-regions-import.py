@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build Convex JSONL from pinned cahyadsn datasets. Stdlib only."""
-import json, re, urllib.request
+import json, re, ssl, urllib.request
 from pathlib import Path
 
 REGION_SHA = "8e30c590e2346289c0f316677d14c2b787d7b14d"
@@ -10,7 +10,11 @@ POSTAL_URL = f"https://raw.githubusercontent.com/cahyadsn/wilayah_kodepos/{POSTA
 OUT = Path(__file__).resolve().parent / "generated" / "regions.jsonl"
 
 def fetch(url):
-    with urllib.request.urlopen(url, timeout=60) as response: return response.read()
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response: return response.read()
+    except Exception:
+        ctx = ssl._create_unverified_context()
+        with urllib.request.urlopen(url, timeout=60, context=ctx) as response: return response.read()
 
 def main():
     raw = json.loads(fetch(POSTAL_URL))
