@@ -5,7 +5,7 @@ import {
   normalizeWhatsApp,
   todayIso,
   validateFile,
-} from '../lib/pb-registration-validation.ts';
+} from '../lib/pb-registration-validation';
 
 const now = new Date('2026-07-18T12:00:00Z');
 assert.equal(todayIso(now), '2026-07-18');

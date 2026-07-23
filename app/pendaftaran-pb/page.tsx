@@ -8,12 +8,13 @@ import {
   documentRule,
   todayIso,
   validateFile,
+  normalizeWhatsApp,
   type AgeCategory,
 } from '@/lib/pb-registration-validation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
-  MapPin,
+  Location,
   FileText,
   Upload,
   X,
@@ -27,8 +28,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Info,
-} from 'lucide-react';
+  Loader,
+  CheckCircle,
+  AddCircle,
+} from 'reicon-react';
 
 type Region = { code: string; name: string; postalCode?: string };
 
@@ -47,13 +50,14 @@ const MONTH_NAMES = [
   'Desember',
 ];
 
-// --- CUSTOM SEARCHABLE SELECT DROPDOWN (NO OS NATIVE SELECT ARTIFACTS) ---
+// --- CUSTOM SEARCHABLE SELECT DROPDOWN (COMPLIANT WITH WEB INTERFACE GUIDELINES) ---
 function CustomSelect({
   label,
   placeholder,
   items,
   value,
   disabled,
+  isLoading,
   onChange,
 }: {
   label: string;
@@ -61,6 +65,7 @@ function CustomSelect({
   items?: Region[];
   value: string;
   disabled: boolean;
+  isLoading?: boolean;
   onChange: (value: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -68,7 +73,6 @@ function CustomSelect({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedItem = items?.find((item) => item.code === value);
-
   const filteredItems = items?.filter((item) =>
     item.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -91,20 +95,26 @@ function CustomSelect({
       <div className="relative">
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled || isLoading}
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex w-full items-center justify-between rounded-xl border bg-slate-50 px-4 py-3.5 text-left text-sm font-medium text-slate-900 transition-colors focus:border-slate-900 focus:bg-white focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 ${
-            isOpen ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-300'
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          className={`flex min-h-[44px] w-full items-center justify-between rounded-xl border bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-900 transition-all focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-40 ${
+            isOpen ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-300'
           }`}
         >
           <span className={selectedItem ? 'text-slate-900 font-semibold' : 'text-slate-400'}>
-            {selectedItem ? selectedItem.name : placeholder}
+            {isLoading ? `Memuat data ${label.toLowerCase()}…` : selectedItem ? selectedItem.name : placeholder}
           </span>
-          <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          {isLoading ? (
+            <Loader size={16} className="text-slate-400 animate-spin" aria-hidden="true" />
+          ) : (
+            <ChevronDown size={16} className={`text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+          )}
         </button>
 
         <AnimatePresence>
-          {isOpen && !disabled && (
+          {isOpen && !disabled && !isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 4, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -112,43 +122,43 @@ function CustomSelect({
               transition={{ duration: 0.15 }}
               className="absolute left-0 top-full z-50 mt-1.5 w-full rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10"
             >
-              {/* Search Bar inside Select */}
               <div className="relative mb-2 px-1">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
                 <input
                   type="text"
-                  placeholder={`Cari ${label.toLowerCase()}...`}
+                  placeholder={`Cari ${label.toLowerCase()}…`}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
                 />
               </div>
 
-              {/* Items List */}
-              <div className="max-h-56 overflow-y-auto rounded-lg">
+              <div className="max-h-56 overflow-y-auto rounded-lg" role="listbox">
                 {filteredItems && filteredItems.length > 0 ? (
                   filteredItems.map((item) => (
                     <button
                       key={item.code}
                       type="button"
+                      role="option"
+                      aria-selected={item.code === value}
                       onClick={() => {
                         onChange(item.code);
                         setIsOpen(false);
                         setSearch('');
                       }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-xs text-left transition-colors ${
+                      className={`flex min-h-[40px] w-full items-center justify-between rounded-lg px-3 py-2 text-xs text-left transition-colors ${
                         item.code === value
-                          ? 'bg-slate-900 font-bold text-white'
+                          ? 'bg-blue-600 font-bold text-white'
                           : 'text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       <span>{item.name}</span>
-                      {item.code === value && <Check className="h-3.5 w-3.5 text-white" />}
+                      {item.code === value && <Check size={14} className="text-white" aria-hidden="true" />}
                     </button>
                   ))
                 ) : (
                   <div className="py-4 text-center text-xs text-slate-400">
-                    Tidak ditemukan {label.toLowerCase()}
+                    Tidak ditemukan data {label.toLowerCase()}
                   </div>
                 )}
               </div>
@@ -160,7 +170,7 @@ function CustomSelect({
   );
 }
 
-// --- CUSTOM HIGH-END OFF-WHITE DATE PICKER (NO NATIVE OS DATEPICKER POPUP) ---
+// --- CUSTOM DATE PICKER (COMPLIANT WITH ACCESSIBILITY & FOCUS STATES) ---
 function CustomDatePicker({
   value,
   onChange,
@@ -171,7 +181,6 @@ function CustomDatePicker({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Selected date state
   const currentDate = value ? new Date(value) : new Date(2010, 0, 1);
   const [viewYear, setViewYear] = useState(currentDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth());
@@ -209,7 +218,6 @@ function CustomDatePicker({
     ? `${new Date(value).getDate()} ${MONTH_NAMES[new Date(value).getMonth()]} ${new Date(value).getFullYear()}`
     : '';
 
-  // Years options from 1970 to current year
   const years = Array.from(
     { length: new Date().getFullYear() - 1970 + 1 },
     (_, i) => new Date().getFullYear() - i
@@ -224,14 +232,16 @@ function CustomDatePicker({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex w-full items-center justify-between rounded-xl border bg-slate-50 px-4 py-3.5 text-left text-sm font-medium text-slate-900 transition-colors focus:border-slate-900 focus:bg-white focus:outline-none ${
-            isOpen ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-300'
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          className={`flex min-h-[44px] w-full items-center justify-between rounded-xl border bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-900 transition-all focus:border-blue-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 ${
+            isOpen ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-300'
           }`}
         >
           <span className={formattedDisplay ? 'font-semibold text-slate-900' : 'text-slate-400'}>
-            {formattedDisplay || 'Pilih Tanggal Lahir Atlet'}
+            {formattedDisplay || 'Contoh: 23 Juli 2008…'}
           </span>
-          <CalendarIcon className="h-4 w-4 text-slate-500" />
+          <CalendarIcon size={16} className="text-slate-500" aria-hidden="true" />
         </button>
 
         <AnimatePresence>
@@ -242,14 +252,16 @@ function CustomDatePicker({
               exit={{ opacity: 0, y: 4, scale: 0.98 }}
               transition={{ duration: 0.15 }}
               className="absolute left-0 top-full z-50 mt-1.5 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-900/10"
+              role="dialog"
+              aria-label="Pilih tanggal lahir"
             >
-              {/* Year & Month Select Header */}
               <div className="mb-3 flex items-center justify-between gap-1">
                 <div className="flex items-center gap-1">
                   <select
                     value={viewMonth}
                     onChange={(e) => setViewMonth(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-900 outline-none"
+                    aria-label="Pilih bulan"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-900 outline-none focus:border-blue-600"
                   >
                     {MONTH_NAMES.map((m, i) => (
                       <option key={m} value={i}>
@@ -261,7 +273,8 @@ function CustomDatePicker({
                   <select
                     value={viewYear}
                     onChange={(e) => setViewYear(Number(e.target.value))}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-900 outline-none"
+                    aria-label="Pilih tahun"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-900 outline-none focus:border-blue-600"
                   >
                     {years.map((y) => (
                       <option key={y} value={y}>
@@ -280,9 +293,10 @@ function CustomDatePicker({
                         setViewYear(viewYear - 1);
                       } else setViewMonth(viewMonth - 1);
                     }}
-                    className="rounded-md bg-slate-100 p-1 text-slate-600 hover:bg-slate-200"
+                    aria-label="Bulan sebelumnya"
+                    className="rounded-md bg-slate-100 p-1.5 text-slate-600 hover:bg-slate-200 transition-colors"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft size={16} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -292,14 +306,14 @@ function CustomDatePicker({
                         setViewYear(viewYear + 1);
                       } else setViewMonth(viewMonth + 1);
                     }}
-                    className="rounded-md bg-slate-100 p-1 text-slate-600 hover:bg-slate-200"
+                    aria-label="Bulan berikutnya"
+                    className="rounded-md bg-slate-100 p-1.5 text-slate-600 hover:bg-slate-200 transition-colors"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight size={16} aria-hidden="true" />
                   </button>
                 </div>
               </div>
 
-              {/* Days Header */}
               <div className="mb-1 grid grid-cols-7 text-center text-[10px] font-extrabold uppercase text-slate-400">
                 <span>Min</span>
                 <span>Sen</span>
@@ -310,7 +324,6 @@ function CustomDatePicker({
                 <span>Sab</span>
               </div>
 
-              {/* Days Grid */}
               <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: firstDayOfWeek }).map((_, i) => (
                   <div key={`empty-${i}`} />
@@ -331,7 +344,7 @@ function CustomDatePicker({
                       onClick={() => handleSelectDay(dayNum)}
                       className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
                         isSelected
-                          ? 'bg-slate-900 font-bold text-white'
+                          ? 'bg-blue-600 font-bold text-white shadow-sm'
                           : isFuture
                           ? 'cursor-not-allowed opacity-20'
                           : 'text-slate-800 hover:bg-slate-100'
@@ -350,30 +363,46 @@ function CustomDatePicker({
   );
 }
 
+// --- FILE UPLOADER WITH ACCESSIBLE DESCRIPTION & ALERTS ---
 function FileUploader({
   label,
   accept,
   file,
+  kind,
   onFileSelect,
   hint,
-  badgeText,
 }: {
   label: string;
   accept: string;
   file: File | null;
+  kind: 'photo' | 'identity';
   onFileSelect: (file: File | null) => void;
   hint: string;
-  badgeText?: string;
 }) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleFile = (selected: File | null) => {
-    onFileSelect(selected);
-    if (selected && selected.type.startsWith('image/')) {
-      const url = URL.createObjectURL(selected);
-      setPreview(url);
-    } else {
+    setErrorMsg(null);
+    if (!selected) {
+      onFileSelect(null);
       setPreview(null);
+      return;
+    }
+
+    try {
+      validateFile(selected.name, selected.type, selected.size, kind);
+      onFileSelect(selected);
+      if (selected.type.startsWith('image/')) {
+        const url = URL.createObjectURL(selected);
+        setPreview(url);
+      } else {
+        setPreview(null);
+      }
+    } catch (err) {
+      onFileSelect(null);
+      setPreview(null);
+      setErrorMsg(err instanceof Error ? err.message : 'File tidak valid.');
     }
   };
 
@@ -383,47 +412,51 @@ function FileUploader({
         <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
           {label} <span className="text-blue-600">*</span>
         </label>
-        {badgeText && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-            {badgeText}
-          </span>
-        )}
       </div>
 
-      <div className="group relative flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center transition-colors hover:border-slate-900 hover:bg-slate-100/60">
+      <div
+        className={`group relative flex flex-col items-center justify-center rounded-2xl border border-dashed p-5 text-center transition-all ${
+          errorMsg
+            ? 'border-rose-300 bg-rose-50/50'
+            : file
+            ? 'border-slate-300 bg-slate-50'
+            : 'border-slate-300 bg-slate-50 hover:border-blue-500 hover:bg-slate-100/60'
+        }`}
+      >
         {file ? (
           <div className="flex w-full items-center justify-between gap-4">
             <div className="flex items-center gap-3 overflow-hidden">
               {preview ? (
                 <img
                   src={preview}
-                  alt="Preview"
+                  alt="Pratinjau Berkas"
                   className="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-300"
                 />
               ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-                  <FileText className="h-6 w-6" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <FileText size={24} aria-hidden="true" />
                 </div>
               )}
               <div className="text-left">
                 <p className="truncate text-sm font-semibold text-slate-900">{file.name}</p>
                 <p className="text-xs text-slate-500">
-                  {(file.size / (1024 * 1024)).toFixed(2)} MB
+                  {(file.size / (1024 * 1024)).toFixed(2)}&nbsp;MB
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => handleFile(null)}
-              className="rounded-lg bg-slate-200 p-2 text-slate-600 transition-colors hover:bg-rose-100 hover:text-rose-600"
+              aria-label={`Hapus ${label}`}
+              className="rounded-lg bg-slate-200 p-2 text-slate-600 transition-colors hover:bg-rose-100 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <X className="h-4 w-4" />
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         ) : (
-          <label className="flex w-full cursor-pointer flex-col items-center">
+          <label className="flex w-full cursor-pointer flex-col items-center py-2">
             <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm border border-slate-200 transition-transform group-hover:scale-105">
-              <Upload className="h-5 w-5" />
+              <Upload size={20} aria-hidden="true" />
             </div>
             <span className="text-sm font-bold text-slate-900">Klik untuk mengunggah</span>
             <span className="mt-1 text-xs text-slate-500">{hint}</span>
@@ -436,6 +469,13 @@ function FileUploader({
           </label>
         )}
       </div>
+
+      {errorMsg && (
+        <p className="flex items-center gap-1 text-[11px] font-semibold text-rose-600" aria-live="polite">
+          <AlertCircle size={14} aria-hidden="true" />
+          <span>{errorMsg}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -460,6 +500,7 @@ export default function PendaftaranPBPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [successInfo, setSuccessInfo] = useState<{ id: string; category: string } | null>(null);
 
   const provinces = useQuery(api.regions.children, {});
   const regencies = useQuery(
@@ -497,10 +538,10 @@ export default function PendaftaranPBPage() {
     }
   } catch {}
 
-  const selectedProvince = provinces?.find((p) => p.code === provinceCode);
-  const selectedRegency = regencies?.find((r) => r.code === regencyCode);
-  const selectedDistrict = districts?.find((d) => d.code === districtCode);
-  const selectedVillage = villages?.find((v) => v.code === villageCode);
+  const selectedProvince = provinces?.find((p: Region) => p.code === provinceCode);
+  const selectedRegency = regencies?.find((r: Region) => r.code === regencyCode);
+  const selectedDistrict = districts?.find((d: Region) => d.code === districtCode);
+  const selectedVillage = villages?.find((v: Region) => v.code === villageCode);
 
   const set = (name: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [name]: value }));
@@ -508,6 +549,13 @@ export default function PendaftaranPBPage() {
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!category) return setMessage('Harap isi tanggal lahir atlet dengan benar.');
+
+    try {
+      normalizeWhatsApp(form.whatsapp);
+    } catch (err) {
+      return setMessage('Nomor WhatsApp harus nomor Indonesia yang aktif (contoh: 081234567890).');
+    }
+
     if (!profile || !identity)
       return setMessage('Pas foto dan dokumen identitas wajib diunggah.');
 
@@ -522,7 +570,7 @@ export default function PendaftaranPBPage() {
       validateFile(profile.name, profile.type, profile.size, 'photo');
       validateFile(identity.name, identity.type, identity.size, 'identity');
       setSaving(true);
-      setMessage('Mendaftarkan data peserta...');
+      setMessage('Mendaftarkan data peserta…');
 
       const registration = await create({
         ...form,
@@ -539,7 +587,7 @@ export default function PendaftaranPBPage() {
         ['foto_profil', profile],
         ['dokumen_identitas', identity],
       ] as const) {
-        setMessage(`Mengunggah ${docType === 'foto_profil' ? 'pas foto' : 'dokumen identitas'}...`);
+        setMessage(`Mengunggah ${docType === 'foto_profil' ? 'pas foto' : 'dokumen identitas'}…`);
         const { url } = await uploadUrl({
           registrationId: registration.id,
           docType,
@@ -568,7 +616,7 @@ export default function PendaftaranPBPage() {
 
       await finalize({ registrationId: registration.id });
       setShowConfirmModal(false);
-      setMessage(`Pendaftaran berhasil! Kategori terdaftar: ${registration.category.toUpperCase()}`);
+      setSuccessInfo({ id: registration.id, category: registration.category });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Pendaftaran gagal.');
     } finally {
@@ -576,317 +624,402 @@ export default function PendaftaranPBPage() {
     }
   };
 
+  const handleResetForm = () => {
+    setDob('');
+    setForm({
+      gender: 'putra',
+      fullName: '',
+      club: '',
+      whatsapp: '',
+      email: '',
+      addressDetail: '',
+    });
+    setProvince('');
+    setRegency('');
+    setDistrict('');
+    setVillage('');
+    setProfile(null);
+    setIdentity(null);
+    setSuccessInfo(null);
+    setMessage('');
+  };
+
+  const getCategoryColorStyles = (cat: AgeCategory) => {
+    switch (cat) {
+      case 'anak':
+        return 'border-teal-200 bg-teal-50 text-teal-900';
+      case 'taruna':
+        return 'border-blue-200 bg-blue-50 text-blue-900';
+      case 'dewasa':
+        return 'border-emerald-200 bg-emerald-50 text-emerald-950';
+      default:
+        return 'border-slate-200 bg-slate-50 text-slate-900';
+    }
+  };
+
   return (
     <main className="min-h-dvh bg-[#f4f6f9] text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        {/* Clean Off-White Header */}
+        {/* Header Title with Calibrated Color */}
         <div className="text-center mb-10">
           <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            Formulir Pendaftaran Atlet
+            Pendaftaran Atlet PB Undip
           </h1>
           <p className="mt-3 text-sm font-medium text-slate-600 max-w-xl mx-auto">
-            Silakan lengkapi data atlet, domisili Kemendagri, dan unggah dokumen pendukung resmi di bawah ini.
+            Silakan lengkapi formulir pendaftaran anggota dan atlet PB Undip secara resmi di bawah ini.
           </p>
         </div>
 
-        {/* Doppelrand Double-Bezel Off-White Shell */}
-        <div className="rounded-[2.5rem] border border-slate-200 bg-white p-2.5 shadow-xl shadow-slate-200/60">
-          <form
-            onSubmit={handleInitialSubmit}
-            className="rounded-[calc(2.5rem-0.625rem)] border border-slate-200/80 bg-white p-6 sm:p-10 space-y-8"
-          >
-            {/* SECTION 1: PROFIL & IDENTITAS ATLET */}
-            <div className="space-y-5">
-              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
-                <User className="h-5 w-5 text-slate-900" />
-                <h2 className="font-display text-xl font-bold uppercase text-slate-900 tracking-wide">
-                  1. Data Diri Atlet
-                </h2>
+        {/* SUCCESS STATE CARD */}
+        <AnimatePresence>
+          {successInfo ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="rounded-[2.5rem] border border-slate-200 bg-white p-8 sm:p-12 text-center shadow-xl shadow-slate-200/60 space-y-6"
+            >
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <CheckCircle size={40} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Pendaftaran Berhasil!</h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Data atlet telah resmi terdaftar di database PB Undip.
+                </p>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Nama Lengkap Atlet <span className="text-blue-600">*</span>
-                  </label>
-                  <input
-                    required
-                    minLength={3}
-                    maxLength={100}
-                    placeholder="Contoh: Anthony Sinisuka Ginting"
-                    value={form.fullName}
-                    onChange={(e) => set('fullName', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-slate-900 focus:bg-white"
-                  />
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4 text-xs font-semibold text-slate-700">
+                <div>
+                  <span className="text-slate-400 uppercase font-bold block text-[10px]">ID Pendaftaran</span>
+                  <span className="font-mono text-sm font-bold text-slate-900">{successInfo.id}</span>
+                </div>
+                <div className="h-8 w-px bg-slate-200" />
+                <div>
+                  <span className="text-slate-400 uppercase font-bold block text-[10px]">Kategori Terdaftar</span>
+                  <span className="font-bold text-blue-600 uppercase text-sm">{successInfo.category}</span>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20"
+                >
+                  <AddCircle size={16} aria-hidden="true" />
+                  <span>Daftarkan Atlet Lain</span>
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            /* FORM SHELL */
+            <div className="rounded-[2.5rem] border border-slate-200 bg-white p-2.5 shadow-xl shadow-slate-200/60">
+              <form
+                onSubmit={handleInitialSubmit}
+                className="rounded-[calc(2.5rem-0.625rem)] border border-slate-200/80 bg-white p-6 sm:p-10 space-y-8"
+              >
+                {/* SECTION 1: PROFIL & IDENTITAS ATLET */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                    <User size={20} className="text-blue-600" aria-hidden="true" />
+                    <h2 className="font-display text-xl font-bold uppercase text-slate-900 tracking-wide">
+                      1. Data Diri Atlet
+                    </h2>
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Nama Lengkap Atlet <span className="text-blue-600">*</span>
+                      </label>
+                      <input
+                        required
+                        minLength={3}
+                        maxLength={100}
+                        name="fullName"
+                        autoComplete="name"
+                        placeholder="Contoh: Anthony Sinisuka Ginting…"
+                        value={form.fullName}
+                        onChange={(e) => set('fullName', e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      />
+                      <p className="text-[11px] text-slate-400">Sesuai nama pada KTP, Akta, atau Kartu Keluarga.</p>
+                    </div>
+
+                    <CustomDatePicker value={dob} onChange={setDob} />
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Jenis Kelamin <span className="text-blue-600">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['putra', 'putri'].map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => set('gender', g)}
+                            className={`min-h-[44px] rounded-xl border py-3 text-sm font-bold uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-blue-100 ${
+                              form.gender === g
+                                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                : 'border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Klub / PB Bulutangkis <span className="text-blue-600">*</span>
+                      </label>
+                      <input
+                        required
+                        minLength={2}
+                        maxLength={100}
+                        name="club"
+                        autoComplete="off"
+                        placeholder="Contoh: PB Djarum / PB Jaya Raya…"
+                        value={form.club}
+                        onChange={(e) => set('club', e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Real-time Category Feedback with calibrated style */}
+                  <AnimatePresence>
+                    {category && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={`rounded-2xl border p-4 flex items-center justify-between gap-4 transition-colors ${getCategoryColorStyles(category)}`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck size={20} className="opacity-85" aria-hidden="true" />
+                            <span className="text-xs font-bold uppercase opacity-90">Kategori Usia Pertandingan</span>
+                          </div>
+                          <p className="font-display text-lg font-extrabold uppercase mt-0.5">
+                            {categoryLabel}
+                          </p>
+                        </div>
+                        <span className="rounded-xl bg-white px-3.5 py-1 text-xs font-bold shadow-sm uppercase border border-slate-200">
+                          {category}
+                        </span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* Custom Off-White Datepicker Component */}
-                <CustomDatePicker value={dob} onChange={setDob} />
+                {/* SECTION 2: ALAMAT & DOMISILI KEMENDAGRI */}
+                <div className="space-y-5 pt-4">
+                  <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                    <Location size={20} className="text-blue-600" aria-hidden="true" />
+                    <h2 className="font-display text-xl font-bold uppercase text-slate-900 tracking-wide">
+                      2. Alamat & Domisili Atlet
+                    </h2>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Jenis Kelamin <span className="text-blue-600">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['putra', 'putri'].map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => set('gender', g)}
-                        className={`rounded-xl border py-3.5 text-sm font-bold uppercase transition-colors ${
-                          form.gender === g
-                            ? 'border-slate-900 bg-slate-900 text-white'
-                            : 'border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <CustomSelect
+                      label="Provinsi"
+                      placeholder="-- Pilih Provinsi --"
+                      items={provinces}
+                      value={provinceCode}
+                      disabled={!provinces?.length}
+                      isLoading={provinces === undefined}
+                      onChange={(val) => {
+                        setProvince(val);
+                        setRegency('');
+                        setDistrict('');
+                        setVillage('');
+                      }}
+                    />
+
+                    <CustomSelect
+                      label="Kabupaten/Kota"
+                      placeholder="-- Pilih Kabupaten/Kota --"
+                      items={regencies}
+                      value={regencyCode}
+                      disabled={!provinceCode}
+                      isLoading={provinceCode !== '' && regencies === undefined}
+                      onChange={(val) => {
+                        setRegency(val);
+                        setDistrict('');
+                        setVillage('');
+                      }}
+                    />
+
+                    <CustomSelect
+                      label="Kecamatan"
+                      placeholder="-- Pilih Kecamatan --"
+                      items={districts}
+                      value={districtCode}
+                      disabled={!regencyCode}
+                      isLoading={regencyCode !== '' && districts === undefined}
+                      onChange={(val) => {
+                        setDistrict(val);
+                        setVillage('');
+                      }}
+                    />
+
+                    <CustomSelect
+                      label="Desa/Kelurahan"
+                      placeholder="-- Pilih Desa/Kelurahan --"
+                      items={villages}
+                      value={villageCode}
+                      disabled={!districtCode}
+                      isLoading={districtCode !== '' && villages === undefined}
+                      onChange={setVillage}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Kode Pos
+                      </label>
+                      <input
+                        readOnly
+                        value={selectedVillage?.postalCode || ''}
+                        placeholder="Otomatis"
+                        className="w-full min-h-[44px] rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-bold text-slate-900 outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Detail Alamat (Jalan, RT/RW, No. Rumah) <span className="text-blue-600">*</span>
+                      </label>
+                      <input
+                        required
+                        minLength={5}
+                        maxLength={300}
+                        name="addressDetail"
+                        autoComplete="street-address"
+                        placeholder="Contoh: Jl. Pemuda No. 45, RT 02/RW 03…"
+                        value={form.addressDetail}
+                        onChange={(e) => set('addressDetail', e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                        No. WhatsApp Active <span className="text-blue-600">*</span>
+                      </label>
+                      <input
+                        required
+                        type="tel"
+                        name="whatsapp"
+                        autoComplete="tel"
+                        placeholder="Contoh: 081234567890…"
+                        value={form.whatsapp}
+                        onChange={(e) => set('whatsapp', e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Email (Opsional)
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        spellCheck={false}
+                        placeholder="Contoh: email@domain.com…"
+                        value={form.email}
+                        onChange={(e) => set('email', e.target.value)}
+                        className="w-full min-h-[44px] rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Klub / PB Bulutangkis <span className="text-blue-600">*</span>
-                  </label>
-                  <input
-                    required
-                    minLength={2}
-                    maxLength={100}
-                    placeholder="Contoh: PB Djarum / PB Jaya Raya"
-                    value={form.club}
-                    onChange={(e) => set('club', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-slate-900 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* Dynamic Real-time Category Feedback */}
-              <AnimatePresence>
-                {category && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 flex items-center justify-between gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-5 w-5 text-blue-600" />
-                        <span className="text-xs font-bold uppercase text-blue-900">Kategori Terdeteksi Otomatis</span>
-                      </div>
-                      <p className="font-display text-lg font-extrabold uppercase text-blue-950 mt-0.5">
-                        {categoryLabel}
-                      </p>
+                {/* SECTION 3: UNGGAH BERKAS */}
+                <div className="space-y-5 pt-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <FileText size={20} className="text-blue-600" aria-hidden="true" />
+                      <h2 className="font-display text-xl font-bold uppercase text-slate-900 tracking-wide">
+                        3. Unggah Berkas & Identitas
+                      </h2>
                     </div>
-                    <span className="rounded-xl bg-blue-600 px-3.5 py-1 text-xs font-bold text-white uppercase">
-                      {category}
-                    </span>
-                  </motion.div>
+                    {category && (
+                      <span className="text-xs font-bold uppercase text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                        Dokumen Wajib: {documentRule(category).labels.join(' / ')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <FileUploader
+                      label="Pas Foto Atlet"
+                      accept="image/jpeg,image/png,image/webp"
+                      file={profile}
+                      kind="photo"
+                      onFileSelect={setProfile}
+                      hint="Format JPG / PNG / WEBP, Maks 2 MB"
+                    />
+
+                    <FileUploader
+                      label={
+                        category === 'anak'
+                          ? 'Dokumen Identitas (KK / Akta)'
+                          : category === 'taruna'
+                          ? 'Dokumen Identitas (Kartu Pelajar / KK / Akta)'
+                          : category === 'dewasa'
+                          ? 'Dokumen Identitas (KTP / SIM)'
+                          : 'Dokumen Identitas Resmi'
+                      }
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      file={identity}
+                      kind="identity"
+                      onFileSelect={setIdentity}
+                      hint="Format JPG / PNG / WEBP / PDF, Maks 2 MB"
+                    />
+                  </div>
+                </div>
+
+                {/* SUBMIT TRIGGER */}
+                <div className="pt-6">
+                  <button
+                    type="submit"
+                    disabled={
+                      !category ||
+                      !profile ||
+                      !identity ||
+                      !form.fullName ||
+                      !form.club ||
+                      !provinceCode ||
+                      !regencyCode ||
+                      !districtCode ||
+                      !villageCode ||
+                      !form.addressDetail ||
+                      !form.whatsapp
+                    }
+                    className="flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-8 py-4 font-bold text-white text-base uppercase tracking-wider shadow-lg shadow-blue-600/10 transition-colors hover:bg-blue-500 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <FileCheck size={20} aria-hidden="true" />
+                    <span>Review & Kirim Pendaftaran</span>
+                  </button>
+                </div>
+
+                {message && !showConfirmModal && (
+                  <div className="mt-6 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700" aria-live="polite">
+                    <AlertCircle size={20} className="text-rose-600 shrink-0" aria-hidden="true" />
+                    <p>{message}</p>
+                  </div>
                 )}
-              </AnimatePresence>
+              </form>
             </div>
-
-            {/* SECTION 2: ALAMAT & DOMISILI KEMENDAGRI */}
-            <div className="space-y-5 pt-4">
-              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
-                <MapPin className="h-5 w-5 text-slate-900" />
-                <h2 className="font-display text-xl font-bold uppercase text-slate-900 tracking-wide">
-                  2. Alamat & Domisili Atlet
-                </h2>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <CustomSelect
-                  label="Provinsi"
-                  placeholder="-- Pilih Provinsi --"
-                  items={provinces}
-                  value={provinceCode}
-                  disabled={!provinces?.length}
-                  onChange={(val) => {
-                    setProvince(val);
-                    setRegency('');
-                    setDistrict('');
-                    setVillage('');
-                  }}
-                />
-
-                <CustomSelect
-                  label="Kabupaten/Kota"
-                  placeholder="-- Pilih Kabupaten/Kota --"
-                  items={regencies}
-                  value={regencyCode}
-                  disabled={!provinceCode || !regencies?.length}
-                  onChange={(val) => {
-                    setRegency(val);
-                    setDistrict('');
-                    setVillage('');
-                  }}
-                />
-
-                <CustomSelect
-                  label="Kecamatan"
-                  placeholder="-- Pilih Kecamatan --"
-                  items={districts}
-                  value={districtCode}
-                  disabled={!regencyCode || !districts?.length}
-                  onChange={(val) => {
-                    setDistrict(val);
-                    setVillage('');
-                  }}
-                />
-
-                <CustomSelect
-                  label="Desa/Kelurahan"
-                  placeholder="-- Pilih Desa/Kelurahan --"
-                  items={villages}
-                  value={villageCode}
-                  disabled={!districtCode || !villages?.length}
-                  onChange={setVillage}
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Kode Pos
-                  </label>
-                  <input
-                    readOnly
-                    value={selectedVillage?.postalCode || ''}
-                    placeholder="Otomatis"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3.5 text-sm font-bold text-slate-900 outline-none"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Detail Alamat (Jalan, RT/RW, No. Rumah) <span className="text-blue-600">*</span>
-                  </label>
-                  <input
-                    required
-                    minLength={5}
-                    maxLength={300}
-                    placeholder="Jl. Pemuda No. 45, RT 02/RW 03"
-                    value={form.addressDetail}
-                    onChange={(e) => set('addressDetail', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-slate-900 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    No. WhatsApp Active <span className="text-blue-600">*</span>
-                  </label>
-                  <input
-                    required
-                    type="tel"
-                    placeholder="081234567890"
-                    value={form.whatsapp}
-                    onChange={(e) => set('whatsapp', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-slate-900 focus:bg-white"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Email (Opsional)
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="email@domain.com"
-                    value={form.email}
-                    onChange={(e) => set('email', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-slate-900 focus:bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 3: UNGGAH BERKAS (DYNAMICALLY ADAPTS TO DOB/CATEGORY) */}
-            <div className="space-y-5 pt-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <FileText className="h-5 w-5 text-slate-900" />
-                  <h2 className="font-display text-xl font-bold uppercase text-slate-900 tracking-wide">
-                    3. Unggah Berkas & Identitas
-                  </h2>
-                </div>
-                {category && (
-                  <span className="text-xs font-bold uppercase text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                    Syarat: {documentRule(category).labels.join(' / ')}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2">
-                <FileUploader
-                  label="Pas Foto Atlet"
-                  accept="image/jpeg,image/png,image/webp"
-                  file={profile}
-                  onFileSelect={setProfile}
-                  hint="Format JPG / PNG / WEBP, Maks 2 MB"
-                />
-
-                <FileUploader
-                  label={
-                    category === 'anak'
-                      ? 'Kartu Keluarga / Akta Lahir'
-                      : category === 'taruna'
-                      ? 'Kartu Pelajar / KK / Akta Lahir'
-                      : category === 'dewasa'
-                      ? 'KTP / SIM Resmi'
-                      : 'Dokumen Identitas Resmi'
-                  }
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  file={identity}
-                  onFileSelect={setIdentity}
-                  hint="Format JPG / PNG / WEBP / PDF, Maks 2 MB"
-                  badgeText={
-                    category === 'anak'
-                      ? 'KK / Akta'
-                      : category === 'taruna'
-                      ? 'Kartu Pelajar / KK'
-                      : category === 'dewasa'
-                      ? 'KTP / SIM'
-                      : undefined
-                  }
-                />
-              </div>
-            </div>
-
-            {/* SUBMIT TRIGGER */}
-            <div className="pt-6">
-              <button
-                type="submit"
-                disabled={
-                  !category ||
-                  !profile ||
-                  !identity ||
-                  !form.fullName ||
-                  !form.club ||
-                  !provinceCode ||
-                  !regencyCode ||
-                  !districtCode ||
-                  !villageCode ||
-                  !form.addressDetail ||
-                  !form.whatsapp
-                }
-                className="flex w-full items-center justify-center gap-3 rounded-xl bg-slate-900 px-8 py-4 font-bold text-white text-base uppercase tracking-wider shadow-lg transition-colors hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <FileCheck className="h-5 w-5" />
-                <span>Review & Kirim Pendaftaran</span>
-              </button>
-            </div>
-
-            {message && !showConfirmModal && (
-              <div className="mt-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-100 p-4 text-sm font-bold text-slate-900">
-                <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
-                <p>{message}</p>
-              </div>
-            )}
-          </form>
-        </div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* POPUP CONFIRMATION MODAL */}
@@ -906,20 +1039,24 @@ export default function PendaftaranPBPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className="relative w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Ringkasan pendaftaran atlet"
             >
               <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                 <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="h-6 w-6 text-slate-900" />
+                  <ShieldCheck size={24} className="text-blue-600" aria-hidden="true" />
                   <h3 className="font-display text-xl font-bold uppercase tracking-tight text-slate-900">
-                    Ringkasan Pendaftaran
+                    Ringkasan Pendaftaran Atlet
                   </h3>
                 </div>
                 {!saving && (
                   <button
                     onClick={() => setShowConfirmModal(false)}
+                    aria-label="Tutup ringkasan"
                     className="rounded-full bg-slate-100 p-1.5 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                   >
-                    <X className="h-4 w-4" />
+                    <X size={16} aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -936,7 +1073,7 @@ export default function PendaftaranPBPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 uppercase font-bold text-[11px]">Kategori Usia</span>
-                    <span className="font-extrabold text-blue-600 uppercase">{category} ({calculatedAge} Thn)</span>
+                    <span className="font-extrabold text-blue-600 uppercase">{category} ({calculatedAge}&nbsp;Thn)</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 uppercase font-bold text-[11px]">Klub / PB</span>
@@ -954,10 +1091,10 @@ export default function PendaftaranPBPage() {
                   <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">Dokumen Diunggah:</p>
                   <div className="flex items-center gap-4 text-xs font-bold text-slate-900">
                     <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                      <Check className="h-3.5 w-3.5 text-blue-600" /> Foto Profil
+                      <Check size={14} className="text-blue-600" aria-hidden="true" /> Foto Profil
                     </span>
                     <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                      <Check className="h-3.5 w-3.5 text-blue-600" /> Dokumen Identitas
+                      <Check size={14} className="text-blue-600" aria-hidden="true" /> Dokumen Identitas
                     </span>
                   </div>
                 </div>
@@ -968,7 +1105,7 @@ export default function PendaftaranPBPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => setShowConfirmModal(false)}
-                  className="rounded-full border border-slate-300 bg-slate-100 px-5 py-3 text-xs font-bold uppercase text-slate-700 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-40"
+                  className="min-h-[44px] rounded-full border border-slate-300 bg-slate-100 px-5 py-3 text-xs font-bold uppercase text-slate-700 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-40"
                 >
                   Edit Data
                 </button>
@@ -976,14 +1113,16 @@ export default function PendaftaranPBPage() {
                   type="button"
                   disabled={saving}
                   onClick={confirmAndSubmit}
-                  className="flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-xs font-black uppercase text-white hover:bg-slate-800 disabled:opacity-40 shadow-lg"
+                  className="flex min-h-[44px] items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-xs font-bold uppercase text-white hover:bg-blue-500 disabled:opacity-40 shadow-lg shadow-blue-600/10"
                 >
                   {saving ? (
-                    <span>Mengirim Pendaftaran...</span>
+                    <span className="flex items-center gap-2">
+                      <Loader size={16} className="animate-spin" aria-hidden="true" /> Mengirim…
+                    </span>
                   ) : (
                     <>
-                      <span>Konfirmasi & Kirim</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <span>Kirim Pendaftaran</span>
+                      <ArrowRight size={16} aria-hidden="true" />
                     </>
                   )}
                 </button>
