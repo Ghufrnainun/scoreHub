@@ -116,7 +116,6 @@ const OverlayIcon = ({ className }: { className?: string }) => (
 
 const MENU_ITEMS = [
   { name: 'Pertandingan', path: '/admin', icon: DashboardIcon },
-  { name: 'Pendaftaran PB', path: '/admin/pendaftaran-pb', icon: DashboardIcon },
   { name: 'Media & Iklan', path: '/admin/media', icon: MediaIcon },
   { name: 'Overlay OBS', path: '/admin/overlay', icon: OverlayIcon },
   { name: 'Templat', path: '/admin/templates', icon: TemplateIcon },

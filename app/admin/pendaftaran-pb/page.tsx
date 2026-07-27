@@ -1,20 +1,5 @@
-'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { useAction, useMutation, useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { loadValidAdminSession } from '@/lib/admin-session';
-const statuses = ['baru', 'valid', 'revisi', 'sudah_input_pbsi', 'ditolak'] as const;
-const address = (item: any) => [item.addressDetail, item.villageName, item.districtName, item.regencyName || item.kabupaten, item.provinceName, item.postalCode].filter(Boolean).join(', ');
-export default function AdminPendaftaranPB() {
-  const [token, setToken] = useState(''), [status, setStatus] = useState(''), [category, setCategory] = useState(''), [kabupaten, setKabupaten] = useState(''), [selected, setSelected] = useState<any>(null), [note, setNote] = useState('');
-  useEffect(() => setToken(loadValidAdminSession()?.token || ''), []);
-  const data = useQuery(api.pbRegistration.listAdmin, token ? { adminSessionToken: token } : 'skip');
-  const update = useMutation(api.pbRegistration.updateStatus), download = useAction(api.pbRegistration.downloadUrl);
-  const filtered = useMemo(() => (data || []).filter((item: any) => (!status || item.status === status) && (!category || item.category === category) && (!kabupaten || item.kabupaten === kabupaten)), [data, status, category, kabupaten]);
-  const setState = async (next: typeof statuses[number]) => { if (!selected) return; await update({ registrationId: selected._id, status: next, note: note || undefined, adminSessionToken: token }); setSelected({ ...selected, status: next, reviewNote: note }); };
-  const openFile = async (docType: 'foto_profil' | 'dokumen_identitas') => { if (!selected) return; window.open(await download({ registrationId: selected._id, docType, adminSessionToken: token }), '_blank', 'noopener,noreferrer'); };
-  if (!token) return <p className="p-6">Sesi master admin diperlukan.</p>;
-  const kabupatenList = [...new Set<string>((data || []).map((item: any) => item.kabupaten))];
-  const pbsi = selected ? [`Nama: ${selected.fullName}`, `Tanggal lahir: ${selected.dob}`, `Kategori: ${selected.category}`, `Jenis kelamin: ${selected.gender}`, `Klub: ${selected.club}`, `WhatsApp: ${selected.whatsapp}`, `Email: ${selected.email || '-'}`, `Alamat: ${address(selected) || selected.kabupaten}`].join('\n') : '';
-  return <main className="p-4 sm:p-8"><h1 className="text-2xl font-black">Pendaftaran PB</h1><div className="my-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{statuses.map(item => <button className="rounded border p-3 text-left" key={item} onClick={() => setStatus(status === item ? '' : item)}>{item}<b className="block text-xl">{(data || []).filter((row: any) => row.status === item).length}</b></button>)}</div><div className="flex flex-wrap gap-2"><select value={category} onChange={e => setCategory(e.target.value)}><option value="">Semua kategori</option><option value="anak">Anak</option><option value="taruna">Taruna</option><option value="dewasa">Dewasa</option></select><select value={kabupaten} onChange={e => setKabupaten(e.target.value)}><option value="">Semua kabupaten</option>{kabupatenList.map(value => <option key={value}>{value}</option>)}</select></div><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th>Nama</th><th>Kategori</th><th>Wilayah</th><th>Status</th></tr></thead><tbody>{filtered.map((item: any) => <tr className="cursor-pointer border-t" key={item._id} onClick={() => { setSelected(item); setNote(item.reviewNote || ''); }}><td className="py-3">{item.fullName}</td><td>{item.category}</td><td>{item.regencyName || item.kabupaten}</td><td>{item.status}</td></tr>)}</tbody></table></div>{selected && <section className="mt-6 rounded border p-4"><h2 className="text-xl font-bold">{selected.fullName}</h2><p>{selected.dob} · {selected.gender} · {selected.club}</p><p>{selected.whatsapp} · {selected.email || '-'}</p><p><b>Alamat:</b> {address(selected) || selected.kabupaten}</p><div className="my-3 flex flex-wrap gap-2"><button className="rounded border p-2" onClick={() => openFile('foto_profil')}>Unduh pas foto</button><button className="rounded border p-2" onClick={() => openFile('dokumen_identitas')}>Unduh dokumen identitas</button><button className="rounded border p-2" onClick={() => navigator.clipboard.writeText(pbsi)}>Copy PBSI</button></div><textarea className="w-full rounded border p-2" placeholder="Catatan review" value={note} onChange={e => setNote(e.target.value)} /><div className="mt-2 flex flex-wrap gap-2">{statuses.map(next => <button className="rounded border p-2" key={next} onClick={() => setState(next)}>{next}</button>)}</div></section>}</main>;
+import { redirect } from 'next/navigation';
+
+export default function RedirectToPBAdmin() {
+  redirect('/pendaftaran-pb/admin');
 }

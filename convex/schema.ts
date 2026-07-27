@@ -145,6 +145,7 @@ export default defineSchema({
     lastUsedAt: v.optional(v.number()),
     isTemporary: v.optional(v.boolean()),
     label: v.optional(v.string()),
+    scope: v.optional(v.string()),
   }).index('by_tokenHash', ['tokenHash'])
     .index('by_expiresAt', ['expiresAt']),
 
@@ -229,7 +230,7 @@ export default defineSchema({
     postalCode: v.optional(v.string()), addressDetail: v.optional(v.string()),
     finalizedAt: v.optional(v.number()),
     category: v.union(v.literal('anak'), v.literal('taruna'), v.literal('dewasa')),
-    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi'), v.literal('ditolak')),
+    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi')),
     reviewNote: v.optional(v.string()), createdAt: v.number(), updatedAt: v.number(),
   }).index('by_status', ['status']).index('by_category', ['category']).index('by_kabupaten', ['kabupaten']),
   pb_registration_files: defineTable({
@@ -238,7 +239,7 @@ export default defineSchema({
     contentType: v.string(), size: v.number(), createdAt: v.number(),
   }).index('by_registration', ['registrationId']),
   pb_registration_history: defineTable({
-    registrationId: v.id('pb_registrations'), status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi'), v.literal('ditolak')),
+    registrationId: v.id('pb_registrations'), status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi')),
     note: v.optional(v.string()), createdAt: v.number(),
   }).index('by_registration', ['registrationId']),
   regions: defineTable({
