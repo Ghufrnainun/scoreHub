@@ -1,10 +1,25 @@
 'use client';
 
-import React from 'react';
-import { ChevronRight, User, MapPin, Calendar, Inbox, CheckCircle2, AlertCircle, Clock, FileCheck2 } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  ChevronRight,
+  User,
+  MapPin,
+  Calendar,
+  Inbox,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  FileCheck2,
+  MessageCircle,
+  Copy,
+  Check
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { RegistrationItem } from './RegistrationStats';
+import { toast } from 'sonner';
 
 interface RegistrationTableProps {
   data: RegistrationItem[];
@@ -19,6 +34,16 @@ export default function RegistrationTable({
   selectedId,
   isLoading,
 }: RegistrationTableProps) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyQuick = (e: React.MouseEvent, text: string, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    toast.success(`Disalin: ${text}`);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -32,24 +57,16 @@ export default function RegistrationTable({
     switch (status) {
       case 'valid':
         return (
-          <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 gap-1.5 px-2.5 py-0.5 font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20 gap-1.5 px-2.5 py-1 font-bold">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Valid (Disetujui)</span>
-          </Badge>
-        );
-      case 'revisi':
-        return (
-          <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/20 gap-1.5 px-2.5 py-0.5 font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse shrink-0" />
-            <AlertCircle className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
-            <span>Perlu Revisi</span>
+            <span>Valid (Diterima)</span>
           </Badge>
         );
       case 'sudah_input_pbsi':
         return (
-          <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20 gap-1.5 px-2.5 py-0.5 font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+          <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20 gap-1.5 px-2.5 py-1 font-bold">
+            <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
             <FileCheck2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             <span>Masuk SI PBSI</span>
           </Badge>
@@ -57,8 +74,8 @@ export default function RegistrationTable({
       case 'baru':
       default:
         return (
-          <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20 gap-1.5 px-2.5 py-0.5 font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/20 gap-1.5 px-2.5 py-1 font-bold">
+            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span>Menunggu Review</span>
           </Badge>
@@ -66,29 +83,6 @@ export default function RegistrationTable({
     }
   };
 
-  const getCategoryBadge = (category: RegistrationItem['category']) => {
-    switch (category) {
-      case 'anak':
-        return (
-          <span className="inline-flex items-center rounded-lg bg-indigo-500/10 px-2 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-            Anak (&lt; 15 Thn)
-          </span>
-        );
-      case 'taruna':
-        return (
-          <span className="inline-flex items-center rounded-lg bg-purple-500/10 px-2 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 border border-purple-500/20">
-            Taruna (15-17 Thn)
-          </span>
-        );
-      case 'dewasa':
-      default:
-        return (
-          <span className="inline-flex items-center rounded-lg bg-secondary px-2 py-1 text-xs font-bold text-foreground border border-border">
-            Dewasa (≥ 18 Thn)
-          </span>
-        );
-    }
-  };
 
   const formatDate = (timestamp: number) => {
     return new Intl.DateTimeFormat('id-ID', {
@@ -134,16 +128,17 @@ export default function RegistrationTable({
           <thead>
             <tr className="border-b border-border bg-secondary/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Atlet & Kontak</th>
-              <th scope="col" className="px-5 py-3.5">Kategori & Usia</th>
+              <th scope="col" className="px-5 py-3.5">Profil Atlet</th>
               <th scope="col" className="px-5 py-3.5">Klub & Asal Wilayah</th>
               <th scope="col" className="px-5 py-3.5">Waktu Daftar</th>
               <th scope="col" className="px-5 py-3.5">Status Verifikasi</th>
-              <th scope="col" className="px-5 py-3.5 text-right"><span className="sr-only">Aksi</span></th>
+              <th scope="col" className="px-5 py-3.5 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
             {data.map((item) => {
               const isSelected = selectedId === item._id;
+              const waClean = item.whatsapp.replace(/[^0-9]/g, '');
               return (
                 <tr
                   key={item._id}
@@ -157,36 +152,35 @@ export default function RegistrationTable({
                     }
                   }}
                   className={cn(
-                    'group cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/60 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary',
+                    'group cursor-pointer transition-all hover:bg-secondary/60 focus:bg-secondary/60 focus:outline-none',
                     isSelected ? 'bg-primary/5 hover:bg-primary/10' : ''
                   )}
                 >
                   {/* Atlet & Kontak */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary font-display text-xs font-black text-foreground border border-border/60">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-xs font-black text-primary border border-primary/20">
                         {getInitials(item.fullName)}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                          {item.fullName}
+                        <div className="font-bold text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
+                          <span>{item.fullName}</span>
                         </div>
-                        <div className="text-xs font-medium text-muted-foreground truncate">
-                          WA: {item.whatsapp}
+                        <div className="text-xs font-medium text-muted-foreground truncate flex items-center gap-2 mt-0.5">
+                          <span className="font-mono">{item.whatsapp}</span>
                         </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Kategori & Usia */}
+                  {/* Profil */}
                   <td className="px-5 py-4 whitespace-nowrap">
                     <div className="space-y-1">
-                      <div>{getCategoryBadge(item.category)}</div>
                       <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                         <User className="h-3 w-3" />
                         <span className="capitalize">{item.gender}</span>
                         <span>•</span>
-                        <span>{item.dob}</span>
+                        <span>{item.dob || '-'}</span>
                       </div>
                     </div>
                   </td>
@@ -199,7 +193,7 @@ export default function RegistrationTable({
                       </div>
                       <div className="text-xs font-medium text-muted-foreground truncate flex items-center gap-1 mt-0.5">
                         <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/80" />
-                        <span className="truncate">{item.regencyName || item.kabupaten}</span>
+                        <span className="truncate">{item.regencyName || '-'}</span>
                       </div>
                     </div>
                   </td>
@@ -217,10 +211,41 @@ export default function RegistrationTable({
                     {getStatusBadge(item.status)}
                   </td>
 
-                  {/* Arrow */}
+                  {/* Quick Actions */}
                   <td className="px-5 py-4 text-right whitespace-nowrap">
-                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/50 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                      <ChevronRight className="h-4 w-4" />
+                    <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {/* WA Quick Link */}
+                      <a
+                        href={`https://wa.me/${waClean}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        title="Chat WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </a>
+
+                      {/* Quick Copy Name */}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg border-border hover:bg-secondary"
+                        onClick={(e) => handleCopyQuick(e, item.fullName, item._id)}
+                        title="Salin Nama Atlet"
+                      >
+                        {copiedId === item._id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+
+                      {/* Detail Arrow */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all"
+                        onClick={() => onSelectRow(item)}
+                        title="Lihat Detail Pendaftar"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>

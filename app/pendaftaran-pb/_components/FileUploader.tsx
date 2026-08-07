@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Upload, CheckCircle, FileText, Trash2, Eye } from 'reicon-react';
+import { Upload, CheckCircle, FileText, Trash2, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface FileUploaderProps {
@@ -41,8 +41,8 @@ export default function FileUploader({
 
   const validateAndSelect = (selectedFile: File) => {
     setError(null);
-    if (selectedFile.size > 2 * 1024 * 1024) {
-      setError('Ukuran file melebihi batas maksimal 2 MB.');
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError('Ukuran file melebihi batas maksimal 5 MB.');
       return;
     }
     onFileSelect(selectedFile);

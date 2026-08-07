@@ -221,26 +221,44 @@ export default defineSchema({
   }).index('by_key', ['key']),
 
   pb_registrations: defineTable({
-    fullName: v.string(), dob: v.string(), gender: v.union(v.literal('putra'), v.literal('putri')),
-    club: v.string(), kabupaten: v.string(), whatsapp: v.string(), email: v.optional(v.string()),
+    nik: v.optional(v.string()),
+    fullName: v.string(), 
+    bwfId: v.optional(v.string()),
+    registrationCode: v.optional(v.string()),
+    gender: v.union(v.literal('pria'), v.literal('wanita'), v.literal('putra'), v.literal('putri')),
+    motherName: v.optional(v.string()),
+    birthPlace: v.optional(v.string()),
+    dob: v.string(), 
+    playingHand: v.optional(v.union(v.literal('kiri'), v.literal('kanan'))),
+    
+    addressDetail: v.optional(v.string()),
+    postalCode: v.optional(v.string()),
     provinceCode: v.optional(v.string()), provinceName: v.optional(v.string()),
     regencyCode: v.optional(v.string()), regencyName: v.optional(v.string()),
+    club: v.string(), 
+    nationality: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    whatsapp: v.string(), 
+    email: v.optional(v.string()),
+    
+    // Backward compat
     districtCode: v.optional(v.string()), districtName: v.optional(v.string()),
     villageCode: v.optional(v.string()), villageName: v.optional(v.string()),
-    postalCode: v.optional(v.string()), addressDetail: v.optional(v.string()),
+    
     finalizedAt: v.optional(v.number()),
-    category: v.union(v.literal('anak'), v.literal('taruna'), v.literal('dewasa')),
-    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi')),
-    reviewNote: v.optional(v.string()), createdAt: v.number(), updatedAt: v.number(),
-  }).index('by_status', ['status']).index('by_category', ['category']).index('by_kabupaten', ['kabupaten']),
+    category: v.optional(v.string()), // Kept for backward compatibility
+    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('sudah_input_pbsi')),
+    createdAt: v.number(), updatedAt: v.number(),
+  }).index('by_status', ['status']),
   pb_registration_files: defineTable({
-    registrationId: v.id('pb_registrations'), category: v.union(v.literal('anak'), v.literal('taruna'), v.literal('dewasa')),
-    docType: v.union(v.literal('foto_profil'), v.literal('dokumen_identitas')), objectKey: v.string(), filename: v.string(),
+    registrationId: v.id('pb_registrations'),
+    docType: v.string(), objectKey: v.string(), filename: v.string(),
     contentType: v.string(), size: v.number(), createdAt: v.number(),
   }).index('by_registration', ['registrationId']),
   pb_registration_history: defineTable({
-    registrationId: v.id('pb_registrations'), status: v.union(v.literal('baru'), v.literal('valid'), v.literal('revisi'), v.literal('sudah_input_pbsi')),
-    note: v.optional(v.string()), createdAt: v.number(),
+    registrationId: v.id('pb_registrations'),
+    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('sudah_input_pbsi')),
+    createdAt: v.number(),
   }).index('by_registration', ['registrationId']),
   regions: defineTable({
     code: v.string(),

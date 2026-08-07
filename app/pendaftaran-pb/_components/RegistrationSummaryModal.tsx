@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ShieldCheck, X, Check, Loader } from 'reicon-react';
-import { type AgeCategory } from '@/lib/pb-registration-validation';
+import { ShieldCheck, X, Check, Loader } from 'lucide-react';
 import { type Region } from './CustomSelect';
 
 export interface RegistrationSummaryModalProps {
@@ -13,13 +12,12 @@ export interface RegistrationSummaryModalProps {
     fullName: string;
     club: string;
     gender: string;
+    addressDetail: string;
+    postalCode: string;
   };
-  category: AgeCategory | null;
   calculatedAge: number | null;
   selectedProvince?: Region;
   selectedRegency?: Region;
-  selectedDistrict?: Region;
-  selectedVillage?: Region;
   onClose: () => void;
   onSubmit: () => void;
 }
@@ -28,12 +26,10 @@ export default function RegistrationSummaryModal({
   isOpen,
   saving,
   form,
-  category,
+
   calculatedAge,
   selectedProvince,
   selectedRegency,
-  selectedDistrict,
-  selectedVillage,
   onClose,
   onSubmit,
 }: RegistrationSummaryModalProps) {
@@ -103,12 +99,7 @@ export default function RegistrationSummaryModal({
                   <span className="text-muted-foreground font-semibold text-[11px]">Jenis Kelamin</span>
                   <span className="font-bold text-foreground capitalize">{form.gender}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground font-semibold text-[11px]">Kategori Usia</span>
-                  <span className="font-extrabold text-amber-700 dark:text-amber-400 uppercase">
-                    {category} ({calculatedAge}&nbsp;Thn)
-                  </span>
-                </div>
+
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold text-[11px]">Asal Klub / PB</span>
                   <span className="font-bold text-foreground">{form.club}</span>
@@ -116,8 +107,8 @@ export default function RegistrationSummaryModal({
                 <div className="flex justify-between border-t border-border/60 pt-3 gap-4">
                   <span className="text-muted-foreground font-semibold text-[11px] shrink-0">Alamat Rumah</span>
                   <span className="font-semibold text-foreground text-right max-w-[260px] leading-relaxed">
-                    {selectedVillage?.name}, {selectedDistrict?.name}, {selectedRegency?.name}, {selectedProvince?.name}{' '}
-                    {selectedVillage?.postalCode && `(${selectedVillage.postalCode})`}
+                    {form.addressDetail}, {selectedRegency?.name}, {selectedProvince?.name}{' '}
+                    {form.postalCode && `(${form.postalCode})`}
                   </span>
                 </div>
               </div>

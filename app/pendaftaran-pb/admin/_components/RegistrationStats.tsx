@@ -9,9 +9,8 @@ export interface RegistrationItem {
   _id: string;
   fullName: string;
   dob: string;
-  gender: 'putra' | 'putri';
+  gender: 'pria' | 'wanita' | 'putra' | 'putri';
   club: string;
-  kabupaten: string;
   whatsapp: string;
   email?: string;
   provinceName?: string;
@@ -20,14 +19,13 @@ export interface RegistrationItem {
   villageName?: string;
   postalCode?: string;
   addressDetail?: string;
-  category: 'anak' | 'taruna' | 'dewasa';
-  status: 'baru' | 'valid' | 'revisi' | 'sudah_input_pbsi';
-  reviewNote?: string;
+  category?: string;
+  status: 'baru' | 'valid' | 'sudah_input_pbsi';
   createdAt: number;
   updatedAt: number;
   files?: Array<{
     _id: string;
-    docType: 'foto_profil' | 'dokumen_identitas';
+    docType: string;
     filename: string;
     objectKey: string;
     contentType: string;
@@ -35,8 +33,7 @@ export interface RegistrationItem {
   }>;
   history?: Array<{
     _id: string;
-    status: 'baru' | 'valid' | 'revisi' | 'sudah_input_pbsi';
-    note?: string;
+    status: 'baru' | 'valid' | 'sudah_input_pbsi';
     createdAt: number;
   }>;
 }
@@ -57,7 +54,6 @@ export default function RegistrationStats({
       all: data.length,
       baru: data.filter((item) => item.status === 'baru').length,
       valid: data.filter((item) => item.status === 'valid').length,
-      revisi: data.filter((item) => item.status === 'revisi').length,
       sudah_input_pbsi: data.filter((item) => item.status === 'sudah_input_pbsi').length,
     };
 
@@ -95,17 +91,6 @@ export default function RegistrationStats({
         activeBorder: 'ring-2 ring-emerald-500 border-transparent',
       },
       {
-        id: 'revisi',
-        title: 'Perlu Perbaikan',
-        subtitle: 'Revisi',
-        count: counts.revisi,
-        icon: AlertCircle,
-        colorClass: 'border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 text-card-foreground',
-        badgeClass: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 font-bold',
-        iconClass: 'text-orange-600 dark:text-orange-400 bg-orange-500/10',
-        activeBorder: 'ring-2 ring-orange-500 border-transparent',
-      },
-      {
         id: 'sudah_input_pbsi',
         title: 'Masuk SI PBSI',
         subtitle: 'Sudah Input',
@@ -120,7 +105,7 @@ export default function RegistrationStats({
   }, [data]);
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
       {statCards.map((card, idx) => {
         const Icon = card.icon;
         const isSelected = selectedStatus === card.id;

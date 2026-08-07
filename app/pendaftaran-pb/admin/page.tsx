@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, usePaginatedQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { loadValidAdminSession } from '@/lib/admin-session';
 import {
@@ -11,7 +11,8 @@ import {
   AlertCircle,
   KeyRound,
   ArrowRight,
-  ShieldCheck,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ import { toast } from 'sonner';
 import RegistrationStats, { type RegistrationItem } from './_components/RegistrationStats';
 import RegistrationFilterBar from './_components/RegistrationFilterBar';
 import RegistrationTable from './_components/RegistrationTable';
-import RegistrationDetailSheet from './_components/RegistrationDetailSheet';
+import { useRouter } from 'next/navigation';
 
 const PB_TOKEN_KEY = 'pb_admin_token';
 
@@ -35,21 +36,17 @@ export default function AdminPendaftaranPBPage() {
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedKabupaten, setSelectedKabupaten] = useState('');
 
-  // Detail Sheet State
-  const [selectedAthlete, setSelectedAthlete] = useState<RegistrationItem | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const router = useRouter();
 
-  // Convex Mutations & Queries
+  // Convex Queries
   const verifyPin = useMutation(api.pbRegistration.verifyAdminPBPin);
-  const updateStatusMutation = useMutation(api.pbRegistration.updateStatus);
-  const data = useQuery(
+  const { results: data, status: paginatedStatus, loadMore } = usePaginatedQuery(
     api.pbRegistration.listAdmin,
-    token ? { adminSessionToken: token } : 'skip'
-  ) as RegistrationItem[] | undefined;
+    token ? { adminSessionToken: token } : 'skip',
+    { initialNumItems: 50 }
+  );
 
   // 1. Initial Session Check (Check PB dedicated token OR Master Admin token)
   useEffect(() => {
@@ -90,8 +87,6 @@ export default function AdminPendaftaranPBPage() {
   const handleLogout = () => {
     localStorage.removeItem(PB_TOKEN_KEY);
     setToken('');
-    setSelectedAthlete(null);
-    setIsSheetOpen(false);
     toast.info('Anda telah keluar dari Dashboard Pendaftaran.');
   };
 
@@ -99,7 +94,7 @@ export default function AdminPendaftaranPBPage() {
   const kabupatenList = useMemo(() => {
     if (!data) return [];
     const list = data
-      .map((item) => item.regencyName || item.kabupaten)
+      .map((item) => item.regencyName)
       .filter(Boolean) as string[];
     return Array.from(new Set(list)).sort();
   }, [data]);
@@ -111,11 +106,9 @@ export default function AdminPendaftaranPBPage() {
       // Status Filter
       if (selectedStatus && item.status !== selectedStatus) return false;
 
-      // Category Filter
-      if (selectedCategory && item.category !== selectedCategory) return false;
 
       // Kabupaten Filter
-      const itemKab = item.regencyName || item.kabupaten || '';
+      const itemKab = item.regencyName || '';
       if (selectedKabupaten && itemKab !== selectedKabupaten) return false;
 
       // Search Query
@@ -130,64 +123,59 @@ export default function AdminPendaftaranPBPage() {
 
       return true;
     });
-  }, [data, selectedStatus, selectedCategory, selectedKabupaten, searchQuery]);
+  }, [data, selectedStatus, selectedKabupaten, searchQuery]);
 
-  // Handle Select Row
-  const handleSelectRow = (item: RegistrationItem) => {
-    setSelectedAthlete(item);
-    setIsSheetOpen(true);
-  };
-
-  // Handle Update Status
-  const handleUpdateStatus = async (status: RegistrationItem['status'], note?: string) => {
-    if (!selectedAthlete || !token) return;
-
-    setIsUpdatingStatus(true);
-    try {
-      await updateStatusMutation({
-        registrationId: selectedAthlete._id as any,
-        status,
-        note: note || undefined,
-        adminSessionToken: token,
-      });
-
-      // Update local selected state for immediate UI feedback
-      const now = Date.now();
-      const updatedHistory = [
-        ...(selectedAthlete.history || []),
-        { _id: 'temp_' + now, status, note, createdAt: now },
-      ];
-      setSelectedAthlete({
-        ...selectedAthlete,
-        status,
-        reviewNote: note,
-        history: updatedHistory as any,
-        updatedAt: now,
-      });
-
-      toast.success(`Status berhasil diperbarui menjadi "${status.toUpperCase()}".`);
-      if (status === 'valid') {
-        setIsSheetOpen(false);
-      }
-    } catch (err) {
-      toast.error(`Gagal memperbarui status: ${(err as Error).message}`);
-    } finally {
-      setIsUpdatingStatus(false);
+  // Export CSV Handler
+  const handleExportCSV = () => {
+    if (!filteredData || filteredData.length === 0) {
+      toast.error('Tidak ada data untuk diekspor.');
+      return;
     }
+
+    const headers = ['ID', 'NIK', 'Nama Lengkap', 'ID BWF', 'Gender', 'Ibu Kandung', 'Tempat Lahir', 'Tanggal Lahir', 'Main Tangan', 'Kewarganegaraan', 'Klub', 'Provinsi', 'Kabupaten/Kota', 'Kode Pos', 'Alamat Lengkap', 'No Telepon', 'No Handphone', 'Email', 'Status', 'Tanggal Daftar'];
+    const rows = filteredData.map((item) => [
+      `"${item._id}"`,
+      `"${item.nik || ''}"`,
+      `"${item.fullName.replace(/"/g, '""')}"`,
+      `"${item.bwfId || ''}"`,
+      `"${item.gender}"`,
+      `"${(item.motherName || '').replace(/"/g, '""')}"`,
+      `"${(item.birthPlace || '').replace(/"/g, '""')}"`,
+      `"${item.dob || ''}"`,
+      `"${item.playingHand || ''}"`,
+      `"${(item.nationality || '').replace(/"/g, '""')}"`,
+      `"${item.club.replace(/"/g, '""')}"`,
+      `"${(item.provinceName || '').replace(/"/g, '""')}"`,
+      `"${(item.regencyName || '').replace(/"/g, '""')}"`,
+      `"${item.postalCode || ''}"`,
+      `"${(item.addressDetail || '').replace(/"/g, '""')}"`,
+      `"${item.phone || ''}"`,
+      `"${item.whatsapp}"`,
+      `"${item.email || ''}"`,
+      `"${item.status}"`,
+      `"${new Date(item.createdAt).toISOString()}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Pendaftaran_PB_Undip_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`${filteredData.length} data pendaftar berhasil diekspor ke CSV.`);
   };
 
   // Reset Filters
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedStatus('');
-    setSelectedCategory('');
     setSelectedKabupaten('');
   };
 
-  const hasActiveFilters = Boolean(
-    searchQuery || selectedStatus || selectedCategory || selectedKabupaten
-  );
-
+  const hasActiveFilters = Boolean(searchQuery || selectedStatus || selectedKabupaten);
   // LOADING CHECK
   if (isAuthChecking) {
     return (
@@ -200,14 +188,13 @@ export default function AdminPendaftaranPBPage() {
     );
   }
 
-  // LOGIN SCREEN (If not authenticated or query failed due to auth)
-  if (!token || (data === undefined && token && loginError)) {
+  // LOGIN SCREEN
+  if (!token || (data.length === 0 && paginatedStatus === 'LoadingFirstPage' && loginError)) {
     return (
       <div className="flex min-h-dvh w-full items-center justify-center p-4 sm:p-6 bg-background text-foreground">
         <div className="w-full max-w-md animate-in fade-in-50 duration-200">
           <div className="rounded-[2rem] border border-border/80 bg-card p-8 sm:p-10 text-card-foreground shadow-lg">
             <div className="flex flex-col items-center text-center">
-              {/* OFFICIAL LOGO */}
               <img src="/logo-pb.png" alt="Logo PB Undip" className="h-16 w-auto object-contain mb-4" />
               <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
                 PB Undip • Admin Pendaftaran
@@ -275,7 +262,7 @@ export default function AdminPendaftaranPBPage() {
   // MAIN AUTHENTICATED DASHBOARD
   return (
     <div className="min-h-dvh bg-background text-foreground pb-20">
-      {/* Clean Header Bar with Official Logo */}
+      {/* Clean Header Bar with Export Button */}
       <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3.5">
@@ -290,15 +277,29 @@ export default function AdminPendaftaranPBPage() {
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="h-9 gap-2 rounded-xl border-border bg-card text-xs font-bold text-foreground hover:bg-secondary transition-all cursor-pointer shadow-2xs"
-          >
-            <LogOut className="h-3.5 w-3.5 text-destructive" />
-            <span>Keluar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* CSV Export */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-9 gap-1.5 rounded-xl border-border bg-card text-xs font-bold text-foreground hover:bg-secondary transition-all cursor-pointer shadow-2xs"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">Ekspor CSV</span>
+            </Button>
+
+            {/* Logout */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="h-9 gap-2 rounded-xl border-border bg-card text-xs font-bold text-foreground hover:bg-secondary transition-all cursor-pointer shadow-2xs"
+            >
+              <LogOut className="h-3.5 w-3.5 text-destructive" />
+              <span>Keluar</span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -318,8 +319,6 @@ export default function AdminPendaftaranPBPage() {
           <RegistrationFilterBar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
             selectedKabupaten={selectedKabupaten}
             onKabupatenChange={setSelectedKabupaten}
             kabupatenList={kabupatenList}
@@ -349,21 +348,23 @@ export default function AdminPendaftaranPBPage() {
 
           <RegistrationTable
             data={filteredData}
-            onSelectRow={handleSelectRow}
-            selectedId={selectedAthlete?._id}
-            isLoading={data === undefined}
+            onSelectRow={(item) => router.push(`/pendaftaran-pb/admin/${item._id}`)}
+            isLoading={paginatedStatus === 'LoadingFirstPage'}
           />
+          
+          {paginatedStatus === 'CanLoadMore' && (
+            <div className="flex justify-center mt-6">
+              <Button
+                variant="outline"
+                onClick={() => loadMore(50)}
+                className="h-10 px-6 rounded-xl font-bold bg-card border-border hover:bg-secondary transition-colors"
+              >
+                Muat Lebih Banyak
+              </Button>
+            </div>
+          )}
         </section>
       </main>
-
-      {/* 4. Detail Sheet & Inspector */}
-      <RegistrationDetailSheet
-        registration={selectedAthlete}
-        open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
-        onUpdateStatus={handleUpdateStatus}
-        isUpdating={isUpdatingStatus}
-      />
     </div>
   );
 }

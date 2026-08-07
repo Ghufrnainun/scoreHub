@@ -6,30 +6,30 @@ import {
   CheckCircle,
   ShieldCheck,
   User,
-  Location,
+  MapPin,
   FileText,
   HelpCircle,
-} from 'reicon-react';
-import { type AgeCategory, documentRule } from '@/lib/pb-registration-validation';
+} from 'lucide-react';
+import { documentRule } from '@/lib/pb-registration-validation';
 
 export interface RegistrationSidebarProps {
   form: {
+    nik: string;
     fullName: string;
     club: string;
     whatsapp: string;
     addressDetail: string;
     gender: string;
+    motherName: string;
+    birthPlace: string;
     email?: string;
   };
   dob: string;
   provinceCode: string;
   regencyCode: string;
   districtCode: string;
-  villageCode: string;
-  profile: File | null;
-  identity: File | null;
-  category: AgeCategory | null;
-  categoryLabel: string;
+  kkFile: File | null;
+  aktaFile: File | null;
   calculatedAge: number | null;
 }
 
@@ -39,33 +39,34 @@ export default function RegistrationSidebar({
   provinceCode,
   regencyCode,
   districtCode,
-  villageCode,
-  profile,
-  identity,
-  category,
-  categoryLabel,
+  kkFile,
+  aktaFile,
   calculatedAge,
 }: RegistrationSidebarProps) {
   const isStep1Done = Boolean(
-    form.fullName.trim().length >= 3 && form.club.trim().length >= 2 && dob && category
+    form.nik.trim().length >= 16 &&
+    form.fullName.trim().length >= 3 && 
+    form.motherName.trim().length >= 3 &&
+    form.birthPlace.trim().length >= 3 &&
+    form.club.trim().length >= 2 && 
+    dob
   );
 
   const isStep2Done = Boolean(
     provinceCode &&
       regencyCode &&
       districtCode &&
-      villageCode &&
       form.addressDetail.trim().length >= 5 &&
-      form.whatsapp.trim().length >= 9
+      form.whatsapp.trim().length >= 10
   );
 
-  const isStep3Done = Boolean(profile && identity);
+  const isStep3Done = Boolean(kkFile && aktaFile);
 
   const steps = [
     {
       id: 1,
       title: 'Data Diri Atlet',
-      desc: 'Nama, Tanggal Lahir, Klub & Gender',
+      desc: 'Identitas Lengkap, Klub & Kelahiran',
       isDone: isStep1Done,
       icon: User,
     },
@@ -74,7 +75,7 @@ export default function RegistrationSidebar({
       title: 'Domisili & Kontak',
       desc: 'Alamat lengkap & No. WhatsApp aktif',
       isDone: isStep2Done,
-      icon: Location,
+      icon: MapPin,
     },
     {
       id: 3,
@@ -169,61 +170,6 @@ export default function RegistrationSidebar({
         </div>
       </div>
 
-      {/* DYNAMIC ELIGIBILITY BOX WITH CHAMPIONSHIP AMBER GOLD HIGHLIGHTS */}
-      <AnimatePresence>
-        {category && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="rounded-[2rem] border border-border/80 bg-secondary/30 p-1.5 shadow-2xs"
-          >
-            <div className="rounded-[calc(2rem-0.375rem)] border border-border bg-card p-6 sm:p-7 space-y-4 text-card-foreground">
-              <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3.5">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck size={16} className="text-amber-600 dark:text-amber-500 shrink-0" aria-hidden="true" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    Kelayakan Usia
-                  </span>
-                </div>
-                {/* Championship Amber Gold Category Badge */}
-                <span className="font-mono text-xs font-extrabold text-amber-700 dark:text-amber-400 tabular-nums">
-                  {category} ({calculatedAge}&nbsp;Thn)
-                </span>
-              </div>
-
-              <div>
-                <p className="font-display text-base font-extrabold text-foreground leading-snug">
-                  {categoryLabel}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed text-pretty">
-                  Atlet usia di bawah 18 tahun wajib melampirkan bukti usia yang sah.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border/60 bg-secondary/30 p-3.5 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Dokumen Wajib:
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-2xs">
-                    <FileText size={13} className="text-muted-foreground shrink-0" aria-hidden="true" /> Pas Foto (Maks 2 MB)
-                  </span>
-                  {documentRule(category).labels.map((docLabel) => (
-                    <span
-                      key={docLabel}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-2xs"
-                    >
-                      <FileText size={13} className="text-muted-foreground shrink-0" aria-hidden="true" /> {docLabel}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* HELPDESK INFO */}
       <div className="rounded-[2rem] border border-border/80 bg-secondary/30 p-1.5 shadow-2xs">

@@ -1,23 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAction, useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import {
-  ageCategory,
   normalizeWhatsApp,
-  type AgeCategory,
+  todayIso,
 } from '@/lib/pb-registration-validation';
+
+export const IDENTITY_DOC_TYPES = [
+  'Akta Lahir', 'Kartu Keluarga', 'KTP', 'Mutasi', 'NISN Data Kemdikbud Online', 
+  'Rapor SD', 'SIM', 'STTB SD', 'STTB SMP', 'STTB TK', 
+  'Surat Ket Pembuatan Akta Lebih Dari Dua Tahun', 'Surat Keterangan Lahir', 
+  'Surat Keterangan Lain', 'Surat Pernyataan Kebenaran Usia'
+];
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
-  Location,
+  MapPin,
   FileText,
   AlertCircle,
   CheckCircle,
-  AddCircle,
+  PlusCircle,
   Award,
-} from 'reicon-react';
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 // Modular Components
 import RegistrationSidebar from './_components/RegistrationSidebar';
@@ -26,27 +33,44 @@ import CustomDatePicker from './_components/CustomDatePicker';
 import FileUploader from './_components/FileUploader';
 import RegistrationSummaryModal from './_components/RegistrationSummaryModal';
 
+// Shadcn UI Components
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+
 export default function PendaftaranPBPage() {
   const [dob, setDob] = useState('');
   const [form, setForm] = useState({
-    gender: 'putra',
+    nik: '',
     fullName: '',
+    bwfId: '',
+    gender: 'pria',
+    motherName: '',
+    birthPlace: '',
+    playingHand: 'kanan',
     club: '',
+    nationality: 'WNI',
+    phone: '',
     whatsapp: '',
     email: '',
     addressDetail: '',
+    postalCode: '',
   });
   const [provinceCode, setProvince] = useState('');
   const [regencyCode, setRegency] = useState('');
   const [districtCode, setDistrict] = useState('');
-  const [villageCode, setVillage] = useState('');
-  const [profile, setProfile] = useState<File | null>(null);
-  const [identity, setIdentity] = useState<File | null>(null);
+  
+  const [kkFile, setKkFile] = useState<File | null>(null);
+  const [aktaFile, setAktaFile] = useState<File | null>(null);
+  
+  const [extraDocs, setExtraDocs] = useState<{ id: string; type: string; file: File | null }[]>([]);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
-  const [successInfo, setSuccessInfo] = useState<{ id: string; category: string } | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ id: string; code?: string } | null>(null);
 
   const provinces = useQuery(api.regions.children, {});
   const regencies = useQuery(
@@ -57,81 +81,96 @@ export default function PendaftaranPBPage() {
     api.regions.children,
     regencyCode ? { parentCode: regencyCode } : 'skip'
   );
-  const villages = useQuery(
-    api.regions.children,
-    districtCode ? { parentCode: districtCode } : 'skip'
-  );
 
   const create = useMutation(api.pbRegistration.create);
   const record = useMutation(api.pbRegistration.recordFile);
   const finalize = useMutation(api.pbRegistration.finalize);
   const uploadUrl = useAction(api.pbRegistration.uploadUrl);
 
-  let category: AgeCategory | null = null;
-  let categoryLabel = '';
-  let calculatedAge: number | null = null;
+  const { calculatedAge, dobError } = useMemo(() => {
+    let calculatedAge: number | null = null;
+    let dobError = '';
 
-  try {
-    if (dob) {
-      category = ageCategory(dob);
-      const bornYear = new Date(dob).getFullYear();
-      const currentYear = new Date().getFullYear();
-      calculatedAge = currentYear - bornYear;
+    if (!dob) return { calculatedAge, dobError };
 
-      if (category === 'anak') categoryLabel = 'Kategori Anak (< 15 Tahun)';
-      else if (category === 'taruna') categoryLabel = 'Kategori Taruna (15 - 17 Tahun)';
-      else if (category === 'dewasa') categoryLabel = 'Kategori Dewasa (≥ 18 Tahun)';
+    try {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) throw new Error('Tanggal lahir tidak valid.');
+      const born = new Date(`${dob}T00:00:00Z`);
+      if (Number.isNaN(+born) || born.toISOString().slice(0, 10) !== dob) throw new Error('Tanggal lahir tidak valid.');
+      const now = new Date();
+      if (dob > todayIso(now)) throw new Error('Tanggal lahir tidak boleh masa depan.');
+      
+      let age = now.getUTCFullYear() - born.getUTCFullYear();
+      if (now.getUTCMonth() < born.getUTCMonth() || (now.getUTCMonth() === born.getUTCMonth() && now.getUTCDate() < born.getUTCDate())) age--;
+      calculatedAge = age;
+    } catch (err) {
+      dobError = (err as Error).message;
     }
-  } catch {}
+    
+    return { calculatedAge, dobError };
+  }, [dob]);
 
   const selectedProvince = provinces?.find((p: Region) => p.code === provinceCode);
   const selectedRegency = regencies?.find((r: Region) => r.code === regencyCode);
-  const selectedDistrict = districts?.find((d: Region) => d.code === districtCode);
-  const selectedVillage = villages?.find((v: Region) => v.code === villageCode);
 
   const set = (name: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [name]: value }));
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category) return setMessage('Harap isi tanggal lahir atlet dengan benar.');
+    if (dobError || !dob) return setMessage('Harap isi tanggal lahir atlet dengan benar.');
 
     try {
-      normalizeWhatsApp(form.whatsapp);
+      const normalizedWa = normalizeWhatsApp(form.whatsapp);
+      set('whatsapp', normalizedWa);
     } catch {
       return setMessage('Nomor WhatsApp harus nomor Indonesia yang aktif (contoh: 081234567890).');
     }
 
-    if (!profile || !identity)
-      return setMessage('Pas foto dan dokumen identitas wajib diunggah.');
+    if (!kkFile || !aktaFile)
+      return setMessage('Dokumen Kartu Keluarga dan Akta Kelahiran wajib diunggah.');
 
     setMessage('');
     setShowConfirmModal(true);
   };
 
   const confirmAndSubmit = async () => {
-    if (!category || !profile || !identity) return;
+    if (!kkFile || !aktaFile || dobError || !dob) return;
+    if (saving) return;
 
     try {
       setSaving(true);
       setMessage('Sedang memproses pendaftaran atlet…');
 
       const registration = await create({
-        ...form,
+        nik: form.nik,
+        fullName: form.fullName,
+        bwfId: form.bwfId || undefined,
+        gender: form.gender as 'pria' | 'wanita' | 'putra' | 'putri',
+        motherName: form.motherName,
+        birthPlace: form.birthPlace,
         dob,
-        gender: form.gender as 'putra' | 'putri',
+        playingHand: form.playingHand as 'kiri' | 'kanan',
+        club: form.club,  nationality: form.nationality || undefined,
+        phone: form.phone || undefined,
         email: form.email || undefined,
+        whatsapp: form.whatsapp,
+        addressDetail: form.addressDetail,
+        postalCode: form.postalCode || undefined,
         provinceCode,
         regencyCode,
         districtCode,
-        villageCode,
       });
 
-      for (const [docType, file] of [
-        ['foto_profil', profile],
-        ['dokumen_identitas', identity],
-      ] as const) {
-        setMessage(`Mengunggah ${docType === 'foto_profil' ? 'pas foto' : 'dokumen identitas'}…`);
+      const docsToUpload: Array<{ docType: string; file: File }> = [
+        { docType: 'Kartu Keluarga', file: kkFile! },
+        { docType: 'Akta Kelahiran', file: aktaFile! },
+        ...extraDocs.filter(d => d.file).map(d => ({ docType: d.type, file: d.file! })),
+      ];
+
+      for (const { docType, file } of docsToUpload) {
+        if (!file) continue;
+        setMessage(`Mengunggah ${docType}…`);
         const { url } = await uploadUrl({
           registrationId: registration.id,
           docType,
@@ -160,9 +199,11 @@ export default function PendaftaranPBPage() {
 
       await finalize({ registrationId: registration.id });
       setShowConfirmModal(false);
-      setSuccessInfo({ id: registration.id, category: registration.category });
+      setSuccessInfo({ id: registration.id, code: registration.code });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Pendaftaran gagal.');
+      const errMsg = error instanceof Error ? error.message : 'Pendaftaran gagal.';
+      setMessage(errMsg);
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -171,19 +212,15 @@ export default function PendaftaranPBPage() {
   const handleResetForm = () => {
     setDob('');
     setForm({
-      gender: 'putra',
-      fullName: '',
-      club: '',
-      whatsapp: '',
-      email: '',
-      addressDetail: '',
+      nik: '', fullName: '', bwfId: '', gender: 'pria',
+      motherName: '', birthPlace: '', playingHand: 'kanan',
+      club: '', nationality: 'WNI', phone: '',
+      whatsapp: '', email: '', addressDetail: '', postalCode: '',
     });
     setProvince('');
     setRegency('');
-    setDistrict('');
-    setVillage('');
-    setProfile(null);
-    setIdentity(null);
+    setKkFile(null);
+    setAktaFile(null);
     setSuccessInfo(null);
     setMessage('');
   };
@@ -194,24 +231,23 @@ export default function PendaftaranPBPage() {
     provinceCode,
     regencyCode,
     districtCode,
-    villageCode,
-    profile,
-    identity,
-    category,
-    categoryLabel,
+    kkFile,
+    aktaFile,
     calculatedAge,
   };
 
   const isFormComplete = Boolean(
-    category &&
-      profile &&
-      identity &&
+    form.nik.trim().length >= 16 &&
+    form.motherName.trim() &&
+    form.birthPlace.trim() &&
+    dob && !dobError &&
+      kkFile &&
+      aktaFile &&
+      (!extraDocs.length || extraDocs.every(d => d.file !== null)) &&
       form.fullName.trim() &&
       form.club.trim() &&
       provinceCode &&
       regencyCode &&
-      districtCode &&
-      villageCode &&
       form.addressDetail.trim() &&
       form.whatsapp.trim()
   );
@@ -245,45 +281,39 @@ export default function PendaftaranPBPage() {
               className="mx-auto max-w-xl rounded-[2rem] border border-border/80 bg-secondary/30 p-1.5 shadow-2xs"
             >
               <div className="rounded-[calc(2rem-0.375rem)] border border-border bg-card p-8 sm:p-10 text-center space-y-6 text-card-foreground">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.1 }}
+                  className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                >
                   <CheckCircle size={32} aria-hidden="true" />
-                </div>
+                </motion.div>
                 <div className="space-y-1.5">
                   <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
-                    Pendaftaran Berhasil Disimpan
+                    Terima Kasih Sudah Mendaftar!
                   </h2>
                   <p className="text-xs text-muted-foreground text-pretty max-w-sm mx-auto leading-relaxed">
-                    Data atlet telah tercatat dengan baik. Harap simpan atau catat ID Pendaftaran di bawah ini.
+                    Data atlet telah tercatat dengan aman di sistem kami. Harap simpan Kode Pendaftaran di bawah ini untuk keperluan administratif.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-secondary/50 p-5 grid grid-cols-2 gap-4 text-left">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                      ID Pendaftaran
-                    </span>
-                    <span className="font-mono text-sm font-bold text-foreground mt-0.5 block tabular-nums">
-                      {successInfo.id}
-                    </span>
-                  </div>
-                  <div className="border-l border-border pl-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                      Kategori Usia
-                    </span>
-                    <span className="font-extrabold text-amber-700 dark:text-amber-400 text-sm mt-0.5 block uppercase">
-                      {successInfo.category}
-                    </span>
-                  </div>
+                <div className="rounded-2xl border border-border bg-secondary/50 p-5 flex flex-col justify-center text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                    Kode Pendaftaran
+                  </span>
+                  <span className="font-mono text-xl tracking-[0.2em] font-bold text-foreground mt-1 block tabular-nums">
+                    {successInfo.code || successInfo.id}
+                  </span>
                 </div>
 
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleResetForm}
+                    onClick={() => window.location.reload()}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-900 bg-slate-900 dark:border-slate-100 dark:bg-slate-100 px-6 py-3 text-xs font-bold text-white dark:text-slate-900 hover:opacity-90 transition-opacity shadow-sm"
                   >
-                    <AddCircle size={16} aria-hidden="true" />
-                    <span>Daftarkan Atlet Lainnya</span>
+                    <span>Selesai & Tutup</span>
                   </button>
                 </div>
               </div>
@@ -300,336 +330,333 @@ export default function PendaftaranPBPage() {
               {/* RIGHT COLUMN: DOUBLE-BEZEL CLEAN FORM CANVAS */}
               <div className="lg:col-span-8 xl:col-span-8">
                 <div className="rounded-[2rem] border border-border/80 bg-secondary/30 p-1.5 shadow-2xs">
-                  <form
-                    onSubmit={handleInitialSubmit}
-                    className="rounded-[calc(2rem-0.375rem)] border border-border bg-card p-6 sm:p-10 space-y-10 text-card-foreground shadow-2xs"
-                  >
-                    {/* SECTION 1: DATA DIRI ATLET */}
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-3 border-b border-border/60 pb-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-foreground">
-                          <User size={18} aria-hidden="true" />
-                        </div>
-                        <div>
-                          <h2 className="font-display text-base font-bold text-foreground tracking-tight">
-                            1. Identitas & Data Diri
-                          </h2>
-                          <p className="text-xs text-muted-foreground">Tuliskan nama, tanggal lahir, dan asal klub atlet.</p>
-                        </div>
+                  <form onSubmit={handleInitialSubmit} className="rounded-[1.75rem] border border-border bg-card p-6 sm:p-10 text-card-foreground shadow-2xs">
+                    <div className="grid grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-6">
+                      
+                      <div className="col-span-full">
+                        <h3 className="text-2xl font-display font-bold text-foreground tracking-tight border-b border-border/60 pb-3 mb-2 flex items-center gap-2">
+                          <User size={18} /> Identitas & Data Diri
+                        </h3>
                       </div>
 
-                      <div className="grid gap-5 sm:grid-cols-2">
-                        <div className="sm:col-span-2 space-y-1.5">
-                          <label
-                            htmlFor="fullName"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
-                          >
-                            <span>Nama Lengkap Atlet</span>
-                            <span className="text-destructive font-bold">*</span>
-                          </label>
-                          <input
-                            id="fullName"
-                            required
-                            minLength={3}
-                            maxLength={100}
-                            name="fullName"
-                            autoComplete="name"
-                            placeholder="Contoh: Anthony Sinisuka Ginting"
-                            value={form.fullName}
-                            onChange={(e) => set('fullName', e.target.value)}
-                            className={`w-full min-h-[46px] rounded-xl border px-3.5 py-2.5 text-sm transition-all outline-none shadow-2xs ${
-                              form.fullName.trim().length > 0
-                                ? 'border-emerald-500/80 bg-emerald-50/20 text-slate-900 font-medium dark:border-emerald-500/60 dark:bg-emerald-950/20 dark:text-white'
-                                : 'border-slate-300 bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal hover:border-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-emerald-500'
-                            }`}
-                          />
-                          <p className="text-[11px] text-muted-foreground font-medium">
-                            Tuliskan nama lengkap tanpa singkatan.
+                      {/* NIK */}
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="nik" className="text-sm font-medium text-foreground">
+                          NIK (Nomor Induk Kependudukan)
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="nik" required minLength={16} maxLength={16} name="nik" placeholder="16 Digit NIK"
+                          value={form.nik} onChange={(e) => set('nik', e.target.value.replace(/[^0-9]/g, ''))}
+                          className="mt-2 tabular-nums"
+                        />
+                        {form.nik.length > 0 && form.nik.length < 16 && (
+                          <p className="text-[11px] text-destructive font-medium mt-1.5 animate-in fade-in slide-in-from-top-1">
+                            NIK harus 16 digit (kurang {16 - form.nik.length} digit)
                           </p>
-                        </div>
+                        )}
+                      </div>
 
+                      {/* Nama Lengkap */}
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="fullName" className="text-sm font-medium text-foreground">
+                          Nama Lengkap Atlet
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="fullName" required minLength={3} maxLength={100} name="fullName" placeholder="Contoh: Anthony Sinisuka Ginting"
+                          value={form.fullName} onChange={(e) => set('fullName', e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+
+                      {/* ID BWF */}
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="bwfId" className="text-sm font-medium text-foreground block">
+                          ID BWF <span className="text-muted-foreground font-normal lowercase">(opsional)</span>
+                        </Label>
+                        <Input id="bwfId" name="bwfId" placeholder="Kosongkan jika tidak ada"
+                          value={form.bwfId} onChange={(e) => set('bwfId', e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+
+                      {/* Klub */}
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="club" className="text-sm font-medium text-foreground">
+                          Klub
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="club" required minLength={2} maxLength={100} name="club" placeholder="Nama Klub"
+                          value={form.club} onChange={(e) => set('club', e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+
+                      {/* Jenis Kelamin & Main Tangan */}
+                      <div className="col-span-full sm:col-span-3 space-y-2">
+                        <Label className="text-sm font-medium text-foreground">
+                          Jenis Kelamin<span className="text-destructive">*</span>
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                          {['pria', 'wanita'].map((g) => {
+                            const isSelected = form.gender === g;
+                            return (
+                              <Button key={g} type="button" variant={isSelected ? 'default' : 'outline'} onClick={() => set('gender', g)} className="uppercase text-xs font-bold w-full transition-transform active:scale-95">
+                                {g}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="col-span-full sm:col-span-3 space-y-2">
+                        <Label className="text-sm font-medium text-foreground">
+                          Main Tangan<span className="text-destructive">*</span>
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                          {['kanan', 'kiri'].map((h) => {
+                            const isSelected = form.playingHand === h;
+                            return (
+                              <Button key={h} type="button" variant={isSelected ? 'default' : 'outline'} onClick={() => set('playingHand', h)} className="uppercase text-xs font-bold w-full transition-transform active:scale-95">
+                                {h}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Ibu Kandung */}
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="motherName" className="text-sm font-medium text-foreground">
+                          Ibu Kandung<span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="motherName" required name="motherName" placeholder="Nama Ibu Kandung"
+                          value={form.motherName} onChange={(e) => set('motherName', e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+
+                      {/* Tempat Lahir */}
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="birthPlace" className="text-sm font-medium text-foreground">
+                          Tempat Lahir<span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="birthPlace" required name="birthPlace" placeholder="Kota Kelahiran"
+                          value={form.birthPlace} onChange={(e) => set('birthPlace', e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+
+                      {/* Tanggal Lahir */}
+                      <div className="col-span-full sm:col-span-3">
                         <CustomDatePicker value={dob} onChange={setDob} />
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1">
-                            <span>Jenis Kelamin</span>
-                            <span className="text-destructive font-bold">*</span>
-                          </label>
-                          <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Jenis kelamin">
-                            {['putra', 'putri'].map((g) => {
-                              const isSelected = form.gender === g;
-                              return (
-                                <button
-                                  key={g}
-                                  type="button"
-                                  role="radio"
-                                  aria-checked={isSelected}
-                                  onClick={() => set('gender', g)}
-                                  className={`min-h-[46px] rounded-xl border py-2.5 text-xs font-bold uppercase tracking-wider transition-all focus:outline-none focus:ring-4 focus:ring-emerald-500/20 active:scale-95 shadow-2xs ${
-                                    isSelected
-                                      ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 shadow-sm ring-1 ring-slate-900/10'
-                                      : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-800'
-                                  }`}
-                                >
-                                  {g}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <label
-                            htmlFor="club"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
-                          >
-                            <span>Klub / Asal PB Bulutangkis</span>
-                            <span className="text-destructive font-bold">*</span>
-                          </label>
-                          <input
-                            id="club"
-                            required
-                            minLength={2}
-                            maxLength={100}
-                            name="club"
-                            autoComplete="off"
-                            placeholder="Contoh: PB Djarum Kudus / PB Jaya Raya"
-                            value={form.club}
-                            onChange={(e) => set('club', e.target.value)}
-                            className={`w-full min-h-[46px] rounded-xl border px-3.5 py-2.5 text-sm transition-all outline-none shadow-2xs ${
-                              form.club.trim().length > 0
-                                ? 'border-emerald-500/80 bg-emerald-50/20 text-slate-900 font-medium dark:border-emerald-500/60 dark:bg-emerald-950/20 dark:text-white'
-                                : 'border-slate-300 bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal hover:border-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-emerald-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* SECTION 2: ALAMAT & DOMISILI */}
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-3 border-b border-border/60 pb-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-foreground">
-                          <Location size={18} aria-hidden="true" />
-                        </div>
-                        <div>
-                          <h2 className="font-display text-base font-bold text-foreground tracking-tight">
-                            2. Wilayah Domisili & Kontak
-                          </h2>
-                          <p className="text-xs text-muted-foreground">Pilih alamat tempat tinggal dan nomor WhatsApp yang aktif.</p>
-                        </div>
+                        {dobError && <p className="text-[11px] text-destructive font-medium mt-1">{dobError}</p>}
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Kewarganegaraan */}
+                      <div className="col-span-full sm:col-span-3">
                         <CustomSelect
-                          label="Provinsi"
-                          placeholder="Pilih Provinsi"
-                          items={provinces}
-                          value={provinceCode}
-                          disabled={!provinces?.length}
-                          isLoading={provinces === undefined}
-                          onChange={(val) => {
-                            setProvince(val);
-                            setRegency('');
+                          label="Kewarganegaraan"
+                          placeholder="Pilih Kewarganegaraan"
+                          items={[
+                            { code: 'WNI', name: 'WNI (Warga Negara Indonesia)' },
+                            { code: 'WNA', name: 'WNA (Warga Negara Asing)' },
+                          ]}
+                          value={form.nationality}
+                          disabled={false}
+                          onChange={(val) => set('nationality', val)}
+                        />
+                      </div>
+
+                      {/* SECTION 2 */}
+                      <div className="col-span-full mt-4">
+                        <h3 className="text-2xl font-display font-bold text-foreground tracking-tight border-b border-border/60 pb-3 mb-2 flex items-center gap-2">
+                          <MapPin size={18} /> Wilayah Domisili & Kontak
+                        </h3>
+                      </div>
+
+                      <div className="col-span-full">
+                        <Label htmlFor="addressDetail" className="text-sm font-medium text-foreground">Alamat</Label>
+                        <Textarea id="addressDetail" name="addressDetail" placeholder="Alamat lengkap"
+                          value={form.addressDetail} onChange={(e) => set('addressDetail', e.target.value)}
+                          className="mt-2 min-h-[100px] resize-y"
+                        />
+                      </div>
+
+                      <div className="col-span-full sm:col-span-3">
+                        <CustomSelect label="Provinsi" placeholder="PILIH" items={provinces} value={provinceCode}
+                          disabled={!provinces?.length} isLoading={provinces === undefined}
+                          onChange={(val) => { setProvince(val); setRegency(''); }}
+                        />
+                      </div>
+
+                      <div className="col-span-full sm:col-span-3">
+                        <CustomSelect label="Kabupaten/Kota" placeholder="- PILIH -" items={regencies} value={regencyCode}
+                          disabled={!provinceCode} isLoading={provinceCode !== '' && regencies === undefined}
+                          onChange={(val) => { 
+                            setRegency(val); 
                             setDistrict('');
-                            setVillage('');
                           }}
                         />
+                      </div>
 
-                        <CustomSelect
-                          label="Kabupaten/Kota"
-                          placeholder="Pilih Kabupaten/Kota"
-                          items={regencies}
-                          value={regencyCode}
-                          disabled={!provinceCode}
-                          isLoading={provinceCode !== '' && regencies === undefined}
-                          onChange={(val) => {
-                            setRegency(val);
-                            setDistrict('');
-                            setVillage('');
+                      <div className="col-span-full sm:col-span-4">
+                        <CustomSelect label="Kecamatan" placeholder="- PILIH -" items={districts} value={districtCode}
+                          disabled={!regencyCode} isLoading={regencyCode !== '' && districts === undefined}
+                          onChange={(val) => { 
+                            setDistrict(val); 
+                            const selected = districts?.find((r: Region) => r.code === val);
+                            if (selected?.postalCode) {
+                              set('postalCode', selected.postalCode);
+                            }
                           }}
                         />
+                      </div>
 
-                        <CustomSelect
-                          label="Kecamatan"
-                          placeholder="Pilih Kecamatan"
-                          items={districts}
-                          value={districtCode}
-                          disabled={!regencyCode}
-                          isLoading={regencyCode !== '' && districts === undefined}
-                          onChange={(val) => {
-                            setDistrict(val);
-                            setVillage('');
-                          }}
-                        />
-
-                        <CustomSelect
-                          label="Desa/Kelurahan"
-                          placeholder="Pilih Desa/Kelurahan"
-                          items={villages}
-                          value={villageCode}
-                          disabled={!districtCode}
-                          isLoading={districtCode !== '' && villages === undefined}
-                          onChange={setVillage}
+                      <div className="col-span-full sm:col-span-2">
+                        <Label htmlFor="postalCode" className="text-sm font-medium text-foreground">Kode Pos</Label>
+                        <Input id="postalCode" name="postalCode" placeholder="Kode Pos"
+                          value={form.postalCode} onChange={(e) => set('postalCode', e.target.value.replace(/[^0-9]/g, ''))}
+                          className="mt-2 tabular-nums"
                         />
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-3">
-                        <div>
-                          <label
-                            htmlFor="postalCode"
-                            className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5"
-                          >
-                            Kode Pos
-                          </label>
-                          <input
-                            id="postalCode"
-                            readOnly
-                            value={selectedVillage?.postalCode || ''}
-                            placeholder="Otomatis"
-                            className="w-full min-h-[46px] rounded-xl border border-slate-200 bg-slate-100/80 px-3.5 py-2.5 text-sm font-mono font-medium text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400 outline-none cursor-not-allowed tabular-nums"
-                          />
-                        </div>
-                        <div className="sm:col-span-2 space-y-1.5">
-                          <label
-                            htmlFor="addressDetail"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
-                          >
-                            <span>Detail Alamat (Jalan, RT/RW, No. Rumah)</span>
-                            <span className="text-destructive font-bold">*</span>
-                          </label>
-                          <input
-                            id="addressDetail"
-                            required
-                            minLength={5}
-                            maxLength={300}
-                            name="addressDetail"
-                            autoComplete="street-address"
-                            placeholder="Contoh: Jl. Pemuda No. 45, RT 02/RW 03"
-                            value={form.addressDetail}
-                            onChange={(e) => set('addressDetail', e.target.value)}
-                            className={`w-full min-h-[46px] rounded-xl border px-3.5 py-2.5 text-sm transition-all outline-none shadow-2xs ${
-                              form.addressDetail.trim().length > 0
-                                ? 'border-emerald-500/80 bg-emerald-50/20 text-slate-900 font-medium dark:border-emerald-500/60 dark:bg-emerald-950/20 dark:text-white'
-                                : 'border-slate-300 bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal hover:border-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-emerald-500'
-                            }`}
-                          />
-                        </div>
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="phone" className="text-sm font-medium text-foreground">Telepon</Label>
+                        <Input id="phone" type="tel" name="phone" placeholder="Nomor Telepon Rumah/Kantor"
+                          value={form.phone} onChange={(e) => set('phone', e.target.value.replace(/[^0-9]/g, ''))}
+                          className="mt-2 tabular-nums"
+                        />
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <label
-                            htmlFor="whatsapp"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1"
-                          >
-                            <span>No. WhatsApp Aktif</span>
-                            <span className="text-destructive font-bold">*</span>
-                          </label>
-                          <input
-                            id="whatsapp"
-                            required
-                            type="tel"
-                            name="whatsapp"
-                            autoComplete="tel"
-                            placeholder="Contoh: 081234567890"
-                            value={form.whatsapp}
-                            onChange={(e) => set('whatsapp', e.target.value)}
-                            className={`w-full min-h-[46px] rounded-xl border px-3.5 py-2.5 text-sm font-mono transition-all outline-none shadow-2xs tabular-nums ${
-                              form.whatsapp.trim().length > 0
-                                ? 'border-emerald-500/80 bg-emerald-50/20 text-slate-900 font-medium dark:border-emerald-500/60 dark:bg-emerald-950/20 dark:text-white'
-                                : 'border-slate-300 bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-sans placeholder:font-normal hover:border-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-emerald-500'
-                            }`}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label
-                            htmlFor="email"
-                            className="text-xs font-semibold text-slate-700 dark:text-slate-200 block"
-                          >
-                            Email <span className="text-muted-foreground font-normal lowercase">(opsional)</span>
-                          </label>
-                          <input
-                            id="email"
-                            type="email"
-                            name="email"
-                            autoComplete="email"
-                            spellCheck={false}
-                            placeholder="Contoh: atlet@domain.com"
-                            value={form.email}
-                            onChange={(e) => set('email', e.target.value)}
-                            className={`w-full min-h-[46px] rounded-xl border px-3.5 py-2.5 text-sm transition-all outline-none shadow-2xs ${
-                              form.email.trim().length > 0
-                                ? 'border-emerald-500/80 bg-emerald-50/20 text-slate-900 font-medium dark:border-emerald-500/60 dark:bg-emerald-950/20 dark:text-white'
-                                : 'border-slate-300 bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal hover:border-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:hover:border-slate-600 dark:focus:border-emerald-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* SECTION 3: UNGGAH BERKAS */}
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-3 border-b border-border/60 pb-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary text-foreground">
-                          <FileText size={18} aria-hidden="true" />
-                        </div>
-                        <div>
-                          <h2 className="font-display text-base font-bold text-foreground tracking-tight">
-                            3. Unggah Dokumen Pendukung
-                          </h2>
-                          <p className="text-xs text-muted-foreground">Unggah foto dan bukti identitas atlet.</p>
-                        </div>
+                      <div className="col-span-full sm:col-span-3">
+                        <Label htmlFor="whatsapp" className="text-sm font-medium text-foreground">
+                          Handphone (WA)<span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="whatsapp" required type="tel" name="whatsapp" placeholder="Contoh: 081234567890"
+                          value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value.replace(/[^0-9]/g, ''))}
+                          className="mt-2 tabular-nums"
+                        />
                       </div>
 
-                      <div className="grid gap-6 sm:grid-cols-2">
+                      <div className="col-span-full">
+                        <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
+                        <Input id="email" type="email" name="email" placeholder="Contoh: atlet@domain.com"
+                          value={form.email} onChange={(e) => set('email', e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+
+                      {/* SECTION 3 */}
+                      <div className="col-span-full mt-4">
+                        <h3 className="text-2xl font-display font-bold text-foreground tracking-tight border-b border-border/60 pb-3 mb-2 flex items-center gap-2">
+                          <FileText size={18} /> Unggah Dokumen Pendukung
+                        </h3>
+                      </div>
+
+                      <div className="col-span-full sm:col-span-3">
                         <FileUploader
-                          label="Pas Foto Terbaru"
-                          accept="image/jpeg,image/png,image/webp"
-                          file={profile}
-                          kind="photo"
-                          onFileSelect={setProfile}
-                          hint="Format JPG / PNG / WEBP, Maksimal 2 MB"
-                        />
-
-                        <FileUploader
-                          label={
-                            category === 'anak'
-                              ? 'Bukti Usia (KK / Akta Kelahiran)'
-                              : category === 'taruna'
-                              ? 'Bukti Usia (Kartu Pelajar / KK / Akta)'
-                              : category === 'dewasa'
-                              ? 'Bukti Usia (KTP / SIM)'
-                              : 'Dokumen Bukti Usia'
-                          }
+                          label="Scan / Foto Kartu Keluarga"
                           accept="image/jpeg,image/png,image/webp,application/pdf"
-                          file={identity}
+                          file={kkFile}
                           kind="identity"
-                          onFileSelect={setIdentity}
-                          hint="Format JPG / PNG / WEBP / PDF, Maksimal 2 MB"
+                          onFileSelect={setKkFile}
+                          hint="Format PDF / JPG / PNG, Maks 5 MB"
                         />
                       </div>
+
+                      <div className="col-span-full sm:col-span-3">
+                        <FileUploader
+                          label="Scan / Foto Akta Kelahiran"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          file={aktaFile}
+                          kind="identity"
+                          onFileSelect={setAktaFile}
+                          hint="Format PDF / JPG / PNG, Maks 5 MB"
+                        />
+                      </div>
+
+                      {extraDocs.length > 0 && (
+                        <div className="col-span-full space-y-6 pt-4 border-t border-border/80">
+                          {extraDocs.map((doc) => (
+                            <div key={doc.id} className="relative space-y-4 p-4 rounded-2xl border border-border bg-secondary/20">
+                              <button
+                                type="button"
+                                onClick={() => setExtraDocs(extraDocs.filter(d => d.id !== doc.id))}
+                                className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center transition-colors shadow-sm"
+                                title="Hapus dokumen ini"
+                              >
+                                ✕
+                              </button>
+                              <div className="space-y-1.5">
+                                <Label className="text-sm font-medium text-foreground block">
+                                  Jenis Dokumen Tambahan
+                                </Label>
+                                <select
+                                  value={doc.type}
+                                  onChange={(e) => setExtraDocs(extraDocs.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d))}
+                                  className="flex h-9 w-full sm:w-1/2 items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {IDENTITY_DOC_TYPES.map((t) => (
+                                    <option key={t} value={t}>{t}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <FileUploader
+                                label={`Unggah File ${doc.type === 'Mutasi' ? 'Surat Mutasi' : doc.type}`}
+                                accept="image/jpeg,image/png,image/webp,application/pdf"
+                                file={doc.file}
+                                kind="identity"
+                                onFileSelect={(f) => setExtraDocs(extraDocs.map(d => d.id === doc.id ? { ...d, file: f } : d))}
+                                hint="Format PDF / JPG / PNG, Maks 5 MB"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className="col-span-full pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setExtraDocs([...extraDocs, { id: Math.random().toString(36).substring(7), type: IDENTITY_DOC_TYPES[1], file: null }])}
+                          className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 gap-1.5 px-0"
+                        >
+                          <PlusCircle size={18} />
+                          Tambah Dokumen Lain (Opsional)
+                        </Button>
+                      </div>
+
                     </div>
 
-                    {/* SUBMIT BUTTON WITH DIPONEGORO SLATE/NAVY TRUST AUTHORITY */}
-                    <div className="pt-6 border-t border-border/80">
-                      <button
+                    <Separator className="my-8" />
+
+                    <div className="flex flex-col sm:flex-row items-center justify-end gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleResetForm}
+                        className="w-full sm:w-auto min-w-[120px]"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
                         type="submit"
                         disabled={!isFormComplete}
-                        className="group flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-900 bg-slate-900 dark:border-slate-100 dark:bg-slate-100 px-6 py-3.5 font-bold text-white dark:text-slate-900 text-xs uppercase tracking-wider transition-all duration-200 hover:opacity-90 active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:opacity-40 shadow-md shadow-slate-900/10"
+                        className="w-full sm:w-auto min-w-[200px] transition-transform active:scale-95"
                       >
                         <Award size={16} aria-hidden="true" />
-                        <span>Tinjau & Kirim Pendaftaran</span>
-                      </button>
-                      {!isFormComplete && (
-                        <p className="mt-3 text-center text-[11px] text-muted-foreground font-medium">
-                          Lengkapi seluruh field wajib (<span className="text-destructive font-bold">*</span>) untuk melanjutkan.
-                        </p>
-                      )}
+                        Tinjau & Kirim
+                      </Button>
                     </div>
+                    
+                    {!isFormComplete && (
+                      <p className="mt-3 text-right text-[11px] text-muted-foreground font-medium">
+                        Lengkapi seluruh field wajib (<span className="text-destructive font-bold">*</span>) untuk melanjutkan.
+                      </p>
+                    )}
 
                     {message && !showConfirmModal && (
-                      <div className="flex items-center gap-2.5 rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive" aria-live="polite">
+                      <div className="mt-6 flex items-center gap-2.5 rounded-md border border-destructive/40 bg-destructive/10 p-3.5 text-xs font-semibold text-destructive">
                         <AlertCircle size={16} className="shrink-0" aria-hidden="true" />
                         <p>{message}</p>
                       </div>
@@ -647,12 +674,9 @@ export default function PendaftaranPBPage() {
         isOpen={showConfirmModal}
         saving={saving}
         form={form}
-        category={category}
         calculatedAge={calculatedAge}
         selectedProvince={selectedProvince}
         selectedRegency={selectedRegency}
-        selectedDistrict={selectedDistrict}
-        selectedVillage={selectedVillage}
         onClose={() => setShowConfirmModal(false)}
         onSubmit={confirmAndSubmit}
       />

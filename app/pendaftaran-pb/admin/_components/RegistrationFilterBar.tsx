@@ -15,8 +15,6 @@ import {
 interface RegistrationFilterBarProps {
   searchQuery: string;
   onSearchChange: (val: string) => void;
-  selectedCategory: string;
-  onCategoryChange: (val: string) => void;
   selectedKabupaten: string;
   onKabupatenChange: (val: string) => void;
   kabupatenList: string[];
@@ -27,8 +25,6 @@ interface RegistrationFilterBarProps {
 export default function RegistrationFilterBar({
   searchQuery,
   onSearchChange,
-  selectedCategory,
-  onCategoryChange,
   selectedKabupaten,
   onKabupatenChange,
   kabupatenList,
@@ -66,21 +62,6 @@ export default function RegistrationFilterBar({
           <span>Filter:</span>
         </div>
 
-        {/* Kategori Select (h-11 for 44px mobile touch target) */}
-        <Select
-          value={selectedCategory || 'all'}
-          onValueChange={(val) => onCategoryChange(val === 'all' ? '' : val)}
-        >
-          <SelectTrigger className="h-11 w-[160px] rounded-xl border-border bg-background text-xs font-bold text-foreground">
-            <SelectValue placeholder="Semua Kategori" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-border bg-card text-card-foreground">
-            <SelectItem value="all" className="text-xs font-semibold">Semua Kategori</SelectItem>
-            <SelectItem value="anak" className="text-xs font-bold">Anak (&lt; 15 Thn)</SelectItem>
-            <SelectItem value="taruna" className="text-xs font-bold">Taruna (15 - 17 Thn)</SelectItem>
-            <SelectItem value="dewasa" className="text-xs font-bold">Dewasa (≥ 18 Thn)</SelectItem>
-          </SelectContent>
-        </Select>
 
         {/* Kabupaten Select (h-11 for 44px mobile touch target) */}
         <Select

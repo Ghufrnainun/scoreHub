@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Search, Check, Loader } from 'reicon-react';
+import { ChevronDown, Search, Check, Loader } from 'lucide-react';
 
 export interface Region {
   code: string;

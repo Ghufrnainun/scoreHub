@@ -9,6 +9,7 @@ import {
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import ConvexClientProvider from '@/components/convex-client-provider';
+import { Toaster } from '@/components/ui/sonner';
 
 const barlow = Barlow({
   subsets: ['latin'],
@@ -72,6 +73,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <ConvexClientProvider>{children}</ConvexClientProvider>
+        <Toaster />
         <Analytics />
       </body>
     </html>

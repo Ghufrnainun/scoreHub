@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'reicon-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { todayIso } from '@/lib/pb-registration-validation';
 
 const MONTH_NAMES = [
