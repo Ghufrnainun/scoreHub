@@ -446,10 +446,11 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredMatches.map((match) => (
+          {filteredMatches.map((match, index) => (
             <Card
               key={match.id}
-              className="flex flex-col gap-4 rounded-3xl border border-black/10 bg-white p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-black/25 hover:shadow-lg hover:shadow-black/5"
+              style={{ animationDelay: `${index * 75}ms` }}
+              className="flex flex-col gap-4 rounded-3xl border border-black/10 bg-white p-5 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-black/25 hover:shadow-lg hover:shadow-black/5"
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
@@ -597,7 +598,7 @@ export default function AdminDashboard() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-xs h-10 rounded-full text-amber-700 hover:bg-amber-50 hover:text-amber-800 font-bold"
+                  className="w-full text-xs h-10 rounded-full text-warn hover:bg-warn/10 hover:text-warn font-bold transition-transform active:scale-95"
                   onClick={() => onFinishMatch(match.matchId)}
                   disabled={match.status === 'finished'}
                 >
@@ -609,7 +610,7 @@ export default function AdminDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full text-xs h-10 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+                      className="w-full text-xs h-10 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive font-bold transition-transform active:scale-95"
                     >
                       Hapus
                     </Button>

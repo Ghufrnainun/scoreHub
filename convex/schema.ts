@@ -145,6 +145,7 @@ export default defineSchema({
     lastUsedAt: v.optional(v.number()),
     isTemporary: v.optional(v.boolean()),
     label: v.optional(v.string()),
+    scope: v.optional(v.string()),
   }).index('by_tokenHash', ['tokenHash'])
     .index('by_expiresAt', ['expiresAt']),
 
@@ -218,4 +219,56 @@ export default defineSchema({
     key: v.string(), // e.g. "global_config" (singleton for now)
     value: v.any(),
   }).index('by_key', ['key']),
+
+  pb_registrations: defineTable({
+    nik: v.optional(v.string()),
+    fullName: v.string(), 
+    bwfId: v.optional(v.string()),
+    registrationCode: v.optional(v.string()),
+    gender: v.union(v.literal('pria'), v.literal('wanita'), v.literal('putra'), v.literal('putri')),
+    motherName: v.optional(v.string()),
+    birthPlace: v.optional(v.string()),
+    dob: v.string(), 
+    playingHand: v.optional(v.union(v.literal('kiri'), v.literal('kanan'))),
+    
+    addressDetail: v.optional(v.string()),
+    postalCode: v.optional(v.string()),
+    provinceCode: v.optional(v.string()), provinceName: v.optional(v.string()),
+    regencyCode: v.optional(v.string()), regencyName: v.optional(v.string()),
+    club: v.string(), 
+    nationality: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    whatsapp: v.string(), 
+    email: v.optional(v.string()),
+    
+    // Backward compat
+    districtCode: v.optional(v.string()), districtName: v.optional(v.string()),
+    villageCode: v.optional(v.string()), villageName: v.optional(v.string()),
+    
+    finalizedAt: v.optional(v.number()),
+    category: v.optional(v.string()), // Kept for backward compatibility
+    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('sudah_input_pbsi')),
+    createdAt: v.number(), updatedAt: v.number(),
+  }).index('by_status', ['status']),
+  pb_registration_files: defineTable({
+    registrationId: v.id('pb_registrations'),
+    docType: v.string(), objectKey: v.string(), filename: v.string(),
+    contentType: v.string(), size: v.number(), createdAt: v.number(),
+  }).index('by_registration', ['registrationId']),
+  pb_registration_history: defineTable({
+    registrationId: v.id('pb_registrations'),
+    status: v.union(v.literal('baru'), v.literal('valid'), v.literal('sudah_input_pbsi')),
+    createdAt: v.number(),
+  }).index('by_registration', ['registrationId']),
+  regions: defineTable({
+    code: v.string(),
+    parentCode: v.optional(v.string()),
+    level: v.union(v.literal('province'), v.literal('regency'), v.literal('district'), v.literal('village')),
+    name: v.string(),
+    postalCode: v.optional(v.string()),
+    sourceVersion: v.string(),
+  })
+    .index('by_code', ['code'])
+    .index('by_parent_name', ['parentCode', 'name'])
+    .index('by_level_name', ['level', 'name']),
 });

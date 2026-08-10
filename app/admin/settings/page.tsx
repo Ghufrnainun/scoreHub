@@ -476,7 +476,7 @@ Silakan masuk menggunakan kode di atas.`;
                 </tr>
               </thead>
               <tbody>
-                {tempCodes.map((code) => (
+                {tempCodes.map((code: any) => (
                   <tr key={code._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
                     <td className="py-4 px-4 font-bold text-slate-900">{code.label}</td>
                     <td className="py-4 px-4 text-muted-foreground">
