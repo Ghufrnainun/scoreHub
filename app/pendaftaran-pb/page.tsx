@@ -587,19 +587,16 @@ export default function PendaftaranPBPage() {
                               >
                                 ✕
                               </button>
-                              <div className="space-y-1.5">
-                                <Label className="text-sm font-medium text-foreground block">
-                                  Jenis Dokumen Tambahan
-                                </Label>
-                                <select
+                              <div className="w-full sm:w-1/2">
+                                <CustomSelect
+                                  label="Jenis Dokumen Tambahan"
+                                  placeholder="Pilih Jenis Dokumen"
+                                  items={IDENTITY_DOC_TYPES.map((t) => ({ code: t, name: t }))}
                                   value={doc.type}
-                                  onChange={(e) => setExtraDocs(extraDocs.map(d => d.id === doc.id ? { ...d, type: e.target.value } : d))}
-                                  className="flex h-9 w-full sm:w-1/2 items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {IDENTITY_DOC_TYPES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                  ))}
-                                </select>
+                                  disabled={false}
+                                  required={false}
+                                  onChange={(val) => setExtraDocs(extraDocs.map(d => d.id === doc.id ? { ...d, type: val } : d))}
+                                />
                               </div>
                               <FileUploader
                                 label={`Unggah File ${doc.type === 'Mutasi' ? 'Surat Mutasi' : doc.type}`}

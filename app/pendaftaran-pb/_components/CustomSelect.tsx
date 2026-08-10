@@ -17,6 +17,7 @@ export interface CustomSelectProps {
   value: string;
   disabled: boolean;
   isLoading?: boolean;
+  required?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -27,6 +28,7 @@ export default function CustomSelect({
   value,
   disabled,
   isLoading,
+  required = true,
   onChange,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -118,7 +120,7 @@ export default function CustomSelect({
         className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between"
       >
         <span>
-          {label} <span className="text-destructive font-bold">*</span>
+          {label} {required && <span className="text-destructive font-bold">*</span>}
         </span>
         {isLoading && (
           <span className="text-[10px] text-muted-foreground font-medium animate-pulse">
