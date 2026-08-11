@@ -61,6 +61,7 @@ export default function AdminRegistrationDetail() {
   const updateStatusMutation = useMutation(api.pbRegistration.updateStatus);
   const getDownloadUrl = useAction(api.pbRegistration.downloadUrl);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [openingFileDocType, setOpeningFileDocType] = useState<string | null>(null);
   const updateDataMutation = useMutation(api.pbRegistration.adminUpdateData);
 
   // States for Inline Editing
@@ -171,6 +172,27 @@ export default function AdminRegistrationDetail() {
       toast.error(`Gagal mengunduh ZIP: ${(err as Error).message}`);
     } finally {
       setIsDownloadingZip(false);
+    }
+  };
+
+  const handleOpenFile = async (docType: string) => {
+    if (!registrationDetail || !token) return;
+    setOpeningFileDocType(docType);
+    try {
+      const url = await getDownloadUrl({
+        registrationId: registrationDetail._id,
+        docType,
+        adminSessionToken: token,
+      });
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('Gagal mendapatkan link file.');
+      }
+    } catch (err) {
+      toast.error(`Gagal membuka file: ${(err as Error).message}`);
+    } finally {
+      setOpeningFileDocType(null);
     }
   };
 
@@ -633,11 +655,21 @@ export default function AdminRegistrationDetail() {
                           {file.filename}
                         </span>
                       </div>
-                      <Button variant="outline" size="sm" className="h-8 rounded-lg font-bold text-xs gap-1 shrink-0" asChild>
-                        <a href={`#file-${file._id}`} target="_blank" rel="noreferrer">
-                          <span>Buka</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg font-bold text-xs gap-1 shrink-0"
+                        onClick={() => handleOpenFile(file.docType)}
+                        disabled={openingFileDocType === file.docType}
+                      >
+                        {openingFileDocType === file.docType ? (
+                          <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span>Buka</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </>
+                        )}
                       </Button>
                     </div>
                   ))
