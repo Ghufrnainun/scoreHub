@@ -333,7 +333,10 @@ export const downloadUrl = action({
   },
   handler: async (ctx, args): Promise<string> => {
     await ctx.runQuery((internal as any).pbRegistration.authorizeMaster, { adminSessionToken: args.adminSessionToken });
-    const file = await ctx.runQuery((internal as any).pbRegistration.getFile, args);
+    const file = await ctx.runQuery((internal as any).pbRegistration.getFile, {
+      registrationId: args.registrationId,
+      docType: args.docType,
+    });
     if (!file) throw new ConvexError('Dokumen tidak ditemukan.');
     
     const s3Client = getS3Client();
