@@ -13,7 +13,7 @@ export const mockAdminData = internalMutation({
         dob: '2012-05-15',
         gender: 'putra',
         club: 'PB Djarum',
-        whatsapp: '081234567890',
+        whatsapp: '085325535155',
         email: 'budi.s@example.com',
         provinceCode: '33',
         regencyCode: '3374',

@@ -74,7 +74,7 @@ export default function AdminPendaftaranPBPage() {
       localStorage.setItem(PB_TOKEN_KEY, res.token);
       setToken(res.token);
       setPinInput('');
-      toast.success('Login berhasil! Selamat datang di Dashboard Pendaftaran PB Undip.');
+      toast.success('Login berhasil! Selamat datang di Dashboard Pendaftaran PB UNDIP.');
     } catch (err) {
       setLoginError((err as Error).message || 'PIN yang dimasukkan salah.');
       toast.error('Gagal login: PIN tidak valid.');
@@ -135,23 +135,23 @@ export default function AdminPendaftaranPBPage() {
     const headers = ['ID', 'NIK', 'Nama Lengkap', 'ID BWF', 'Gender', 'Ibu Kandung', 'Tempat Lahir', 'Tanggal Lahir', 'Main Tangan', 'Kewarganegaraan', 'Klub', 'Provinsi', 'Kabupaten/Kota', 'Kode Pos', 'Alamat Lengkap', 'No Telepon', 'No Handphone', 'Email', 'Status', 'Tanggal Daftar'];
     const rows = filteredData.map((item) => [
       `"${item._id}"`,
-      `"${item.nik || ''}"`,
+      `"${item.nik || '--'}"`,
       `"${item.fullName.replace(/"/g, '""')}"`,
-      `"${item.bwfId || ''}"`,
+      `"${item.bwfId || '--'}"`,
       `"${item.gender}"`,
-      `"${(item.motherName || '').replace(/"/g, '""')}"`,
-      `"${(item.birthPlace || '').replace(/"/g, '""')}"`,
-      `"${item.dob || ''}"`,
-      `"${item.playingHand || ''}"`,
-      `"${(item.nationality || '').replace(/"/g, '""')}"`,
+      `"${(item.motherName || '--').replace(/"/g, '""')}"`,
+      `"${(item.birthPlace || '--').replace(/"/g, '""')}"`,
+      `"${item.dob || '--'}"`,
+      `"${item.playingHand || '--'}"`,
+      `"${(item.nationality || '--').replace(/"/g, '""')}"`,
       `"${item.club.replace(/"/g, '""')}"`,
-      `"${(item.provinceName || '').replace(/"/g, '""')}"`,
-      `"${(item.regencyName || '').replace(/"/g, '""')}"`,
-      `"${item.postalCode || ''}"`,
-      `"${(item.addressDetail || '').replace(/"/g, '""')}"`,
-      `"${item.phone || ''}"`,
-      `"${item.whatsapp}"`,
-      `"${item.email || ''}"`,
+      `"${(item.provinceName || '--').replace(/"/g, '""')}"`,
+      `"${(item.regencyName || '--').replace(/"/g, '""')}"`,
+      `"${item.postalCode || '--'}"`,
+      `"${(item.addressDetail || '--').replace(/"/g, '""')}"`,
+      `"${item.phone || '--'}"`,
+      `"${item.whatsapp || '--'}"`,
+      `"${(item.email || '--').replace(/"/g, '""')}"`,
       `"${item.status}"`,
       `"${new Date(item.createdAt).toISOString()}"`,
     ]);
@@ -160,7 +160,7 @@ export default function AdminPendaftaranPBPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Pendaftaran_PB_Undip_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Pendaftaran_PB_UNDIP_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -195,9 +195,9 @@ export default function AdminPendaftaranPBPage() {
         <div className="w-full max-w-md animate-in fade-in-50 duration-200">
           <div className="rounded-[2rem] border border-border/80 bg-card p-8 sm:p-10 text-card-foreground shadow-lg">
             <div className="flex flex-col items-center text-center">
-              <img src="/logo-pb.png" alt="Logo PB Undip" className="h-16 w-auto object-contain mb-4" />
+              <img src="/logo-pb.png" alt="Logo PB UNDIP" className="h-16 w-auto object-contain mb-4" />
               <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-                PB Undip • Admin Pendaftaran
+                PB UNDIP • Admin Pendaftaran
               </h1>
               <p className="mt-1.5 text-xs font-medium text-muted-foreground max-w-xs">
                 Masukkan PIN untuk mengakses dasbor tracking data pendaftaran dan berkas atlet.
@@ -266,10 +266,10 @@ export default function AdminPendaftaranPBPage() {
       <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3.5">
-            <img src="/logo-pb.png" alt="Logo PB Undip" className="h-9 w-auto object-contain shrink-0" />
+            <img src="/logo-pb.png" alt="Logo PB UNDIP" className="h-9 w-auto object-contain shrink-0" />
             <div>
               <h1 className="font-display text-lg font-bold tracking-tight text-foreground">
-                PB Undip • Dashboard Pendaftaran
+                PB UNDIP • Dashboard Pendaftaran
               </h1>
               <p className="text-xs font-medium text-muted-foreground">
                 Tracking data pendaftaran atlet, verifikasi berkas, dan ekspor SI PBSI.

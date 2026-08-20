@@ -94,10 +94,10 @@ export default function RegistrationSidebar({
           
           {/* HEADER WITH OFFICIAL LOGO */}
           <div className="flex items-center gap-3 border-b border-border/60 pb-5">
-            <img src="/logo-pb.png" alt="PB Undip" className="h-9 w-auto object-contain shrink-0" />
+            <img src="/logo-pb.png" alt="PB UNDIP" className="h-9 w-auto object-contain shrink-0" />
             <div>
               <h3 className="font-display text-sm font-bold tracking-tight text-foreground leading-none">
-                PB Undip
+                PB UNDIP
               </h3>
               <span className="text-[11px] text-muted-foreground font-medium mt-0.5 block">
                 Pendaftaran Atlet
@@ -111,7 +111,7 @@ export default function RegistrationSidebar({
               Progres Pengisian
             </h4>
             <p className="text-xs leading-relaxed text-muted-foreground text-pretty">
-              Lengkapi 3 tahapan secara berurutan untuk mendaftar sebagai atlet di PB Undip.
+              Lengkapi 3 tahapan secara berurutan untuk mendaftar sebagai atlet di PB UNDIP.
             </p>
           </div>
 
@@ -179,11 +179,11 @@ export default function RegistrationSidebar({
             <span>Bantuan Pendaftaran</span>
           </div>
           <p className="text-muted-foreground leading-relaxed text-pretty">
-            Jika ada kesulitan atau pertanyaan saat mengisi formulir, silakan hubungi pengurus PB Undip.
+            Jika ada kesulitan atau pertanyaan saat mengisi formulir, silakan hubungi pengurus PB UNDIP.
           </p>
           <div className="pt-1">
             <a
-              href="https://wa.me/6281234567890"
+              href="https://wa.me/6285325535155"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3.5 py-2 text-xs font-bold text-foreground transition-all duration-200 shadow-2xs"

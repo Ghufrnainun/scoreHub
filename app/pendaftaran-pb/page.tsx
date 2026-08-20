@@ -259,13 +259,13 @@ export default function PendaftaranPBPage() {
         {/* CLEAN EDITORIAL HEADER WITH LOGO */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-6">
           <div className="flex items-center gap-4">
-            <img src="/logo-pb.png" alt="Logo PB Undip" className="h-12 w-auto object-contain shrink-0" />
+            <img src="/logo-pb.png" alt="Logo PB UNDIP" className="h-12 w-auto object-contain shrink-0" />
             <div className="space-y-1">
               <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-balance">
                 Pendaftaran Atlet Baru
               </h1>
               <p className="text-sm text-muted-foreground text-pretty max-w-xl">
-                Lengkapi informasi identitas, domisili, dan berkas usia atlet bulutangkis untuk mendaftar di PB Undip.
+                Lengkapi informasi identitas, domisili, dan berkas usia atlet bulutangkis untuk mendaftar di PB UNDIP.
               </p>
             </div>
           </div>
