@@ -33,6 +33,22 @@ import CustomDatePicker from '../../_components/CustomDatePicker';
 
 const PB_TOKEN_KEY = 'pb_admin_token';
 
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+// Ubah 'YYYY-MM-DD' (atau ISO date) jadi '28 Februari 1992'
+function formatDob(dob?: string | null): string {
+  if (!dob) return '-';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dob);
+  if (!m) return dob;
+  const [, y, mo, d] = m;
+  const monthIdx = parseInt(mo, 10) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return dob;
+  return `${parseInt(d, 10)} ${MONTH_NAMES[monthIdx]} ${y}`;
+}
+
 export default function AdminRegistrationDetail() {
   const router = useRouter();
   const params = useParams();
@@ -348,9 +364,9 @@ export default function AdminRegistrationDetail() {
 
                   {/* Field: Tanggal Lahir */}
                   <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tanggal Lahir (YYYY-MM-DD)</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tanggal Lahir</span>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono font-bold text-sm text-foreground">{registrationDetail.dob || '-'}</span>
+                      <span className="font-bold text-sm text-foreground">{formatDob(registrationDetail.dob)}</span>
                       <Button
                         variant="outline"
                         size="sm"
@@ -373,9 +389,9 @@ export default function AdminRegistrationDetail() {
                     </div>
                   </div>
 
-                  {/* Field: Klub / Sekolah */}
+                  {/* Field: Klub */}
                   <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Klub / Sekolah</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Klub</span>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-sm text-foreground truncate">{registrationDetail.club}</span>
                       <Button
@@ -515,7 +531,7 @@ export default function AdminRegistrationDetail() {
                     <Input className="h-10 rounded-xl bg-background uppercase" placeholder="Kosongkan jika tidak ada" value={editForm.bwfId} onChange={(e) => setEditForm({...editForm, bwfId: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Klub / Sekolah</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Klub</Label>
                     <Input className="h-10 rounded-xl bg-background" value={editForm.club} onChange={(e) => setEditForm({...editForm, club: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">

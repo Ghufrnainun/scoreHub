@@ -87,6 +87,17 @@ export default function RegistrationTable({
     }).format(new Date(timestamp));
   };
 
+  // Ubah 'YYYY-MM-DD' jadi '28 Feb 1992' (format singkat untuk tabel)
+  const formatDob = (dob?: string | null) => {
+    if (!dob) return '-';
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dob);
+    if (!m) return dob;
+    const [, y, mo, d] = m;
+    const date = new Date(Number(y), Number(mo) - 1, Number(d));
+    if (Number.isNaN(+date)) return dob;
+    return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+  };
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground shadow-2xs">
@@ -171,7 +182,7 @@ export default function RegistrationTable({
                         <User className="h-3 w-3" />
                         <span className="capitalize">{genderLabel(item.gender)}</span>
                         <span>•</span>
-                        <span>{item.dob || '-'}</span>
+                        <span>{formatDob(item.dob)}</span>
                       </div>
                     </div>
                   </td>
