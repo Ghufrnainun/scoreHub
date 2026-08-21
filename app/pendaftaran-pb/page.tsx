@@ -257,18 +257,22 @@ export default function PendaftaranPBPage() {
     <main className="min-h-dvh bg-background text-foreground pb-20 pt-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="mx-auto max-w-6xl space-y-8">
         
-        {/* CLEAN EDITORIAL HEADER WITH LOGO */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-6">
-          <div className="flex items-center gap-4">
-            <img src="/logo-pb.png" alt="Logo PB UNDIP" className="h-12 w-auto object-contain shrink-0" />
-            <div className="space-y-1">
-              <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-balance">
-                Pendaftaran Atlet Baru
-              </h1>
-              <p className="text-sm text-muted-foreground text-pretty max-w-xl">
-                Lengkapi informasi identitas, domisili, dan dokumen pendukung atlet bulutangkis untuk mendaftar di PB UNDIP.
-              </p>
-            </div>
+        {/* CLEAN EDITORIAL HEADER WITH BANNER */}
+        <div className="space-y-5 border-b border-border/80 pb-6">
+          <div className="overflow-hidden rounded-2xl border border-border/80 shadow-2xs bg-secondary/20">
+            <img
+              src="/polyTron-banner.png"
+              alt="PolyTron"
+              className="w-full h-auto object-cover"
+            />
+          </div>
+          <div className="space-y-1">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-balance">
+              Pendaftaran Atlet Baru
+            </h1>
+            <p className="text-sm text-muted-foreground text-pretty max-w-xl">
+              Lengkapi informasi identitas, domisili, dan dokumen pendukung atlet bulutangkis untuk mendaftar di PB UNDIP.
+            </p>
           </div>
         </div>
 
