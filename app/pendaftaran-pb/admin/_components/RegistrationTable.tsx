@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { genderLabel } from '@/lib/gender';
+import { GenderIcon } from '@/lib/gender-icon';
 import type { RegistrationItem } from './RegistrationStats';
 import { toast } from 'sonner';
 
@@ -43,15 +44,6 @@ export default function RegistrationTable({
     setCopiedId(id);
     toast.success(`Disalin: ${text}`);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .slice(0, 2)
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
   };
 
   const getStatusBadge = (status: RegistrationItem['status']) => {
@@ -160,8 +152,8 @@ export default function RegistrationTable({
                   {/* Atlet & Kontak */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-xs font-black text-primary border border-primary/20">
-                        {getInitials(item.fullName)}
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                        <GenderIcon gender={item.gender} className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
                         <div className="font-bold text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1.5">

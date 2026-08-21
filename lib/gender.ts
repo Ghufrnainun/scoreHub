@@ -7,3 +7,7 @@ export function genderLabel(gender?: string | null): string {
   if (gender === 'putri' || gender === 'wanita') return 'Perempuan';
   return gender;
 }
+
+export function isMale(gender?: string | null): boolean {
+  return gender === 'putra' || gender === 'pria';
+}
