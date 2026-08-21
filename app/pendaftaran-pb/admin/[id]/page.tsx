@@ -23,6 +23,7 @@ import {
   Clock,
   CheckCircle2,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +84,8 @@ export default function AdminRegistrationDetail() {
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [openingFileDocType, setOpeningFileDocType] = useState<string | null>(null);
   const updateDataMutation = useMutation(api.pbRegistration.adminUpdateData);
+  const deleteRegistrationMutation = useMutation(api.pbRegistration.deleteRegistration);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // States for Inline Editing
   const [isEditing, setIsEditing] = useState(false);
@@ -231,6 +234,27 @@ export default function AdminRegistrationDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!registrationDetail || !token || isDeleting) return;
+    const ok = window.confirm(
+      `Hapus pendaftaran atas nama "${registrationDetail.fullName}"?\n\nIni akan menghapus seluruh data pendaftar beserta dokumen & riwayat status. Tindakan ini tidak bisa dibatalkan.`
+    );
+    if (!ok) return;
+    setIsDeleting(true);
+    try {
+      await deleteRegistrationMutation({
+        registrationId: registrationDetail._id,
+        adminSessionToken: token,
+      });
+      toast.success('Data pendaftar berhasil dihapus.');
+      router.push('/pendaftaran-pb/admin');
+    } catch (err) {
+      toast.error(`Gagal menghapus data: ${(err as Error).message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleOpenFile = async (docType: string) => {
     if (!registrationDetail || !token) return;
     setOpeningFileDocType(docType);
@@ -316,9 +340,20 @@ export default function AdminRegistrationDetail() {
               
               <div className="shrink-0 flex gap-2">
                 {!isEditing ? (
-                  <Button variant="outline" className="rounded-xl font-bold border-border shadow-2xs" onClick={() => setIsEditing(true)}>
-                    Edit Data Atlet
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl font-bold border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-2xs"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? 'Menghapus...' : 'Hapus'}
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" className="rounded-xl font-bold border-border shadow-2xs" onClick={() => setIsEditing(true)}>
+                      Edit Data Atlet
+                    </Button>
+                  </>
                 ) : (
                   <div className="flex gap-2">
                     <Button variant="ghost" className="rounded-xl font-semibold" onClick={() => setIsEditing(false)}>Batal</Button>
