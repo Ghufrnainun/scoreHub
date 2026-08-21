@@ -259,7 +259,7 @@ export default function PendaftaranPBPage() {
         
         {/* CLEAN EDITORIAL HEADER WITH BANNER */}
         <div className="space-y-5 border-b border-border/80 pb-6">
-          <div className="overflow-hidden border border-border/80 bg-secondary/20">
+          <div className="overflow-hidden bg-secondary/20">
             <img
               src="/polyTron-banner.png"
               alt="PolyTron"
@@ -270,8 +270,8 @@ export default function PendaftaranPBPage() {
             <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-balance">
               Pendaftaran Atlet Baru
             </h1>
-            <p className="text-sm text-muted-foreground text-pretty max-w-xl">
-              Lengkapi informasi identitas, domisili, dan dokumen pendukung atlet bulutangkis untuk mendaftar di PB UNDIP.
+            <p className="text-sm text-muted-foreground text-pretty">
+              Lengkapi informasi identitas, domisili, dan dokumen pendukung atlet bulutangkis untuk mendaftar di PB UNDIP
             </p>
           </div>
         </div>

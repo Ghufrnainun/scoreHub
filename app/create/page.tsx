@@ -578,7 +578,7 @@ export default function CreateMatchPage() {
             className="w-10 h-10 flex items-center justify-center hover:scale-105 transition-transform"
           >
             <Image
-              src="/logo-pb.png"
+              src="/pb-emblem.png"
               alt="Scorehub logo"
               width={32}
               height={32}

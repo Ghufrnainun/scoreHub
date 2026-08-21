@@ -95,7 +95,7 @@ export default function RegistrationSidebar({
           
           {/* HEADER WITH OFFICIAL LOGO */}
           <div className="flex items-center gap-3 border-b border-border/60 pb-5">
-            <img src="/logo-pb.png" alt="PB UNDIP" className="h-9 w-auto object-contain shrink-0" />
+            <img src="/pb-emblem.png" alt="PB UNDIP" className="h-9 w-auto object-contain shrink-0" />
             <div>
               <h3 className="font-display text-sm font-bold tracking-tight text-foreground leading-none">
                 PB UNDIP

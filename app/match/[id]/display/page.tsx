@@ -211,7 +211,7 @@ export default function BwfScoreboard() {
             <Link href="/admin" className="flex items-center gap-3 group">
               <div className="w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Image
-                  src="/logo-pb.png"
+                  src="/pb-emblem.png"
                   alt="Scorehub logo"
                   width={32}
                   height={32}

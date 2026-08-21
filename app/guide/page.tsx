@@ -184,7 +184,7 @@ export default function GuidePage() {
               className="flex h-10 w-10 items-center justify-center transition-transform hover:scale-105"
             >
               <Image
-                src="/logo-pb.png"
+                src="/pb-emblem.png"
                 alt="Scorehub logo"
                 width={32}
                 height={32}

@@ -34,9 +34,9 @@ const literata = Literata({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://scorehub.app'),
-  title: 'ScoreHub | Real-time Sports Scoreboard',
+  title: 'PB UNDIP | Pendaftaran & Scoreboard',
   description:
-    'ScoreHub adalah sistem scoreboard olahraga realtime untuk operator, wasit, dan display venue.',
+    'Sistem pendaftaran atlet dan scoreboard realtime PB UNDIP untuk operator, wasit, dan display venue.',
   icons: {
     icon: [
       {

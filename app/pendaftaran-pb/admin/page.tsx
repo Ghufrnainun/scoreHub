@@ -233,7 +233,7 @@ export default function AdminPendaftaranPBPage() {
         <div className="w-full max-w-md animate-in fade-in-50 duration-200">
           <div className="rounded-[2rem] border border-border/80 bg-card p-8 sm:p-10 text-card-foreground shadow-lg">
             <div className="flex flex-col items-center text-center">
-              <img src="/logo-pb.png" alt="Logo PB UNDIP" className="h-16 w-auto object-contain mb-4" />
+              <img src="/pb-emblem.png" alt="Logo PB UNDIP" className="h-16 w-auto object-contain mb-4" />
               <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
                 PB UNDIP • Admin Pendaftaran
               </h1>
@@ -304,9 +304,10 @@ export default function AdminPendaftaranPBPage() {
       <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3.5">
+            <img src="/pb-emblem-text.png" alt="PB UNDIP" className="h-11 w-auto object-contain shrink-0" />
             <div>
               <h1 className="font-display text-lg font-bold tracking-tight text-foreground">
-                PB UNDIP • Dashboard Pendaftaran
+                Dashboard Pendaftaran
               </h1>
               <p className="text-xs font-medium text-muted-foreground">
                 Tracking data pendaftaran atlet, verifikasi berkas, dan ekspor SI PBSI.

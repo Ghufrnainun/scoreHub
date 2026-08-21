@@ -205,7 +205,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-3">
             <div className="size-10 flex items-center justify-center">
               <Image
-                src="/logo-pb.png"
+                src="/pb-emblem.png"
                 alt="Scorehub logo"
                 width={32}
                 height={32}
@@ -280,7 +280,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-2 font-black text-xl tracking-tight text-black">
             <div className="w-8 h-8 flex items-center justify-center">
               <Image
-                src="/logo-pb.png"
+                src="/pb-emblem.png"
                 alt="Scorehub logo"
                 width={24}
                 height={24}

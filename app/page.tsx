@@ -59,7 +59,7 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6">
           <div className="flex items-center gap-3">
             <Image 
-              src="/logo-pb.png" 
+              src="/icon.svg" 
               alt="Scorehub" 
               width={24} 
               height={24} 
@@ -185,7 +185,7 @@ export default function LandingPage() {
         {/* FOOTER */}
         <footer className="py-12 border-t border-black/5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 opacity-50">
-            <Image src="/logo-pb.png" alt="" width={16} height={16} className="h-4 w-4 grayscale" />
+            <Image src="/icon.svg" alt="" width={16} height={16} className="h-4 w-4 grayscale" />
             <span className={`${displayFont.className} text-sm tracking-widest uppercase mt-1`}>Scorehub</span>
           </div>
           <p className="text-[10px] text-black/40 font-bold tracking-widest uppercase">
