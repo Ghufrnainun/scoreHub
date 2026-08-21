@@ -262,6 +262,27 @@ export const adminUpdateData = mutation({
   }
 });
 
+export const deleteRegistration = mutation({
+  args: {
+    registrationId: v.id('pb_registrations'),
+    adminSessionToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await assertPBAdminSession(ctx, args.adminSessionToken);
+    const reg = await ctx.db.get(args.registrationId);
+    if (!reg) throw new ConvexError('Pendaftaran tidak ditemukan.');
+
+    // Hapus file & history terkait, lalu hapus data utama
+    const files = await ctx.db.query('pb_registration_files').withIndex('by_registration', q => q.eq('registrationId', args.registrationId)).collect();
+    for (const f of files) await ctx.db.delete(f._id);
+    const history = await ctx.db.query('pb_registration_history').withIndex('by_registration', q => q.eq('registrationId', args.registrationId)).collect();
+    for (const h of history) await ctx.db.delete(h._id);
+
+    await ctx.db.delete(args.registrationId);
+    return true;
+  }
+});
+
 export const getRegistration = internalQuery({
   args: { registrationId: v.id('pb_registrations') },
   handler: (ctx, args) => ctx.db.get(args.registrationId)
