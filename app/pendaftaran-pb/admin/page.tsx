@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, usePaginatedQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { loadValidAdminSession } from '@/lib/admin-session';
+import { genderLabel } from '@/lib/gender';
+import * as XLSX from 'xlsx';
 import {
   LogOut,
   RefreshCw,
@@ -125,7 +127,8 @@ export default function AdminPendaftaranPBPage() {
     });
   }, [data, selectedStatus, selectedKabupaten, searchQuery]);
 
-  // Export CSV Handler
+  // Export XLSX Handler (SheetJS). Kolom numerik sensitif (NIK, WA, HP, kode pos)
+  // dipaksa bertipe teks biar Excel tidak mengubah jadi notasi ilmiah / menghilangkan 0 depan.
   const handleExportCSV = () => {
     if (!filteredData || filteredData.length === 0) {
       toast.error('Tidak ada data untuk diekspor.');
@@ -133,39 +136,74 @@ export default function AdminPendaftaranPBPage() {
     }
 
     const headers = ['ID', 'NIK', 'Nama Lengkap', 'ID BWF', 'Gender', 'Ibu Kandung', 'Tempat Lahir', 'Tanggal Lahir', 'Main Tangan', 'Kewarganegaraan', 'Klub', 'Provinsi', 'Kabupaten/Kota', 'Kode Pos', 'Alamat Lengkap', 'No Telepon', 'No Handphone', 'Email', 'Status', 'Tanggal Daftar'];
-    const rows = filteredData.map((item) => [
-      `"${item._id}"`,
-      `"${item.nik || '--'}"`,
-      `"${item.fullName.replace(/"/g, '""')}"`,
-      `"${item.bwfId || '--'}"`,
-      `"${item.gender}"`,
-      `"${(item.motherName || '--').replace(/"/g, '""')}"`,
-      `"${(item.birthPlace || '--').replace(/"/g, '""')}"`,
-      `"${item.dob || '--'}"`,
-      `"${item.playingHand || '--'}"`,
-      `"${(item.nationality || '--').replace(/"/g, '""')}"`,
-      `"${item.club.replace(/"/g, '""')}"`,
-      `"${(item.provinceName || '--').replace(/"/g, '""')}"`,
-      `"${(item.regencyName || '--').replace(/"/g, '""')}"`,
-      `"${item.postalCode || '--'}"`,
-      `"${(item.addressDetail || '--').replace(/"/g, '""')}"`,
-      `"${item.phone || '--'}"`,
-      `"${item.whatsapp || '--'}"`,
-      `"${(item.email || '--').replace(/"/g, '""')}"`,
-      `"${item.status}"`,
-      `"${new Date(item.createdAt).toISOString()}"`,
-    ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Pendaftaran_PB_UNDIP_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Kolom yang harus selalu jadi TEKS (hindari notasi ilmiah / hilangnya 0 di depan)
+    const textColumns = new Set([1, 3, 7, 13, 15, 16, 19]); // NIK, ID BWF, Tgl Lahir, Kode Pos, No Telp, No HP, Tgl Daftar
+    const numCols = headers.length;
 
-    toast.success(`${filteredData.length} data pendaftar berhasil diekspor ke CSV.`);
+    const aoa: (string | number)[][] = [headers];
+    filteredData.forEach((item) => {
+      const row = [
+        item._id,
+        item.nik || '--',
+        item.fullName,
+        item.bwfId || '--',
+        genderLabel(item.gender),
+        item.motherName || '--',
+        item.birthPlace || '--',
+        item.dob || '--',
+        item.playingHand || '--',
+        item.nationality || '--',
+        item.club,
+        item.provinceName || '--',
+        item.regencyName || '--',
+        item.postalCode || '--',
+        item.addressDetail || '--',
+        item.phone || '--',
+        item.whatsapp || '--',
+        item.email || '--',
+        item.status,
+        item.createdAt ? new Date(item.createdAt).toISOString().slice(0, 10) : '--',
+      ];
+      aoa.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Paksa kolom sensitif bertipe teks (z: '0' = format teks di SheetJS)
+    for (let c = 0; c < numCols; c++) {
+      if (textColumns.has(c)) {
+        for (let r = 1; r < aoa.length; r++) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if (cell) {
+            cell.t = 's'; // string type
+            cell.z = '@'; // text format
+          }
+        }
+      }
+    }
+
+    // Auto column width (paling lebar ~40 chars, min 8)
+    const colWidths: { wch: number }[] = [];
+    for (let c = 0; c < numCols; c++) {
+      let maxLen = headers[c].length;
+      aoa.forEach((row) => {
+        const v = String(row[c] ?? '');
+        if (v.length > maxLen) maxLen = v.length;
+      });
+      colWidths.push({ wch: Math.min(Math.max(maxLen + 2, 8), 40) });
+    }
+    ws['!cols'] = colWidths;
+
+    // Freeze header row
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Pendaftar');
+
+    const filename = `Pendaftaran_PB_UNDIP_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    toast.success(`${filteredData.length} data pendaftar berhasil diekspor ke Excel (.xlsx).`);
   };
 
   // Reset Filters
@@ -278,7 +316,7 @@ export default function AdminPendaftaranPBPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* CSV Export */}
+            {/* XLSX Export */}
             <Button
               variant="outline"
               size="sm"
@@ -286,7 +324,7 @@ export default function AdminPendaftaranPBPage() {
               className="h-9 gap-1.5 rounded-xl border-border bg-card text-xs font-bold text-foreground hover:bg-secondary transition-all cursor-pointer shadow-2xs"
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="hidden sm:inline">Ekspor CSV</span>
+              <span className="hidden sm:inline">Ekspor Excel</span>
             </Button>
 
             {/* Logout */}
