@@ -302,9 +302,8 @@ export default function AdminPendaftaranPBPage() {
     <div className="min-h-dvh bg-background text-foreground pb-20">
       {/* Clean Header Bar with Export Button */}
       <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3.5">
-            <img src="/logo-pb.png" alt="Logo PB UNDIP" className="h-9 w-auto object-contain shrink-0" />
             <div>
               <h1 className="font-display text-lg font-bold tracking-tight text-foreground">
                 PB UNDIP • Dashboard Pendaftaran
@@ -313,6 +312,15 @@ export default function AdminPendaftaranPBPage() {
                 Tracking data pendaftaran atlet, verifikasi berkas, dan ekspor SI PBSI.
               </p>
             </div>
+          </div>
+
+          {/* Banner PolyTron di tengah */}
+          <div className="hidden lg:block shrink-0">
+            <img
+              src="/polyTron-banner.png"
+              alt="PolyTron"
+              className="h-11 w-auto object-contain"
+            />
           </div>
 
           <div className="flex items-center gap-2">
