@@ -32,6 +32,7 @@ import CustomSelect, { type Region } from './_components/CustomSelect';
 import CustomDatePicker from './_components/CustomDatePicker';
 import FileUploader from './_components/FileUploader';
 import RegistrationSummaryModal from './_components/RegistrationSummaryModal';
+import SocialMedia from './_components/SocialMedia';
 
 // Shadcn UI Components
 import { Input } from '@/components/ui/input';
@@ -319,7 +320,8 @@ export default function PendaftaranPBPage() {
               </div>
             </motion.div>
           ) : (
-            /* 2-COLUMN ASYMMETRICAL LAYOUT */
+            <>
+            {/* 2-COLUMN ASYMMETRICAL LAYOUT */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
               
               {/* LEFT COLUMN: LIVE PROGRESS TRACKER */}
@@ -668,6 +670,11 @@ export default function PendaftaranPBPage() {
                 </div>
               </div>
             </div>
+            {/* Social Media & Email — mobile tampil paling bawah setelah form */}
+            <div className="sm:hidden pt-4">
+              <SocialMedia />
+            </div>
+            </>
           )}
         </AnimatePresence>
       </div>

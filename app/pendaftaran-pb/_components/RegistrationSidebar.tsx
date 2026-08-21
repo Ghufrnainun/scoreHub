@@ -11,6 +11,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { documentRule } from '@/lib/pb-registration-validation';
+import SocialMedia from './SocialMedia';
 
 export interface RegistrationSidebarProps {
   form: {
@@ -176,7 +177,7 @@ export default function RegistrationSidebar({
         <div className="rounded-[calc(2rem-0.375rem)] border border-border bg-card p-6 space-y-3 text-xs text-card-foreground">
           <div className="flex items-center gap-2 font-bold text-foreground">
             <HelpCircle size={16} className="text-muted-foreground shrink-0" aria-hidden="true" />
-            <span>Bantuan Pendaftaran</span>
+            <span>Hubungi Kami</span>
           </div>
           <p className="text-muted-foreground leading-relaxed text-pretty">
             Jika ada kesulitan atau pertanyaan saat mengisi formulir, silakan hubungi pengurus PB UNDIP.
@@ -191,6 +192,10 @@ export default function RegistrationSidebar({
               <span>Chat WhatsApp Admin</span>
               <span aria-hidden="true" className="font-mono">↗</span>
             </a>
+          </div>
+          {/* Social Media & Email — desktop tampil di sidebar */}
+          <div className="hidden sm:block border-t border-border/60 mt-2 pt-3">
+            <SocialMedia />
           </div>
         </div>
       </div>
