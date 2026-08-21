@@ -24,7 +24,19 @@ import {
   CheckCircle2,
   ShieldCheck,
   Trash2,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,6 +98,7 @@ export default function AdminRegistrationDetail() {
   const updateDataMutation = useMutation(api.pbRegistration.adminUpdateData);
   const deleteRegistrationMutation = useMutation(api.pbRegistration.deleteRegistration);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // States for Inline Editing
   const [isEditing, setIsEditing] = useState(false);
@@ -236,10 +249,6 @@ export default function AdminRegistrationDetail() {
 
   const handleDelete = async () => {
     if (!registrationDetail || !token || isDeleting) return;
-    const ok = window.confirm(
-      `Hapus pendaftaran atas nama "${registrationDetail.fullName}"?\n\nIni akan menghapus seluruh data pendaftar beserta dokumen & riwayat status. Tindakan ini tidak bisa dibatalkan.`
-    );
-    if (!ok) return;
     setIsDeleting(true);
     try {
       await deleteRegistrationMutation({
@@ -247,10 +256,10 @@ export default function AdminRegistrationDetail() {
         adminSessionToken: token,
       });
       toast.success('Data pendaftar berhasil dihapus.');
+      setIsDeleteDialogOpen(false);
       router.push('/pendaftaran-pb/admin');
     } catch (err) {
       toast.error(`Gagal menghapus data: ${(err as Error).message}`);
-    } finally {
       setIsDeleting(false);
     }
   };
@@ -343,12 +352,12 @@ export default function AdminRegistrationDetail() {
                   <>
                     <Button
                       variant="outline"
-                      className="rounded-xl font-bold border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-2xs"
-                      onClick={handleDelete}
+                      className="rounded-xl font-bold border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-2xs gap-1.5"
+                      onClick={() => setIsDeleteDialogOpen(true)}
                       disabled={isDeleting}
                     >
-                      {isDeleting ? 'Menghapus...' : 'Hapus'}
                       <Trash2 className="w-4 h-4" />
+                      <span>Hapus</span>
                     </Button>
                     <Button variant="outline" className="rounded-xl font-bold border-border shadow-2xs" onClick={() => setIsEditing(true)}>
                       Edit Data Atlet
@@ -883,6 +892,75 @@ export default function AdminRegistrationDetail() {
           </div>
         </div>
       </main>
+
+      {/* Alert Dialog Konfirmasi Hapus */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => !isDeleting && setIsDeleteDialogOpen(open)}>
+        <AlertDialogContent className="max-w-md rounded-2xl p-6 sm:p-7 border-border bg-card text-card-foreground shadow-2xl">
+          <AlertDialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive border border-destructive/20">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg font-bold text-foreground tracking-tight">
+                  Hapus Pendaftaran?
+                </AlertDialogTitle>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                  Tindakan ini permanen dan tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <AlertDialogDescription className="text-sm text-foreground/80 leading-relaxed pt-1">
+              Ini akan menghapus seluruh data pendaftar beserta dokumen berkas &amp; riwayat status secara permanen.
+            </AlertDialogDescription>
+
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3.5 space-y-1.5 mt-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-semibold">Nama Pendaftar:</span>
+                <span className="font-bold text-foreground">{registrationDetail.fullName}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-semibold">Klub / PB:</span>
+                <span className="font-medium text-foreground">{registrationDetail.club}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-semibold">ID Pendaftaran:</span>
+                <span className="font-mono font-bold text-muted-foreground">#{registrationDetail._id.slice(-6)}</span>
+              </div>
+            </div>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 mt-4 sm:gap-2">
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="rounded-xl font-bold border-border sm:mt-0"
+            >
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              className="rounded-xl font-bold bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-2 shadow-sm"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menghapus...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Hapus Pendaftaran</span>
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

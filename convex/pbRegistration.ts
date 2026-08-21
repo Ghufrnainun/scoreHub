@@ -200,7 +200,7 @@ export const getRegistrationDetail = query({
   handler: async (ctx, args) => {
     await assertPBAdminSession(ctx, args.adminSessionToken);
     const registration = await ctx.db.get(args.registrationId);
-    if (!registration) throw new ConvexError('Pendaftaran tidak ditemukan.');
+    if (!registration) return null;
     const files = await ctx.db.query('pb_registration_files').withIndex('by_registration', q => q.eq('registrationId', args.registrationId)).collect();
     const history = await ctx.db.query('pb_registration_history').withIndex('by_registration', q => q.eq('registrationId', args.registrationId)).collect();
     return { ...registration, files, history };

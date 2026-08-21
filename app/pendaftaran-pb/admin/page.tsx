@@ -19,7 +19,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import RegistrationStats, { type RegistrationItem } from './_components/RegistrationStats';
+import RegistrationStats, {
+  type RegistrationItem,
+} from './_components/RegistrationStats';
 import RegistrationFilterBar from './_components/RegistrationFilterBar';
 import RegistrationTable from './_components/RegistrationTable';
 import { useRouter } from 'next/navigation';
@@ -44,10 +46,14 @@ export default function AdminPendaftaranPBPage() {
 
   // Convex Queries
   const verifyPin = useMutation(api.pbRegistration.verifyAdminPBPin);
-  const { results: data, status: paginatedStatus, loadMore } = usePaginatedQuery(
+  const {
+    results: data,
+    status: paginatedStatus,
+    loadMore,
+  } = usePaginatedQuery(
     api.pbRegistration.listAdmin,
     token ? { adminSessionToken: token } : 'skip',
-    { initialNumItems: 50 }
+    { initialNumItems: 50 },
   );
 
   // 1. Initial Session Check (Check PB dedicated token OR Master Admin token)
@@ -76,7 +82,9 @@ export default function AdminPendaftaranPBPage() {
       localStorage.setItem(PB_TOKEN_KEY, res.token);
       setToken(res.token);
       setPinInput('');
-      toast.success('Login berhasil! Selamat datang di Dashboard Pendaftaran PB UNDIP.');
+      toast.success(
+        'Login berhasil! Selamat datang di Dashboard Pendaftaran PB UNDIP.',
+      );
     } catch (err) {
       setLoginError((err as Error).message || 'PIN yang dimasukkan salah.');
       toast.error('Gagal login: PIN tidak valid.');
@@ -108,7 +116,6 @@ export default function AdminPendaftaranPBPage() {
       // Status Filter
       if (selectedStatus && item.status !== selectedStatus) return false;
 
-
       // Kabupaten Filter
       const itemKab = item.regencyName || '';
       if (selectedKabupaten && itemKab !== selectedKabupaten) return false;
@@ -135,7 +142,28 @@ export default function AdminPendaftaranPBPage() {
       return;
     }
 
-    const headers = ['ID', 'NIK', 'Nama Lengkap', 'ID BWF', 'Gender', 'Ibu Kandung', 'Tempat Lahir', 'Tanggal Lahir', 'Main Tangan', 'Kewarganegaraan', 'Klub', 'Provinsi', 'Kabupaten/Kota', 'Kode Pos', 'Alamat Lengkap', 'No Telepon', 'No Handphone', 'Email', 'Status', 'Tanggal Daftar'];
+    const headers = [
+      'ID',
+      'NIK',
+      'Nama Lengkap',
+      'ID BWF',
+      'Gender',
+      'Ibu Kandung',
+      'Tempat Lahir',
+      'Tanggal Lahir',
+      'Main Tangan',
+      'Kewarganegaraan',
+      'Klub',
+      'Provinsi',
+      'Kabupaten/Kota',
+      'Kode Pos',
+      'Alamat Lengkap',
+      'No Telepon',
+      'No Handphone',
+      'Email',
+      'Status',
+      'Tanggal Daftar',
+    ];
 
     // Kolom yang harus selalu jadi TEKS (hindari notasi ilmiah / hilangnya 0 di depan)
     const textColumns = new Set([1, 3, 7, 13, 15, 16, 19]); // NIK, ID BWF, Tgl Lahir, Kode Pos, No Telp, No HP, Tgl Daftar
@@ -163,7 +191,9 @@ export default function AdminPendaftaranPBPage() {
         item.whatsapp || '--',
         item.email || '--',
         item.status,
-        item.createdAt ? new Date(item.createdAt).toISOString().slice(0, 10) : '--',
+        item.createdAt
+          ? new Date(item.createdAt).toISOString().slice(0, 10)
+          : '--',
       ];
       aoa.push(row);
     });
@@ -203,7 +233,9 @@ export default function AdminPendaftaranPBPage() {
 
     const filename = `Pendaftaran_PB_UNDIP_${new Date().toISOString().slice(0, 10)}.xlsx`;
     XLSX.writeFile(wb, filename);
-    toast.success(`${filteredData.length} data pendaftar berhasil diekspor ke Excel (.xlsx).`);
+    toast.success(
+      `${filteredData.length} data pendaftar berhasil diekspor ke Excel (.xlsx).`,
+    );
   };
 
   // Reset Filters
@@ -213,38 +245,53 @@ export default function AdminPendaftaranPBPage() {
     setSelectedKabupaten('');
   };
 
-  const hasActiveFilters = Boolean(searchQuery || selectedStatus || selectedKabupaten);
+  const hasActiveFilters = Boolean(
+    searchQuery || selectedStatus || selectedKabupaten,
+  );
   // LOADING CHECK
   if (isAuthChecking) {
     return (
       <div className="flex min-h-dvh w-full items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-          <span className="text-sm font-semibold text-muted-foreground">Memuat sesi...</span>
+          <span className="text-sm font-semibold text-muted-foreground">
+            Memuat sesi...
+          </span>
         </div>
       </div>
     );
   }
 
   // LOGIN SCREEN
-  if (!token || (data.length === 0 && paginatedStatus === 'LoadingFirstPage' && loginError)) {
+  if (
+    !token ||
+    (data.length === 0 && paginatedStatus === 'LoadingFirstPage' && loginError)
+  ) {
     return (
       <div className="flex min-h-dvh w-full items-center justify-center p-4 sm:p-6 bg-background text-foreground">
         <div className="w-full max-w-md animate-in fade-in-50 duration-200">
           <div className="rounded-[2rem] border border-border/80 bg-card p-8 sm:p-10 text-card-foreground shadow-lg">
             <div className="flex flex-col items-center text-center">
-              <img src="/pb-emblem.png" alt="Logo PB UNDIP" className="h-16 w-auto object-contain mb-4" />
+              <img
+                src="/pb-emblem.png"
+                alt="Logo PB UNDIP"
+                className="h-16 w-auto object-contain mb-4"
+              />
               <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
                 PB UNDIP • Admin Pendaftaran
               </h1>
               <p className="mt-1.5 text-xs font-medium text-muted-foreground max-w-xs">
-                Masukkan PIN untuk mengakses dasbor tracking data pendaftaran dan berkas atlet.
+                Masukkan PIN untuk mengakses dasbor tracking data pendaftaran
+                dan berkas atlet.
               </p>
             </div>
 
             <form onSubmit={handleLogin} className="mt-8 space-y-4">
               <div>
-                <label htmlFor="pin-input" className="block text-xs font-bold uppercase tracking-wider text-foreground mb-2">
+                <label
+                  htmlFor="pin-input"
+                  className="block text-xs font-bold uppercase tracking-wider text-foreground mb-2"
+                >
                   PIN Admin
                 </label>
                 <div className="relative">
@@ -288,7 +335,8 @@ export default function AdminPendaftaranPBPage() {
 
             <div className="mt-6 border-t border-border/80 pt-4 text-center">
               <p className="text-[11px] font-medium text-muted-foreground">
-                Catatan: Akses ini terpisah dari papan skor pertandingan utama ScoreHub.
+                Catatan: Akses ini terpisah dari papan skor pertandingan utama
+                ScoreHub.
               </p>
             </div>
           </div>
@@ -303,24 +351,30 @@ export default function AdminPendaftaranPBPage() {
       {/* Clean Header Bar with Export Button */}
       <header className="sticky top-0 z-30 border-b border-border/80 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3.5">
-            <img src="/pb-emblem-text.png" alt="PB UNDIP" className="h-11 w-auto object-contain shrink-0" />
+          <div className="flex items-center gap-4">
+            <img
+              src="/logo-pb-undip.png"
+              alt="Persatuan Bulutangkis Universitas Diponegoro"
+              className="h-10 sm:h-12 w-auto object-contain shrink-0"
+            />
+            <div className="hidden sm:block h-9 w-px bg-border/80" />
             <div>
-              <h1 className="font-display text-lg font-bold tracking-tight text-foreground">
+              <h1 className="font-display text-base sm:text-lg font-bold tracking-tight text-foreground">
                 Dashboard Pendaftaran
               </h1>
               <p className="text-xs font-medium text-muted-foreground">
-                Tracking data pendaftaran atlet, verifikasi berkas, dan ekspor SI PBSI.
+                Tracking data pendaftaran atlet, verifikasi berkas, dan ekspor
+                SI PBSI
               </p>
             </div>
           </div>
 
-          {/* QR Keyword di tengah */}
-          <div className="hidden lg:block shrink-0">
+          {/* Banner #EnergiJuara & QR di tengah */}
+          <div className="hidden md:flex items-center justify-center shrink-0">
             <img
-              src="/qr-keyword.jpg"
-              alt="QR Keyword"
-              className="h-11 w-auto object-contain"
+              src="/pb-banner-qr.png"
+              alt="Energi Juara - Play Hard Stay Humble"
+              className="h-9 sm:h-10 w-auto max-w-[260px] lg:max-w-[400px] object-contain dark:invert transition-all"
             />
           </div>
 
@@ -395,10 +449,12 @@ export default function AdminPendaftaranPBPage() {
 
           <RegistrationTable
             data={filteredData}
-            onSelectRow={(item) => router.push(`/pendaftaran-pb/admin/${item._id}`)}
+            onSelectRow={(item) =>
+              router.push(`/pendaftaran-pb/admin/${item._id}`)
+            }
             isLoading={paginatedStatus === 'LoadingFirstPage'}
           />
-          
+
           {paginatedStatus === 'CanLoadMore' && (
             <div className="flex justify-center mt-6">
               <Button
