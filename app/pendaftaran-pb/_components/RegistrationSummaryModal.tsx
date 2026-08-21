@@ -4,6 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ShieldCheck, X, Check, Loader } from 'lucide-react';
 import { type Region } from './CustomSelect';
+import { genderLabel } from '@/lib/gender';
 
 export interface RegistrationSummaryModalProps {
   isOpen: boolean;
@@ -97,7 +98,7 @@ export default function RegistrationSummaryModal({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold text-[11px]">Jenis Kelamin</span>
-                  <span className="font-bold text-foreground capitalize">{form.gender}</span>
+                  <span className="font-bold text-foreground capitalize">{genderLabel(form.gender)}</span>
                 </div>
 
                 <div className="flex justify-between items-center">

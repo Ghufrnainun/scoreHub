@@ -7,6 +7,8 @@ import { api } from '@/convex/_generated/api';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { loadValidAdminSession } from '@/lib/admin-session';
+import { genderLabel } from '@/lib/gender';
+import { GenderAvatar } from '@/lib/gender-avatar';
 import { Id } from '@/convex/_generated/dataModel';
 import {
   ArrowLeft,
@@ -27,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import CustomDatePicker from '../../_components/CustomDatePicker';
 
 const PB_TOKEN_KEY = 'pb_admin_token';
 
@@ -62,7 +65,6 @@ export default function AdminRegistrationDetail() {
   const getDownloadUrl = useAction(api.pbRegistration.downloadUrl);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [openingFileDocType, setOpeningFileDocType] = useState<string | null>(null);
-  const [downloadingFileDocType, setDownloadingFileDocType] = useState<string | null>(null);
   const updateDataMutation = useMutation(api.pbRegistration.adminUpdateData);
 
   // States for Inline Editing
@@ -71,17 +73,19 @@ export default function AdminRegistrationDetail() {
   const [editForm, setEditForm] = useState<{
     fullName: string;
     dob: string;
-    gender: 'pria' | 'wanita' | 'putra' | 'putri';
+    gender: 'putra' | 'putri';
     club: string;
     whatsapp: string;
     email: string;
+    bwfId: string;
   }>({
     fullName: '',
     dob: '',
     gender: 'putra',
     club: '',
     whatsapp: '',
-    email: ''
+    email: '',
+    bwfId: '',
   });
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -89,13 +93,20 @@ export default function AdminRegistrationDetail() {
 
   useEffect(() => {
     if (registrationDetail && !isEditing) {
+      // Normalisasi nilai gender lama (pria/wanita) ke nilai kanonik (putra/putri)
+      // supaya dropdown edit cuma 2 opsi & select tidak tampil blank.
+      const rawGender = registrationDetail.gender;
+      const normalizedGender: 'putra' | 'putri' =
+        rawGender === 'putri' || rawGender === 'wanita' ? 'putri' : 'putra';
+
       setEditForm({
         fullName: registrationDetail.fullName,
         email: registrationDetail.email || '',
         whatsapp: registrationDetail.whatsapp,
-        gender: registrationDetail.gender,
+        gender: normalizedGender,
         dob: registrationDetail.dob || '',
         club: registrationDetail.club,
+        bwfId: registrationDetail.bwfId || '',
       });
     }
   }, [registrationDetail, isEditing]);
@@ -137,6 +148,7 @@ export default function AdminRegistrationDetail() {
         club: editForm.club,
         whatsapp: editForm.whatsapp,
         email: editForm.email || undefined,
+        bwfId: editForm.bwfId?.trim().toUpperCase() || undefined,
       });
       toast.success('Data pendaftar berhasil diperbarui.');
       setIsEditing(false);
@@ -197,30 +209,6 @@ export default function AdminRegistrationDetail() {
     }
   };
 
-  const handleDownloadSingleFile = async (docType: string, filename: string) => {
-    if (!registrationDetail || !token) return;
-    setDownloadingFileDocType(docType);
-    try {
-      const url = await getDownloadUrl({
-        registrationId: registrationDetail._id,
-        docType,
-        adminSessionToken: token,
-      });
-      if (url) {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        saveAs(blob, filename);
-        toast.success(`Dokumen ${filename} berhasil diunduh!`);
-      } else {
-        toast.error('Gagal mendapatkan link file.');
-      }
-    } catch (err) {
-      toast.error(`Gagal mengunduh file: ${(err as Error).message}`);
-    } finally {
-      setDownloadingFileDocType(null);
-    }
-  };
-
   if (isAuthChecking) return <div className="p-8 text-center text-muted-foreground font-semibold">Memuat sesi...</div>;
   if (!token) {
     router.push('/pendaftaran-pb/admin');
@@ -269,9 +257,7 @@ export default function AdminRegistrationDetail() {
             {/* Header Athlete Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border border-border shadow-2xs rounded-2xl p-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 font-display text-xl font-black text-primary border border-primary/20 shrink-0">
-                  {registrationDetail.fullName.slice(0, 2).toUpperCase()}
-                </div>
+                <GenderAvatar gender={registrationDetail.gender} size="lg" />
                 <div>
                   <h2 className="font-bold text-xl text-foreground tracking-tight">{registrationDetail.fullName}</h2>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -279,7 +265,7 @@ export default function AdminRegistrationDetail() {
                       {registrationDetail.club}
                     </span>
                     <span className="text-xs text-muted-foreground font-medium">
-                      ({registrationDetail.gender === 'putra' ? 'Putra' : 'Putri'})
+                      ({genderLabel(registrationDetail.gender)})
                     </span>
                   </div>
                 </div>
@@ -382,7 +368,7 @@ export default function AdminRegistrationDetail() {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Gender</span>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-sm text-foreground capitalize">
-                        {registrationDetail.gender}
+                        {genderLabel(registrationDetail.gender)}
                       </span>
                     </div>
                   </div>
@@ -525,12 +511,15 @@ export default function AdminRegistrationDetail() {
                     <Input className="h-10 rounded-xl bg-background" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">ID BWF</Label>
+                    <Input className="h-10 rounded-xl bg-background uppercase" placeholder="Kosongkan jika tidak ada" value={editForm.bwfId} onChange={(e) => setEditForm({...editForm, bwfId: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Klub / Sekolah</Label>
                     <Input className="h-10 rounded-xl bg-background" value={editForm.club} onChange={(e) => setEditForm({...editForm, club: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tanggal Lahir (YYYY-MM-DD)</Label>
-                    <Input type="date" className="h-10 rounded-xl bg-background" value={editForm.dob} onChange={(e) => setEditForm({...editForm, dob: e.target.value})} />
+                    <CustomDatePicker value={editForm.dob} onChange={(dob) => setEditForm({...editForm, dob})} />
                     <p className="text-[11px] font-medium text-muted-foreground">Kategori umur akan terhitung otomatis.</p>
                   </div>
                   <div className="space-y-1.5">
@@ -540,9 +529,10 @@ export default function AdminRegistrationDetail() {
                       value={editForm.gender}
                       onChange={(e) => setEditForm({...editForm, gender: e.target.value as 'putra' | 'putri'})}
                     >
-                      <option value="putra">Putra</option>
-                      <option value="putri">Putri</option>
+                      <option value="putra">Laki-laki</option>
+                      <option value="putri">Perempuan</option>
                     </select>
+                    <p className="text-[11px] font-medium text-muted-foreground">Nilai lama (pria/wanita) otomatis dinormalisasi saat disimpan.</p>
                   </div>
                 </div>
               )}
@@ -663,7 +653,7 @@ export default function AdminRegistrationDetail() {
                     ) : (
                       <Download className="w-3.5 h-3.5" />
                     )}
-                    <span>{isDownloadingZip ? 'Memproses...' : 'Download .zip'}</span>
+                    <span>{isDownloadingZip ? 'Memproses...' : 'Unduh Berkas'}</span>
                   </Button>
                 )}
               </div>
@@ -695,23 +685,6 @@ export default function AdminRegistrationDetail() {
                             <>
                               <span>Buka</span>
                               <ExternalLink className="w-3 h-3" />
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg font-bold text-xs gap-1 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
-                          onClick={() => handleDownloadSingleFile(file.docType, file.filename)}
-                          disabled={downloadingFileDocType === file.docType}
-                          title="Download Berkas Direct"
-                        >
-                          {downloadingFileDocType === file.docType ? (
-                            <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <>
-                              <span>Download</span>
-                              <Download className="w-3 h-3" />
                             </>
                           )}
                         </Button>

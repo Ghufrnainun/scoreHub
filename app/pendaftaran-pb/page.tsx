@@ -377,18 +377,24 @@ export default function PendaftaranPBPage() {
                           value={form.bwfId} onChange={(e) => set('bwfId', e.target.value)}
                           className="mt-2"
                         />
+                        <p className="text-[11px] font-medium text-muted-foreground mt-1.5 leading-relaxed">
+                          Pendaftar baru: kosongkan saja. Nanti di berkas akan ditulis strip (–).
+                        </p>
                       </div>
 
                       {/* Klub */}
                       <div className="col-span-full sm:col-span-3">
                         <Label htmlFor="club" className="text-sm font-medium text-foreground">
-                          Klub
+                          Klub Asal / Mutasi
                           <span className="text-destructive">*</span>
                         </Label>
-                        <Input id="club" required minLength={2} maxLength={100} name="club" placeholder="Nama Klub"
+                        <Input id="club" required minLength={2} maxLength={100} name="club" placeholder="Contoh: PB UNDIP"
                           value={form.club} onChange={(e) => set('club', e.target.value)}
                           className="mt-2"
                         />
+                        <p className="text-[11px] font-medium text-muted-foreground mt-1.5 leading-relaxed">
+                          Pendaftar baru cukup tulis nama klub saat ini, misal <span className="font-bold">PB UNDIP</span>.
+                        </p>
                       </div>
 
                       {/* Jenis Kelamin & Main Tangan */}
@@ -397,11 +403,11 @@ export default function PendaftaranPBPage() {
                           Jenis Kelamin<span className="text-destructive">*</span>
                         </Label>
                         <div className="grid grid-cols-2 gap-2" role="radiogroup">
-                          {['pria', 'wanita'].map((g) => {
+                          {(['pria', 'wanita'] as const).map((g) => {
                             const isSelected = form.gender === g;
                             return (
                               <Button key={g} type="button" variant={isSelected ? 'default' : 'outline'} onClick={() => set('gender', g)} className="uppercase text-xs font-bold w-full transition-transform active:scale-95">
-                                {g}
+                                {g === 'pria' ? 'Laki-laki' : 'Perempuan'}
                               </Button>
                             );
                           })}

@@ -18,6 +18,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { genderLabel } from '@/lib/gender';
+import { GenderAvatar } from '@/lib/gender-avatar';
 import type { RegistrationItem } from './RegistrationStats';
 import { toast } from 'sonner';
 
@@ -42,15 +44,6 @@ export default function RegistrationTable({
     setCopiedId(id);
     toast.success(`Disalin: ${text}`);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .slice(0, 2)
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
   };
 
   const getStatusBadge = (status: RegistrationItem['status']) => {
@@ -128,7 +121,7 @@ export default function RegistrationTable({
           <thead>
             <tr className="border-b border-border bg-secondary/50 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               <th scope="col" className="px-5 py-3.5">Atlet & Kontak</th>
-              <th scope="col" className="px-5 py-3.5">Profil Atlet</th>
+              <th scope="col" className="px-5 py-3.5">Gender & Tgl Lahir</th>
               <th scope="col" className="px-5 py-3.5">Klub & Asal Wilayah</th>
               <th scope="col" className="px-5 py-3.5">Waktu Daftar</th>
               <th scope="col" className="px-5 py-3.5">Status Verifikasi</th>
@@ -159,9 +152,7 @@ export default function RegistrationTable({
                   {/* Atlet & Kontak */}
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display text-xs font-black text-primary border border-primary/20">
-                        {getInitials(item.fullName)}
-                      </div>
+                      <GenderAvatar gender={item.gender} size="sm" />
                       <div className="min-w-0">
                         <div className="font-bold text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1.5">
                           <span>{item.fullName}</span>
@@ -173,12 +164,12 @@ export default function RegistrationTable({
                     </div>
                   </td>
 
-                  {/* Profil */}
+                  {/* Gender & Tgl Lahir */}
                   <td className="px-5 py-4 whitespace-nowrap">
                     <div className="space-y-1">
                       <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        <span className="capitalize">{item.gender}</span>
+                        <span className="capitalize">{genderLabel(item.gender)}</span>
                         <span>•</span>
                         <span>{item.dob || '-'}</span>
                       </div>
