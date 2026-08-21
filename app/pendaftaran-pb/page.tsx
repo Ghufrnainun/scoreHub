@@ -266,7 +266,7 @@ export default function PendaftaranPBPage() {
                 Pendaftaran Atlet Baru
               </h1>
               <p className="text-sm text-muted-foreground text-pretty max-w-xl">
-                Lengkapi informasi identitas, domisili, dan berkas usia atlet bulutangkis untuk mendaftar di PB UNDIP.
+                Lengkapi informasi identitas, domisili, dan dokumen pendukung atlet bulutangkis untuk mendaftar di PB UNDIP.
               </p>
             </div>
           </div>
