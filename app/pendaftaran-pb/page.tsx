@@ -259,7 +259,7 @@ export default function PendaftaranPBPage() {
         
         {/* CLEAN EDITORIAL HEADER WITH BANNER */}
         <div className="space-y-5 border-b border-border/80 pb-6">
-          <div className="overflow-hidden rounded-2xl border border-border/80 shadow-2xs bg-secondary/20">
+          <div className="overflow-hidden border border-border/80 bg-secondary/20">
             <img
               src="/polyTron-banner.png"
               alt="PolyTron"
