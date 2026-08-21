@@ -371,7 +371,7 @@ export default function AdminRegistrationDetail() {
                         variant="outline"
                         size="sm"
                         className="h-7 px-2 text-xs font-semibold gap-1 border-border shrink-0 hover:bg-background"
-                        onClick={() => handleCopy(registrationDetail.dob || '', 'Tanggal Lahir')}
+                        onClick={() => handleCopy(formatDob(registrationDetail.dob), 'Tanggal Lahir')}
                       >
                         {copiedField === 'Tanggal Lahir' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                         <span>Salin</span>
