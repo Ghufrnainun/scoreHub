@@ -230,7 +230,13 @@ export const adminUpdateData = mutation({
     club: v.optional(v.string()),
     whatsapp: v.optional(v.string()),
     email: v.optional(v.string()),
-    bwfId: v.optional(v.string())
+    bwfId: v.optional(v.string()),
+    nik: v.optional(v.string()),
+    motherName: v.optional(v.string()),
+    birthPlace: v.optional(v.string()),
+    playingHand: v.optional(v.union(v.literal('kiri'), v.literal('kanan'))),
+    addressDetail: v.optional(v.string()),
+    phone: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await assertPBAdminSession(ctx, args.adminSessionToken);
@@ -245,6 +251,12 @@ export const adminUpdateData = mutation({
     if (args.whatsapp !== undefined) patch.whatsapp = normalizeWhatsApp(args.whatsapp);
     if (args.email !== undefined) patch.email = args.email.trim().toLowerCase() || undefined;
     if (args.bwfId !== undefined) patch.bwfId = args.bwfId.trim().toUpperCase() || undefined;
+    if (args.nik !== undefined) patch.nik = args.nik.trim() || undefined;
+    if (args.motherName !== undefined) patch.motherName = cleanText(args.motherName, 'Ibu Kandung', 1, 100);
+    if (args.birthPlace !== undefined) patch.birthPlace = cleanText(args.birthPlace, 'Tempat Lahir', 1, 100);
+    if (args.playingHand !== undefined) patch.playingHand = args.playingHand;
+    if (args.addressDetail !== undefined) patch.addressDetail = cleanText(args.addressDetail, 'Alamat', 1, 300);
+    if (args.phone !== undefined) patch.phone = args.phone.replace(/[^0-9]/g, '') || undefined;
 
     await ctx.db.patch(args.registrationId, patch);
   }

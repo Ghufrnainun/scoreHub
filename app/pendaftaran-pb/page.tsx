@@ -536,7 +536,7 @@ export default function PendaftaranPBPage() {
 
                       <div className="col-span-full sm:col-span-3">
                         <Label htmlFor="whatsapp" className="text-sm font-medium text-foreground">
-                          Handphone (WA)<span className="text-destructive">*</span>
+                          Nomor WhatsApp<span className="text-destructive">*</span>
                         </Label>
                         <Input id="whatsapp" required type="tel" name="whatsapp" placeholder="Contoh: 081234567890"
                           value={form.whatsapp} onChange={(e) => set('whatsapp', e.target.value.replace(/[^0-9]/g, ''))}

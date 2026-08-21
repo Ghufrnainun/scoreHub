@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import CustomDatePicker from '../../_components/CustomDatePicker';
@@ -94,6 +95,12 @@ export default function AdminRegistrationDetail() {
     whatsapp: string;
     email: string;
     bwfId: string;
+    nik: string;
+    motherName: string;
+    birthPlace: string;
+    playingHand: 'kanan' | 'kiri';
+    addressDetail: string;
+    phone: string;
   }>({
     fullName: '',
     dob: '',
@@ -102,6 +109,12 @@ export default function AdminRegistrationDetail() {
     whatsapp: '',
     email: '',
     bwfId: '',
+    nik: '',
+    motherName: '',
+    birthPlace: '',
+    playingHand: 'kanan',
+    addressDetail: '',
+    phone: '',
   });
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -114,6 +127,8 @@ export default function AdminRegistrationDetail() {
       const rawGender = registrationDetail.gender;
       const normalizedGender: 'putra' | 'putri' =
         rawGender === 'putri' || rawGender === 'wanita' ? 'putri' : 'putra';
+      const rawHand = registrationDetail.playingHand;
+      const normalizedHand: 'kanan' | 'kiri' = rawHand === 'kiri' ? 'kiri' : 'kanan';
 
       setEditForm({
         fullName: registrationDetail.fullName,
@@ -123,6 +138,12 @@ export default function AdminRegistrationDetail() {
         dob: registrationDetail.dob || '',
         club: registrationDetail.club,
         bwfId: registrationDetail.bwfId || '',
+        nik: registrationDetail.nik || '',
+        motherName: registrationDetail.motherName || '',
+        birthPlace: registrationDetail.birthPlace || '',
+        playingHand: normalizedHand,
+        addressDetail: registrationDetail.addressDetail || '',
+        phone: registrationDetail.phone || '',
       });
     }
   }, [registrationDetail, isEditing]);
@@ -165,6 +186,12 @@ export default function AdminRegistrationDetail() {
         whatsapp: editForm.whatsapp,
         email: editForm.email || undefined,
         bwfId: editForm.bwfId?.trim().toUpperCase() || undefined,
+        nik: editForm.nik?.trim() || undefined,
+        motherName: editForm.motherName || undefined,
+        birthPlace: editForm.birthPlace || undefined,
+        playingHand: editForm.playingHand,
+        addressDetail: editForm.addressDetail || undefined,
+        phone: editForm.phone?.replace(/[^0-9]/g, '') || undefined,
       });
       toast.success('Data pendaftar berhasil diperbarui.');
       setIsEditing(false);
@@ -491,9 +518,67 @@ export default function AdminRegistrationDetail() {
                     </div>
                   </div>
 
+                  {/* Field: Main Tangan */}
+                  <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Main Tangan</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-foreground capitalize">{registrationDetail.playingHand || '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Field: Telepon */}
+                  <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Telepon</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-bold text-sm text-foreground truncate">{registrationDetail.phone || '-'}</span>
+                      {registrationDetail.phone && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs font-semibold gap-1 border-border shrink-0 hover:bg-background"
+                          onClick={() => handleCopy(registrationDetail.phone || '', 'Telepon')}
+                        >
+                          {copiedField === 'Telepon' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          <span>Salin</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Field: Provinsi */}
+                  <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Provinsi</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-foreground truncate">{registrationDetail.provinceName || '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Field: Alamat Lengkap */}
+                  <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2 sm:col-span-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Alamat Lengkap</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-foreground leading-relaxed">
+                        {registrationDetail.addressDetail || '-'}
+                        {registrationDetail.districtName ? `, ${registrationDetail.districtName}` : ''}
+                        {registrationDetail.postalCode ? ` ${registrationDetail.postalCode}` : ''}
+                      </span>
+                      {registrationDetail.addressDetail && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs font-semibold gap-1 border-border shrink-0 hover:bg-background"
+                          onClick={() => handleCopy([registrationDetail.addressDetail, registrationDetail.districtName, registrationDetail.postalCode].filter(Boolean).join(', '), 'Alamat')}
+                        >
+                          {copiedField === 'Alamat' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          <span>Salin</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Field: Email */}
                   <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5 flex flex-col justify-between gap-2 sm:col-span-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email Pendaftar</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Email</span>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm text-foreground truncate">{registrationDetail.email || 'Tidak dicantumkan'}</span>
                       {registrationDetail.email && (
@@ -515,40 +600,85 @@ export default function AdminRegistrationDetail() {
                 // EDIT MODE FORM
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Lengkap</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Lengkap <span className="text-destructive">*</span></Label>
                     <Input className="h-10 rounded-xl bg-background" value={editForm.fullName} onChange={(e) => setEditForm({...editForm, fullName: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nomor WhatsApp</Label>
-                    <Input className="h-10 rounded-xl bg-background" value={editForm.whatsapp} onChange={(e) => setEditForm({...editForm, whatsapp: e.target.value})} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email</Label>
-                    <Input className="h-10 rounded-xl bg-background" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">NIK</Label>
+                    <Input className="h-10 rounded-xl bg-background tabular-nums" maxLength={16} value={editForm.nik} onChange={(e) => setEditForm({...editForm, nik: e.target.value.replace(/[^0-9]/g, '')})} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">ID BWF</Label>
                     <Input className="h-10 rounded-xl bg-background uppercase" placeholder="Kosongkan jika tidak ada" value={editForm.bwfId} onChange={(e) => setEditForm({...editForm, bwfId: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Klub</Label>
-                    <Input className="h-10 rounded-xl bg-background" value={editForm.club} onChange={(e) => setEditForm({...editForm, club: e.target.value})} />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ibu Kandung</Label>
+                    <Input className="h-10 rounded-xl bg-background" value={editForm.motherName} onChange={(e) => setEditForm({...editForm, motherName: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tempat Lahir</Label>
+                    <Input className="h-10 rounded-xl bg-background" value={editForm.birthPlace} onChange={(e) => setEditForm({...editForm, birthPlace: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
                     <CustomDatePicker value={editForm.dob} onChange={(dob) => setEditForm({...editForm, dob})} />
                     <p className="text-[11px] font-medium text-muted-foreground">Kategori umur akan terhitung otomatis.</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Gender</Label>
-                    <select
-                      className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground focus:ring-2 focus:ring-primary"
-                      value={editForm.gender}
-                      onChange={(e) => setEditForm({...editForm, gender: e.target.value as 'putra' | 'putri'})}
-                    >
-                      <option value="putra">Laki-laki</option>
-                      <option value="putri">Perempuan</option>
-                    </select>
-                    <p className="text-[11px] font-medium text-muted-foreground">Nilai lama (pria/wanita) otomatis dinormalisasi saat disimpan.</p>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Klub <span className="text-destructive">*</span></Label>
+                    <Input className="h-10 rounded-xl bg-background" value={editForm.club} onChange={(e) => setEditForm({...editForm, club: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nomor WhatsApp <span className="text-destructive">*</span></Label>
+                    <Input className="h-10 rounded-xl bg-background tabular-nums" value={editForm.whatsapp} onChange={(e) => setEditForm({...editForm, whatsapp: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Telepon</Label>
+                    <Input type="tel" className="h-10 rounded-xl bg-background tabular-nums" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value.replace(/[^0-9]/g, '')})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email</Label>
+                    <Input type="email" className="h-10 rounded-xl bg-background" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Jenis Kelamin</Label>
+                    <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                      {(['putra', 'putri'] as const).map((g) => (
+                        <Button
+                          key={g}
+                          type="button"
+                          variant={editForm.gender === g ? 'default' : 'outline'}
+                          onClick={() => setEditForm({...editForm, gender: g})}
+                          className="uppercase text-xs font-bold w-full transition-transform active:scale-95"
+                        >
+                          {g === 'putra' ? 'Laki-laki' : 'Perempuan'}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] font-medium text-muted-foreground">Nilai lama (pria/wanita) otomatis dinormalisasi.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Main Tangan</Label>
+                    <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                      {(['kanan', 'kiri'] as const).map((h) => (
+                        <Button
+                          key={h}
+                          type="button"
+                          variant={editForm.playingHand === h ? 'default' : 'outline'}
+                          onClick={() => setEditForm({...editForm, playingHand: h})}
+                          className="uppercase text-xs font-bold w-full transition-transform active:scale-95"
+                        >
+                          {h === 'kanan' ? 'Kanan' : 'Kiri'}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Alamat Lengkap</Label>
+                    <Textarea
+                      className="rounded-xl bg-background min-h-[80px] resize-y"
+                      value={editForm.addressDetail}
+                      onChange={(e) => setEditForm({...editForm, addressDetail: e.target.value})}
+                    />
                   </div>
                 </div>
               )}
