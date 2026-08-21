@@ -18,6 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { genderLabel } from '@/lib/gender';
 import type { RegistrationItem } from './RegistrationStats';
 import { toast } from 'sonner';
 
@@ -178,7 +179,7 @@ export default function RegistrationTable({
                     <div className="space-y-1">
                       <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        <span className="capitalize">{item.gender}</span>
+                        <span className="capitalize">{genderLabel(item.gender)}</span>
                         <span>•</span>
                         <span>{item.dob || '-'}</span>
                       </div>

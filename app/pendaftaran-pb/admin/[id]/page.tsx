@@ -7,6 +7,7 @@ import { api } from '@/convex/_generated/api';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { loadValidAdminSession } from '@/lib/admin-session';
+import { genderLabel } from '@/lib/gender';
 import { Id } from '@/convex/_generated/dataModel';
 import {
   ArrowLeft,
@@ -279,7 +280,7 @@ export default function AdminRegistrationDetail() {
                       {registrationDetail.club}
                     </span>
                     <span className="text-xs text-muted-foreground font-medium">
-                      ({registrationDetail.gender === 'putra' ? 'Putra' : 'Putri'})
+                      ({genderLabel(registrationDetail.gender)})
                     </span>
                   </div>
                 </div>
@@ -382,7 +383,7 @@ export default function AdminRegistrationDetail() {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Gender</span>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-sm text-foreground capitalize">
-                        {registrationDetail.gender}
+                        {genderLabel(registrationDetail.gender)}
                       </span>
                     </div>
                   </div>
@@ -538,10 +539,12 @@ export default function AdminRegistrationDetail() {
                     <select
                       className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground focus:ring-2 focus:ring-primary"
                       value={editForm.gender}
-                      onChange={(e) => setEditForm({...editForm, gender: e.target.value as 'putra' | 'putri'})}
+                      onChange={(e) => setEditForm({...editForm, gender: e.target.value as 'putra' | 'putri' | 'pria' | 'wanita'})}
                     >
-                      <option value="putra">Putra</option>
-                      <option value="putri">Putri</option>
+                      <option value="putra">Laki-laki</option>
+                      <option value="pria">Laki-laki</option>
+                      <option value="putri">Perempuan</option>
+                      <option value="wanita">Perempuan</option>
                     </select>
                   </div>
                 </div>

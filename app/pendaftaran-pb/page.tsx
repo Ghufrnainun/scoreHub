@@ -397,11 +397,11 @@ export default function PendaftaranPBPage() {
                           Jenis Kelamin<span className="text-destructive">*</span>
                         </Label>
                         <div className="grid grid-cols-2 gap-2" role="radiogroup">
-                          {['pria', 'wanita'].map((g) => {
+                          {(['pria', 'wanita'] as const).map((g) => {
                             const isSelected = form.gender === g;
                             return (
                               <Button key={g} type="button" variant={isSelected ? 'default' : 'outline'} onClick={() => set('gender', g)} className="uppercase text-xs font-bold w-full transition-transform active:scale-95">
-                                {g}
+                                {g === 'pria' ? 'Laki-laki' : 'Perempuan'}
                               </Button>
                             );
                           })}
