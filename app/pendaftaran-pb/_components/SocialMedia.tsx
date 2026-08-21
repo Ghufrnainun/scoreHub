@@ -14,7 +14,7 @@ export const PB_CONTACTS = {
   threads: 'https://threads.com/pb_undip',
 };
 
-export default function SocialMedia({ showEmail = true }: { showEmail?: boolean }) {
+export default function SocialMedia() {
   const links = [
     { label: 'Facebook', href: PB_CONTACTS.facebook, Icon: Facebook },
     { label: 'Instagram', href: PB_CONTACTS.instagram, Icon: Instagram },
@@ -22,12 +22,13 @@ export default function SocialMedia({ showEmail = true }: { showEmail?: boolean 
     { label: 'YouTube', href: PB_CONTACTS.youtube, Icon: Youtube },
     { label: 'X', href: PB_CONTACTS.x, Icon: Twitter },
     { label: 'Threads', href: PB_CONTACTS.threads, Icon: MessageCircle },
+    { label: 'Email', href: `mailto:${PB_CONTACTS.email}`, Icon: Mail },
   ];
 
   return (
     <div className="space-y-3">
       <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-        Sosial Media
+        Media Sosial
       </div>
       <div className="flex flex-wrap gap-2">
         {links.map(({ label, href, Icon }) => (
@@ -43,15 +44,6 @@ export default function SocialMedia({ showEmail = true }: { showEmail?: boolean 
           </a>
         ))}
       </div>
-      {showEmail && (
-        <a
-          href={`mailto:${PB_CONTACTS.email}`}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-        >
-          <Mail size={13} aria-hidden="true" />
-          <span>{PB_CONTACTS.email}</span>
-        </a>
-      )}
     </div>
   );
 }
