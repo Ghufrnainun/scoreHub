@@ -229,7 +229,8 @@ export const adminUpdateData = mutation({
     gender: v.optional(v.union(v.literal('pria'), v.literal('wanita'), v.literal('putra'), v.literal('putri'))),
     club: v.optional(v.string()),
     whatsapp: v.optional(v.string()),
-    email: v.optional(v.string())
+    email: v.optional(v.string()),
+    bwfId: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     await assertPBAdminSession(ctx, args.adminSessionToken);
@@ -243,6 +244,7 @@ export const adminUpdateData = mutation({
     if (args.gender !== undefined) patch.gender = args.gender;
     if (args.whatsapp !== undefined) patch.whatsapp = normalizeWhatsApp(args.whatsapp);
     if (args.email !== undefined) patch.email = args.email.trim().toLowerCase() || undefined;
+    if (args.bwfId !== undefined) patch.bwfId = args.bwfId.trim().toUpperCase() || undefined;
 
     await ctx.db.patch(args.registrationId, patch);
   }

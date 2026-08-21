@@ -8,7 +8,7 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { loadValidAdminSession } from '@/lib/admin-session';
 import { genderLabel } from '@/lib/gender';
-import { GenderIcon } from '@/lib/gender-icon';
+import { GenderAvatar } from '@/lib/gender-avatar';
 import { Id } from '@/convex/_generated/dataModel';
 import {
   ArrowLeft,
@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import CustomDatePicker from '../../_components/CustomDatePicker';
 
 const PB_TOKEN_KEY = 'pb_admin_token';
 
@@ -72,17 +73,19 @@ export default function AdminRegistrationDetail() {
   const [editForm, setEditForm] = useState<{
     fullName: string;
     dob: string;
-    gender: 'pria' | 'wanita' | 'putra' | 'putri';
+    gender: 'putra' | 'putri';
     club: string;
     whatsapp: string;
     email: string;
+    bwfId: string;
   }>({
     fullName: '',
     dob: '',
     gender: 'putra',
     club: '',
     whatsapp: '',
-    email: ''
+    email: '',
+    bwfId: '',
   });
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -90,13 +93,20 @@ export default function AdminRegistrationDetail() {
 
   useEffect(() => {
     if (registrationDetail && !isEditing) {
+      // Normalisasi nilai gender lama (pria/wanita) ke nilai kanonik (putra/putri)
+      // supaya dropdown edit cuma 2 opsi & select tidak tampil blank.
+      const rawGender = registrationDetail.gender;
+      const normalizedGender: 'putra' | 'putri' =
+        rawGender === 'putri' || rawGender === 'wanita' ? 'putri' : 'putra';
+
       setEditForm({
         fullName: registrationDetail.fullName,
         email: registrationDetail.email || '',
         whatsapp: registrationDetail.whatsapp,
-        gender: registrationDetail.gender,
+        gender: normalizedGender,
         dob: registrationDetail.dob || '',
         club: registrationDetail.club,
+        bwfId: registrationDetail.bwfId || '',
       });
     }
   }, [registrationDetail, isEditing]);
@@ -138,6 +148,7 @@ export default function AdminRegistrationDetail() {
         club: editForm.club,
         whatsapp: editForm.whatsapp,
         email: editForm.email || undefined,
+        bwfId: editForm.bwfId?.trim().toUpperCase() || undefined,
       });
       toast.success('Data pendaftar berhasil diperbarui.');
       setIsEditing(false);
@@ -246,9 +257,7 @@ export default function AdminRegistrationDetail() {
             {/* Header Athlete Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border border-border shadow-2xs rounded-2xl p-5">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
-                  <GenderIcon gender={registrationDetail.gender} className="w-8 h-8" />
-                </div>
+                <GenderAvatar gender={registrationDetail.gender} size="lg" />
                 <div>
                   <h2 className="font-bold text-xl text-foreground tracking-tight">{registrationDetail.fullName}</h2>
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -502,12 +511,15 @@ export default function AdminRegistrationDetail() {
                     <Input className="h-10 rounded-xl bg-background" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">ID BWF</Label>
+                    <Input className="h-10 rounded-xl bg-background uppercase" placeholder="Kosongkan jika tidak ada" value={editForm.bwfId} onChange={(e) => setEditForm({...editForm, bwfId: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Klub / Sekolah</Label>
                     <Input className="h-10 rounded-xl bg-background" value={editForm.club} onChange={(e) => setEditForm({...editForm, club: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tanggal Lahir (YYYY-MM-DD)</Label>
-                    <Input type="date" className="h-10 rounded-xl bg-background" value={editForm.dob} onChange={(e) => setEditForm({...editForm, dob: e.target.value})} />
+                    <CustomDatePicker value={editForm.dob} onChange={(dob) => setEditForm({...editForm, dob})} />
                     <p className="text-[11px] font-medium text-muted-foreground">Kategori umur akan terhitung otomatis.</p>
                   </div>
                   <div className="space-y-1.5">
@@ -515,13 +527,12 @@ export default function AdminRegistrationDetail() {
                     <select
                       className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground focus:ring-2 focus:ring-primary"
                       value={editForm.gender}
-                      onChange={(e) => setEditForm({...editForm, gender: e.target.value as 'putra' | 'putri' | 'pria' | 'wanita'})}
+                      onChange={(e) => setEditForm({...editForm, gender: e.target.value as 'putra' | 'putri'})}
                     >
                       <option value="putra">Laki-laki</option>
-                      <option value="pria">Laki-laki</option>
                       <option value="putri">Perempuan</option>
-                      <option value="wanita">Perempuan</option>
                     </select>
+                    <p className="text-[11px] font-medium text-muted-foreground">Nilai lama (pria/wanita) otomatis dinormalisasi saat disimpan.</p>
                   </div>
                 </div>
               )}
