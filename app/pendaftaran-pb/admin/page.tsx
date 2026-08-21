@@ -315,11 +315,11 @@ export default function AdminPendaftaranPBPage() {
             </div>
           </div>
 
-          {/* Banner PolyTron di tengah */}
+          {/* QR Keyword di tengah */}
           <div className="hidden lg:block shrink-0">
             <img
-              src="/polyTron-banner.png"
-              alt="PolyTron"
+              src="/qr-keyword.jpg"
+              alt="QR Keyword"
               className="h-11 w-auto object-contain"
             />
           </div>
