@@ -235,8 +235,11 @@ export default function AdminPendaftaranPBPage() {
             <div className="flex flex-col items-center text-center">
               <img src="/pb-emblem.png" alt="Logo PB UNDIP" className="h-16 w-auto object-contain mb-4" />
               <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-                PB UNDIP • Admin Pendaftaran
+                PB UNDIP
               </h1>
+              <h2 className="mt-0.5 font-display text-lg font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Admin Pendaftaran
+              </h2>
               <p className="mt-1.5 text-xs font-medium text-muted-foreground max-w-xs">
                 Masukkan PIN untuk mengakses dasbor tracking data pendaftaran dan berkas atlet.
               </p>
